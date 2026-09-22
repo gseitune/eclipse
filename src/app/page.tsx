@@ -65,8 +65,14 @@ export default async function Home() {
       <header className="mb-12 text-center">
         <div className="relative mx-auto mb-6 h-24 w-24">
           <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_35%_30%,#fef3c7,#fb923c_48%,#e11d48_92%)] shadow-[0_0_70px_rgba(249,115,22,0.5)]" />
-          <div className="absolute -right-2 -bottom-2 h-16 w-16 animate-spin-slow drop-shadow-[0_6px_10px_rgba(28,25,23,0.35)]">
-            <BeachBall />
+          <div className="absolute -right-2 -bottom-2 h-16 w-16 animate-spin-slow overflow-hidden rounded-full ring-2 ring-amber-100 drop-shadow-[0_6px_10px_rgba(28,25,23,0.35)]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/ball-mikasa.jpg"
+              alt=""
+              className="h-full w-full object-cover"
+              draggable={false}
+            />
           </div>
         </div>
 
@@ -212,24 +218,6 @@ export default async function Home() {
       </footer>
       </div>
     </main>
-  );
-}
-
-function BeachBall() {
-  return (
-    <svg viewBox="0 0 100 100" className="h-full w-full" aria-hidden="true">
-      <circle
-        cx="50"
-        cy="50"
-        r="47"
-        fill="#ffffff"
-        stroke="#c8d2da"
-        strokeWidth="2.5"
-      />
-      <path d="M6 48 Q50 60 94 48 L94 66 Q50 78 6 66 Z" fill="#f7c331" />
-      <path d="M50 6 Q62 50 50 94 L32 94 Q44 50 32 6 Z" fill="#2d7fc1" />
-      <circle cx="50" cy="50" r="1.6" fill="#c8d2da" />
-    </svg>
   );
 }
 
