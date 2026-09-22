@@ -67,7 +67,15 @@ export default async function Home() {
       <div className="relative z-10">
       <header className="mb-12 text-center">
         <div className="relative mx-auto mb-6 h-24 w-24">
-          <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_35%_30%,#fef3c7,#fb923c_48%,#e11d48_92%)] shadow-[0_0_70px_rgba(249,115,22,0.5)]" />
+          <div className="absolute inset-0 overflow-hidden rounded-full shadow-[0_0_70px_rgba(249,115,22,0.5)]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/sun.jpg"
+              alt=""
+              className="h-full w-full object-cover"
+              draggable={false}
+            />
+          </div>
           <div className="absolute -right-2 -bottom-2 h-16 w-16 animate-spin-slow overflow-hidden rounded-full ring-2 ring-amber-100 drop-shadow-[0_6px_10px_rgba(28,25,23,0.35)]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
