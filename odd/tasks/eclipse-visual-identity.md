@@ -28,8 +28,11 @@
 - [x] T6: Subtle palm tree silhouettes at bottom corners (fixed layer, behind content)
 - [x] T7: Use real photo of the Mikasa BV550C as the spinning hero ball (circular mask)
 - [x] T8: Replace palm silhouettes with user's jungle foliage photo as full-page backdrop
+- [x] T9: Rename brand to Selvaarena (green gradient title + subtítulo Circuito de beach vóley)
 
 ## Progress
+
+- T9: DONE 2026-09-22 — h1 "Eclipse" → "Selvaarena" con gradiente `from-emerald-950 via-emerald-700 to-green-600` (mismo efecto bg-clip-text); subtítulo "Torneo de beach vóley" → "Circuito de beach vóley"; metadata title/description → "Selvaarena · Circuito Mixto Etapa 5". Pushed `1039c83`.
 
 - T8: DONE 2026-09-22 — user downloaded `tropical-leaves-wallpaper-background-natural-jungle-monstera-and-palm-leaves-foliage-pattern-design-in-minimalist-pale-green-color-style-design-for-fabric-print-cover-banner-decoration-vector-3464254851.jpg`; copied to `public/jungle-bg.jpg`; page backdrop = fixed `img` opacity-45 + warm gradient overlay (`from-sand-50/90 via-sand-100/80 to-sand-200/90`) to keep content readable; palm SVG components removed (unused). Content keeps `relative z-10`. Pushed `32f019c`.
 
