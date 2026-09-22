@@ -58,10 +58,10 @@ export default async function Home() {
         <img
           src="/jungle-bg.jpg"
           alt=""
-          className="h-full w-full object-cover opacity-45"
+          className="h-full w-full object-cover opacity-70"
           draggable={false}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-sand-50/90 via-sand-100/80 to-sand-200/90" />
+        <div className="absolute inset-0 bg-gradient-to-b from-sand-50/50 via-sand-100/30 to-sand-200/50" />
       </div>
 
       <div className="relative z-10">
