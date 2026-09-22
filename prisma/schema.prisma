@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum Zone {
+  A
+  B
+}
+
+enum Stage {
+  GROUPS
+  SEMIFINAL_1
+  SEMIFINAL_2
+  FINAL
+}
+
+enum ResultStatus {
+  PENDING
+  WINNER_ONLY
+  COMPLETE
+}
+
+model Team {
+  id          String   @id @default(cuid())
+  name        String
+  zone        Zone
+  matchesA    Match[]  @relation("TeamA")
+  matchesB    Match[]  @relation("TeamB")
+  wonMatches  Match[]  @relation("Winner")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Match {
+  id           String       @id @default(cuid())
+  stage        Stage        @default(GROUPS)
+  zone         Zone?
+  slot         Int
+  timeLabel    String?
+  teamAId      String?
+  teamBId      String?
+  teamA        Team?        @relation("TeamA", fields: [teamAId], references: [id])
+  teamB        Team?        @relation("TeamB", fields: [teamBId], references: [id])
+  setAScore    Int?
+  setBScore    Int?
+  resultStatus ResultStatus @default(PENDING)
+  winnerId     String?
+  winner       Team?        @relation("Winner", fields: [winnerId], references: [id])
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
