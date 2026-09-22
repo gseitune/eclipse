@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Selvaarena · Circuito Mixto Etapa 5",
+  title: "SELVARENA · Circuito Mixto Etapa 5",
   description: "Circuito de beach vóley — Circuito Mixto Principiantes 2026, Etapa 5.",
 };
 

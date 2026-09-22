@@ -83,7 +83,7 @@ export default async function Home() {
           Circuito Mixto Principiantes 2026 · Etapa 5
         </p>
         <h1 className="mt-3 bg-gradient-to-r from-emerald-950 via-emerald-700 to-green-600 bg-clip-text text-6xl font-bold tracking-tight text-transparent">
-          Selvaarena
+          SELVARENA
         </h1>
         <p className="mx-auto mt-4 max-w-md text-lg text-stone-600">
           Circuito de beach vóley — una cancha, dos zonas, la final a la tarde.
