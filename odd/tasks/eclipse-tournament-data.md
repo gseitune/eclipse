@@ -27,7 +27,10 @@
 
 ## Progress
 
-- (pending)
+- T1: DONE 2026-09-22 — engine with injectable RNG; verified via TSX assertions (6/7/10/11/12/13/20 teams + 200 real-random runs for 11 → always balanced 4/4/3; <6 throws).
+- T2: DONE 2026-09-22 — idempotent seed via `prisma.config.ts` `migrations.seed` (Prisma 7 no longer reads `package.json` `prisma.seed`: "No seed command configured"); `npx prisma db seed` → "Seed OK — 10 teams, 23 matches (20 with fixed pairs, 3 bracket slots)".
+- T3: DONE 2026-09-22 — footer shows "10 equipos · 23 partidos cargados"; build passes; dev HTTP 200 with seeded names.
+- T4: DONE 2026-09-22 — 4 work-unit commits: `e6d4db5` engine, `92c4b4d` seed, `451b175` home counts, `bacdbfa` docs. Push pending.
 
 ## Delivery
 
