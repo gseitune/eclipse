@@ -53,12 +53,15 @@ export default async function Home() {
 
   return (
     <main className="relative mx-auto w-full max-w-3xl flex-1 px-6 py-12">
-      <div
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-0 flex items-end justify-between px-6"
-        aria-hidden="true"
-      >
-        <PalmTree className="h-36 w-24 opacity-30" />
-        <PalmTree className="h-56 w-40 opacity-25" />
+      <div className="pointer-events-none fixed inset-0 z-0" aria-hidden="true">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/jungle-bg.jpg"
+          alt=""
+          className="h-full w-full object-cover opacity-45"
+          draggable={false}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-sand-50/90 via-sand-100/80 to-sand-200/90" />
       </div>
 
       <div className="relative z-10">
@@ -218,30 +221,6 @@ export default async function Home() {
       </footer>
       </div>
     </main>
-  );
-}
-
-function PalmTree({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 90 160"
-      className={className}
-      aria-hidden="true"
-      preserveAspectRatio="xMidYMax meet"
-    >
-      <path
-        d="M45 160 Q48 110 40 60"
-        stroke="#7c2d12"
-        strokeWidth="7"
-        fill="none"
-        strokeLinecap="round"
-      />
-      <path d="M40 62 Q10 58 2 30 Q26 36 40 52 Z" fill="#7c2d12" />
-      <path d="M40 62 Q74 58 84 28 Q60 36 44 52 Z" fill="#7c2d12" />
-      <path d="M40 60 Q16 40 18 8 Q38 28 40 48 Z" fill="#7c2d12" />
-      <path d="M40 60 Q68 40 66 10 Q46 28 42 48 Z" fill="#7c2d12" />
-      <path d="M40 58 Q40 24 46 4 Q52 26 48 56 Z" fill="#7c2d12" />
-    </svg>
   );
 }
 
