@@ -82,11 +82,11 @@ export default async function Home() {
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-700">
           Circuito Mixto Principiantes 2026 · Etapa 5
         </p>
-        <h1 className="mt-3 bg-gradient-to-r from-amber-500 via-orange-600 to-rose-600 bg-clip-text text-6xl font-bold tracking-tight text-transparent">
-          Eclipse
+        <h1 className="mt-3 bg-gradient-to-r from-emerald-950 via-emerald-700 to-green-600 bg-clip-text text-6xl font-bold tracking-tight text-transparent">
+          Selvaarena
         </h1>
         <p className="mx-auto mt-4 max-w-md text-lg text-stone-600">
-          Torneo de beach vóley — una cancha, dos zonas, la final a la tarde.
+          Circuito de beach vóley — una cancha, dos zonas, la final a la tarde.
         </p>
 
         <div className="mt-6 flex justify-center gap-3">
