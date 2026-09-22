@@ -4,18 +4,20 @@ import { prisma } from "@/lib/prisma";
 const ZONE_STYLES = {
   A: {
     label: "Zona A",
-    badge: "bg-sky-100 text-sky-800 ring-sky-600/20",
+    badge: "bg-amber-100 text-amber-800 ring-amber-600/30",
+    accent: "border-l-amber-400",
   },
   B: {
     label: "Zona B",
-    badge: "bg-rose-100 text-rose-800 ring-rose-600/20",
+    badge: "bg-teal-100 text-teal-800 ring-teal-600/30",
+    accent: "border-l-teal-400",
   },
 } as const;
 
 const STATUS_LABELS = {
-  PENDING: { label: "Pending", classes: "bg-zinc-100 text-zinc-600 ring-zinc-500/20" },
-  WINNER_ONLY: { label: "Winner only", classes: "bg-amber-100 text-amber-800 ring-amber-600/20" },
-  COMPLETE: { label: "Complete", classes: "bg-emerald-100 text-emerald-800 ring-emerald-600/20" },
+  PENDING: { label: "Pending", classes: "bg-stone-200/70 text-stone-600 ring-stone-500/20" },
+  WINNER_ONLY: { label: "Winner only", classes: "bg-amber-100 text-amber-800 ring-amber-600/30" },
+  COMPLETE: { label: "Complete", classes: "bg-emerald-100 text-emerald-800 ring-emerald-600/30" },
 } as const;
 
 type BracketStage = "SEMIFINAL_1" | "SEMIFINAL_2" | "FINAL";
@@ -51,29 +53,43 @@ export default async function Home() {
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-12">
-      <header className="mb-10">
-        <p className="text-sm font-medium uppercase tracking-widest text-zinc-500">
+      <header className="mb-12 text-center">
+        <div className="relative mx-auto mb-6 h-24 w-24">
+          <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_35%_30%,#fef3c7,#fb923c_48%,#e11d48_92%)] shadow-[0_0_70px_rgba(249,115,22,0.5)]" />
+          <div className="absolute -right-1 -bottom-1 h-14 w-14 rounded-full bg-gradient-to-br from-teal-600 to-teal-950 shadow-lg" />
+        </div>
+
+        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-700">
           Circuito Mixto Principiantes 2026 · Etapa 5
         </p>
-        <h1 className="mt-2 text-4xl font-semibold tracking-tight text-zinc-900">
+        <h1 className="mt-3 bg-gradient-to-r from-amber-500 via-orange-600 to-rose-600 bg-clip-text text-6xl font-bold tracking-tight text-transparent">
           Eclipse
         </h1>
-        <p className="mt-3 text-lg text-zinc-600">
+        <p className="mx-auto mt-4 max-w-md text-lg text-stone-600">
           Torneo de beach vóley — una cancha, dos zonas, la final a la tarde.
         </p>
+
+        <div className="mt-6 flex justify-center gap-3">
+          <span className="rounded-full bg-sand-100 px-3 py-1 text-sm font-semibold text-stone-700 ring-1 ring-inset ring-sand-300">
+            {teams.length} equipos
+          </span>
+          <span className="rounded-full bg-sand-100 px-3 py-1 text-sm font-semibold text-stone-700 ring-1 ring-inset ring-sand-300">
+            {matches.length} partidos
+          </span>
+        </div>
       </header>
 
-      <section className="mb-10 grid gap-6 sm:grid-cols-2">
+      <section className="mb-10 grid gap-5 sm:grid-cols-2">
         {(["A", "B"] as const).map((zone) => {
           const zoneTeams = zone === "A" ? zoneA : zoneB;
           const style = ZONE_STYLES[zone];
           return (
             <div
               key={zone}
-              className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm"
+              className={`rounded-2xl border border-l-4 border-sand-200 bg-white/70 p-5 shadow-sm backdrop-blur ${style.accent}`}
             >
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-zinc-900">
+                <h2 className="text-lg font-semibold text-stone-900">
                   {style.label}
                 </h2>
                 <span
@@ -83,7 +99,7 @@ export default async function Home() {
                 </span>
               </div>
               {zoneTeams.length === 0 ? (
-                <p className="text-sm text-zinc-500">
+                <p className="text-sm text-stone-500">
                   Sin equipos cargados todavía.
                 </p>
               ) : (
@@ -91,7 +107,7 @@ export default async function Home() {
                   {zoneTeams.map((team) => (
                     <li
                       key={team.id}
-                      className="rounded-lg bg-zinc-50 px-3 py-2 text-sm text-zinc-800"
+                      className="rounded-lg bg-sand-50 px-3 py-2 text-sm font-medium text-stone-800"
                     >
                       {team.name}
                     </li>
@@ -104,9 +120,12 @@ export default async function Home() {
       </section>
 
       <section className="mb-10">
-        <h2 className="mb-4 text-xl font-semibold tracking-tight text-zinc-900">
+        <h2 className="mb-2 text-xl font-bold tracking-tight text-stone-900">
           Partidos
         </h2>
+        <p className="mb-6 text-sm text-stone-500">
+          Una sola cancha, partidos de 20 minutos desde las 10:00.
+        </p>
 
         <div className="space-y-8">
           {[
@@ -115,7 +134,7 @@ export default async function Home() {
           ].map(({ zone, list, style }) => (
             <div key={zone}>
               <div className="mb-2 flex items-center gap-3">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-stone-500">
                   Fase de grupos · {style.label}
                 </h3>
                 <span
@@ -124,16 +143,16 @@ export default async function Home() {
                   {list.length} partidos
                 </span>
               </div>
-              <ul className="divide-y divide-zinc-200 overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+              <ul className="divide-y divide-sand-200 overflow-hidden rounded-2xl border border-sand-200 bg-white/70 backdrop-blur">
                 {list.map((match) => (
                   <li
                     key={match.id}
-                    className="flex items-center justify-between gap-4 px-4 py-3"
+                    className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-sand-50"
                   >
-                    <span className="w-24 shrink-0 text-sm tabular-nums text-zinc-500">
+                    <span className="w-24 shrink-0 font-mono text-sm tabular-nums text-stone-500">
                       {match.timeLabel}
                     </span>
-                    <span className="flex-1 text-sm font-medium text-zinc-900">
+                    <span className="flex-1 text-sm font-medium text-stone-900">
                       {match.teamA?.name ?? "—"} vs {match.teamB?.name ?? "—"}
                     </span>
                     <StatusBadge status={match.resultStatus} />
@@ -144,26 +163,26 @@ export default async function Home() {
           ))}
 
           <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-stone-500">
               Eliminatorias
             </h3>
-            <ul className="divide-y divide-zinc-200 overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+            <ul className="divide-y divide-sand-200 overflow-hidden rounded-2xl border border-sand-200 bg-white/70 backdrop-blur">
               {bracket.map((match) => {
                 const label =
                   BRACKET_LABELS[match.stage as BracketStage];
                 return (
                   <li
                     key={match.id}
-                    className="flex items-center justify-between gap-4 px-4 py-3"
+                    className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-sand-50"
                   >
-                    <span className="w-24 shrink-0 text-sm tabular-nums text-zinc-500">
+                    <span className="w-24 shrink-0 font-mono text-sm tabular-nums text-stone-500">
                       {match.timeLabel}
                     </span>
                     <span className="flex-1">
-                      <span className="block text-xs font-semibold text-zinc-400">
+                      <span className="block text-xs font-semibold uppercase tracking-wide text-amber-700">
                         {label.title}
                       </span>
-                      <span className="text-sm font-medium text-zinc-900">
+                      <span className="text-sm font-medium text-stone-900">
                         {match.teamA?.name ? `${match.teamA.name} vs ${match.teamB?.name}` : label.match}
                       </span>
                     </span>
@@ -176,7 +195,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <footer className="mt-10 border-t border-zinc-200 pt-5 text-sm text-zinc-500">
+      <footer className="mt-10 border-t border-sand-200 pt-5 text-sm text-stone-500">
         Base de datos conectada · {teams.length} equipos · {matches.length}
         partidos cargados.
       </footer>
