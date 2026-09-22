@@ -15,9 +15,12 @@ const ZONE_STYLES = {
 export default async function Home() {
   await connection(); // keep DB reads out of prerendering
 
-  const teams = await prisma.team.findMany({
-    orderBy: [{ zone: "asc" }, { name: "asc" }],
-  });
+  const [teams, matchCount] = await Promise.all([
+    prisma.team.findMany({
+      orderBy: [{ zone: "asc" }, { name: "asc" }],
+    }),
+    prisma.match.count(),
+  ]);
 
   const zoneA = teams.filter((team) => team.zone === "A");
   const zoneB = teams.filter((team) => team.zone === "B");
@@ -77,7 +80,8 @@ export default async function Home() {
       </section>
 
       <footer className="mt-10 border-t border-zinc-200 pt-5 text-sm text-zinc-500">
-        Base de datos conectada · {teams.length} equipos en total.
+        Base de datos conectada · {teams.length} equipos · {matchCount} partidos
+        cargados.
       </footer>
     </main>
   );
