@@ -52,11 +52,22 @@ export default async function Home() {
   const bracket = matches.filter((match) => match.stage !== "GROUPS");
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-12">
+    <main className="relative mx-auto w-full max-w-3xl flex-1 px-6 py-12">
+      <div
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-0 flex items-end justify-between px-6"
+        aria-hidden="true"
+      >
+        <PalmTree className="h-36 w-24 opacity-30" />
+        <PalmTree className="h-56 w-40 opacity-25" />
+      </div>
+
+      <div className="relative z-10">
       <header className="mb-12 text-center">
         <div className="relative mx-auto mb-6 h-24 w-24">
           <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_35%_30%,#fef3c7,#fb923c_48%,#e11d48_92%)] shadow-[0_0_70px_rgba(249,115,22,0.5)]" />
-          <div className="absolute -right-1 -bottom-1 h-14 w-14 rounded-full bg-gradient-to-br from-teal-600 to-teal-950 shadow-lg" />
+          <div className="absolute -right-2 -bottom-2 h-16 w-16 animate-spin-slow drop-shadow-[0_6px_10px_rgba(28,25,23,0.35)]">
+            <BeachBall />
+          </div>
         </div>
 
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-700">
@@ -199,7 +210,50 @@ export default async function Home() {
         Base de datos conectada · {teams.length} equipos · {matches.length}
         partidos cargados.
       </footer>
+      </div>
     </main>
+  );
+}
+
+function BeachBall() {
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full" aria-hidden="true">
+      <circle
+        cx="50"
+        cy="50"
+        r="47"
+        fill="#ffffff"
+        stroke="#c8d2da"
+        strokeWidth="2.5"
+      />
+      <path d="M6 48 Q50 60 94 48 L94 66 Q50 78 6 66 Z" fill="#f7c331" />
+      <path d="M50 6 Q62 50 50 94 L32 94 Q44 50 32 6 Z" fill="#2d7fc1" />
+      <circle cx="50" cy="50" r="1.6" fill="#c8d2da" />
+    </svg>
+  );
+}
+
+function PalmTree({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 90 160"
+      className={className}
+      aria-hidden="true"
+      preserveAspectRatio="xMidYMax meet"
+    >
+      <path
+        d="M45 160 Q48 110 40 60"
+        stroke="#7c2d12"
+        strokeWidth="7"
+        fill="none"
+        strokeLinecap="round"
+      />
+      <path d="M40 62 Q10 58 2 30 Q26 36 40 52 Z" fill="#7c2d12" />
+      <path d="M40 62 Q74 58 84 28 Q60 36 44 52 Z" fill="#7c2d12" />
+      <path d="M40 60 Q16 40 18 8 Q38 28 40 48 Z" fill="#7c2d12" />
+      <path d="M40 60 Q68 40 66 10 Q46 28 42 48 Z" fill="#7c2d12" />
+      <path d="M40 58 Q40 24 46 4 Q52 26 48 56 Z" fill="#7c2d12" />
+    </svg>
   );
 }
 

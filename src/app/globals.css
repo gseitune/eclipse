@@ -20,6 +20,16 @@
   --foreground: #1c1917;
 }
 
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 16s linear infinite;
+}
+
 body {
   background:
     radial-gradient(1100px 560px at 85% -10%, rgba(249, 115, 22, 0.16), transparent 60%),
