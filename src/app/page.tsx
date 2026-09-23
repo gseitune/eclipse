@@ -66,8 +66,8 @@ export default async function Home() {
 
       <div className="relative z-10">
       <header className="mb-12 text-center">
-        <div className="relative mx-auto mb-10 h-64 w-64 sm:h-96 sm:w-96">
-          <div className="absolute inset-0 rounded-full shadow-[0_0_70px_rgba(249,115,22,0.5)] sm:shadow-[0_0_140px_rgba(249,115,22,0.5)]">
+        <div className="relative mx-auto mb-6 h-24 w-24">
+          <div className="absolute left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full shadow-[0_0_80px_rgba(249,115,22,0.4)]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/sun-transparent.png"
@@ -76,7 +76,7 @@ export default async function Home() {
               draggable={false}
             />
           </div>
-          <div className="absolute -right-4 -bottom-4 h-40 w-40 animate-spin-slow overflow-hidden rounded-full ring-2 ring-amber-100 drop-shadow-[0_6px_10px_rgba(28,25,23,0.35)] sm:-right-8 sm:-bottom-8 sm:h-64 sm:w-64">
+          <div className="absolute -right-2 -bottom-2 h-16 w-16 animate-spin-slow overflow-hidden rounded-full ring-2 ring-amber-100 drop-shadow-[0_6px_10px_rgba(28,25,23,0.35)]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/ball-mikasa.jpg"
