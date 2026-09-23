@@ -26,6 +26,28 @@ enum ResultStatus {
   COMPLETE
 }
 
+enum Phase {
+  GROUPS
+  ELIMINATORIES
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model TournamentState {
+  id            Int      @id @default(1)
+  phase         Phase    @default(GROUPS)
+  zoneConfirmed Boolean  @default(false)
+  prepMinutes   Int      @default(5)
+  matchMinutes  Int      @default(20)
+  updatedAt     DateTime @updatedAt
+}
+
 model Team {
   id          String   @id @default(cuid())
   name        String
@@ -52,6 +74,7 @@ model Match {
   resultStatus ResultStatus @default(PENDING)
   winnerId     String?
   winner       Team?        @relation("Winner", fields: [winnerId], references: [id])
+  recordedAt   DateTime?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 }

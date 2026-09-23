@@ -331,16 +331,8 @@ export type TeamNullableScalarRelationFilter = {
   isNot?: Prisma.TeamWhereInput | null
 }
 
-export type StringFieldUpdateOperationsInput = {
-  set?: string
-}
-
 export type EnumZoneFieldUpdateOperationsInput = {
   set?: $Enums.Zone
-}
-
-export type DateTimeFieldUpdateOperationsInput = {
-  set?: Date | string
 }
 
 export type TeamCreateNestedOneWithoutMatchesAInput = {

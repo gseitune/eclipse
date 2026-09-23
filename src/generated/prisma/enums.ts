@@ -35,3 +35,11 @@ export const ResultStatus = {
 } as const
 
 export type ResultStatus = (typeof ResultStatus)[keyof typeof ResultStatus]
+
+
+export const Phase = {
+  GROUPS: 'GROUPS',
+  ELIMINATORIES: 'ELIMINATORIES'
+} as const
+
+export type Phase = (typeof Phase)[keyof typeof Phase]

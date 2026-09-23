@@ -51,6 +51,8 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
+  User: 'User',
+  TournamentState: 'TournamentState',
   Team: 'Team',
   Match: 'Match'
 } as const
@@ -66,6 +68,29 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 } as const)
 
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
+
+
+export const UserScalarFieldEnum = {
+  id: 'id',
+  email: 'email',
+  passwordHash: 'passwordHash',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const TournamentStateScalarFieldEnum = {
+  id: 'id',
+  phase: 'phase',
+  zoneConfirmed: 'zoneConfirmed',
+  prepMinutes: 'prepMinutes',
+  matchMinutes: 'matchMinutes',
+  updatedAt: 'updatedAt'
+} as const
+
+export type TournamentStateScalarFieldEnum = (typeof TournamentStateScalarFieldEnum)[keyof typeof TournamentStateScalarFieldEnum]
 
 
 export const TeamScalarFieldEnum = {
@@ -91,6 +116,7 @@ export const MatchScalarFieldEnum = {
   setBScore: 'setBScore',
   resultStatus: 'resultStatus',
   winnerId: 'winnerId',
+  recordedAt: 'recordedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const

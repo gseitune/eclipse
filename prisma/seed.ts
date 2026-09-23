@@ -104,6 +104,12 @@ async function main(): Promise<void> {
     where: { teamAId: { not: null } },
   });
 
+  await prisma.tournamentState.upsert({
+    where: { id: 1 },
+    update: {},
+    create: { id: 1 },
+  });
+
   if (teamCount !== TEAMS.length || matchCount !== MATCHES.length) {
     throw new Error(
       `Seed mismatch: ${teamCount} teams / ${matchCount} matches expected ${TEAMS.length}/${MATCHES.length}`,

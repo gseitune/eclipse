@@ -397,6 +397,8 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 
 export const ModelName = {
+  User: 'User',
+  TournamentState: 'TournamentState',
   Team: 'Team',
   Match: 'Match'
 } as const
@@ -414,10 +416,158 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "team" | "match"
+    modelProps: "user" | "tournamentState" | "team" | "match"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
+    User: {
+      payload: Prisma.$UserPayload<ExtArgs>
+      fields: Prisma.UserFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.UserFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.UserFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserPayload>
+        }
+        findFirst: {
+          args: Prisma.UserFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.UserFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserPayload>
+        }
+        findMany: {
+          args: Prisma.UserFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserPayload>[]
+        }
+        create: {
+          args: Prisma.UserCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserPayload>
+        }
+        createMany: {
+          args: Prisma.UserCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.UserCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserPayload>[]
+        }
+        delete: {
+          args: Prisma.UserDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserPayload>
+        }
+        update: {
+          args: Prisma.UserUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserPayload>
+        }
+        deleteMany: {
+          args: Prisma.UserDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.UserUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.UserUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserPayload>[]
+        }
+        upsert: {
+          args: Prisma.UserUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UserPayload>
+        }
+        aggregate: {
+          args: Prisma.UserAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateUser>
+        }
+        groupBy: {
+          args: Prisma.UserGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UserGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.UserCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UserCountAggregateOutputType> | number
+        }
+      }
+    }
+    TournamentState: {
+      payload: Prisma.$TournamentStatePayload<ExtArgs>
+      fields: Prisma.TournamentStateFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.TournamentStateFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TournamentStatePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.TournamentStateFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TournamentStatePayload>
+        }
+        findFirst: {
+          args: Prisma.TournamentStateFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TournamentStatePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.TournamentStateFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TournamentStatePayload>
+        }
+        findMany: {
+          args: Prisma.TournamentStateFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TournamentStatePayload>[]
+        }
+        create: {
+          args: Prisma.TournamentStateCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TournamentStatePayload>
+        }
+        createMany: {
+          args: Prisma.TournamentStateCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.TournamentStateCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TournamentStatePayload>[]
+        }
+        delete: {
+          args: Prisma.TournamentStateDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TournamentStatePayload>
+        }
+        update: {
+          args: Prisma.TournamentStateUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TournamentStatePayload>
+        }
+        deleteMany: {
+          args: Prisma.TournamentStateDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.TournamentStateUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.TournamentStateUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TournamentStatePayload>[]
+        }
+        upsert: {
+          args: Prisma.TournamentStateUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TournamentStatePayload>
+        }
+        aggregate: {
+          args: Prisma.TournamentStateAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateTournamentState>
+        }
+        groupBy: {
+          args: Prisma.TournamentStateGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TournamentStateGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.TournamentStateCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TournamentStateCountAggregateOutputType> | number
+        }
+      }
+    }
     Team: {
       payload: Prisma.$TeamPayload<ExtArgs>
       fields: Prisma.TeamFieldRefs
@@ -602,6 +752,29 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
 
 
+export const UserScalarFieldEnum = {
+  id: 'id',
+  email: 'email',
+  passwordHash: 'passwordHash',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const TournamentStateScalarFieldEnum = {
+  id: 'id',
+  phase: 'phase',
+  zoneConfirmed: 'zoneConfirmed',
+  prepMinutes: 'prepMinutes',
+  matchMinutes: 'matchMinutes',
+  updatedAt: 'updatedAt'
+} as const
+
+export type TournamentStateScalarFieldEnum = (typeof TournamentStateScalarFieldEnum)[keyof typeof TournamentStateScalarFieldEnum]
+
+
 export const TeamScalarFieldEnum = {
   id: 'id',
   name: 'name',
@@ -625,6 +798,7 @@ export const MatchScalarFieldEnum = {
   setBScore: 'setBScore',
   resultStatus: 'resultStatus',
   winnerId: 'winnerId',
+  recordedAt: 'recordedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -662,13 +836,6 @@ export type StringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 
 
 
 /**
- * Reference to a field of type 'Zone'
- */
-export type EnumZoneFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Zone'>
-    
-
-
-/**
  * Reference to a field of type 'DateTime'
  */
 export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
@@ -676,16 +843,37 @@ export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel
 
 
 /**
- * Reference to a field of type 'Stage'
+ * Reference to a field of type 'Int'
  */
-export type EnumStageFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Stage'>
+export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
     
 
 
 /**
- * Reference to a field of type 'Int'
+ * Reference to a field of type 'Phase'
  */
-export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
+export type EnumPhaseFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Phase'>
+    
+
+
+/**
+ * Reference to a field of type 'Boolean'
+ */
+export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
+    
+
+
+/**
+ * Reference to a field of type 'Zone'
+ */
+export type EnumZoneFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Zone'>
+    
+
+
+/**
+ * Reference to a field of type 'Stage'
+ */
+export type EnumStageFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Stage'>
     
 
 
@@ -853,6 +1041,8 @@ export interface PrismaClientOptionsWithAdapter extends PrismaClientBaseOptions 
  */
 export type PrismaClientOptions = PrismaClientOptionsWithAccelerateUrl | PrismaClientOptionsWithAdapter
 export type GlobalOmitConfig = {
+  user?: Prisma.UserOmit
+  tournamentState?: Prisma.TournamentStateOmit
   team?: Prisma.TeamOmit
   match?: Prisma.MatchOmit
 }
