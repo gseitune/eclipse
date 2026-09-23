@@ -35,4 +35,9 @@ Back: prisma/schema.prisma + migration, prisma/seed.ts (state row only), src/lib
 - [B11] Docs: tiebreak + bracket format documented in repo
 
 ## Progress
-- B1 in progress: schema edits + migration pending
+- B1 ✅ schema + migration + client + seed state (commit 7f145b5)
+- B2 ✅ zonification pure lib + tests (canSwapZones/swapZone/regenerateZones/zoneSizes)
+- B3 ✅ standings pure lib + tests (won → setDiff → h2h → unresolved; WINNER_ONLY never invents sets)
+- B5 ✅ schedule pure lib + tests (chain prep/match minutes)
+- B6 ✅ brackets pure lib + tests (2 zonas A1×B2/B1×A2; 3 zonas A1×mejor2°, B1×C1; ties block generation conservatively)
+- Next: B4 results service (Prisma) → B9 API → B7 auth → B8 SSE → B10/B11 docs+cierre
