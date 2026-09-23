@@ -118,7 +118,7 @@ panel. The spec (2026-09-23) defines the product surface.
   RDD: off (not enabled by user) — no native review for this commit.
 - T2 done — commit `d8431d2` feat(front): live-state SSE hook. Checks: tsc
   clean, eslint clean, existing tests still 13/13. RDD: off, no review.
-- T3 done — commit `<next>` feat(front): public home shell, compact hero,
+- T3 done — commit `6d718e1` feat(front): public home shell, compact hero,
   es layout. Checks: tsc clean, eslint clean (1 pre-existing warning
   pairKey in standings.ts, not ours), tests 13/13. RDD: off.
 - Next: T4.

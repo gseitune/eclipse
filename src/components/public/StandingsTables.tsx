@@ -1,0 +1,174 @@
+"use client";
+
+import { useState } from "react";
+import { zoneName, phaseLabel } from "@/lib/front/phase";
+import type { ZoneId, StandingRow, TeamPublic } from "@/lib/front/types";
+
+const ZONES: ZoneId[] = ["A", "B", "C"];
+
+interface StandingsTablesProps {
+  standings: Partial<Record<ZoneId, StandingRow[]>>;
+  zones: Record<ZoneId, TeamPublic[]>;
+  liveIds: Set<string>;
+  liveTeamIds: Set<string>;
+  initialZone: ZoneId;
+  phase: string;
+}
+
+export function StandingsTables({
+  standings,
+  zones,
+  liveIds,
+  liveTeamIds,
+  initialZone,
+  phase,
+}: StandingsTablesProps) {
+  const [activeZone, setActiveZone] = useState<ZoneId>(initialZone);
+
+  return (
+    <section aria-label="Posiciones" className="rounded-2xl border border-sand-300 bg-white/70 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-stone-900">Posiciones</h2>
+        {liveIds.size > 0 && (
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-ember-500">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ember-500" />
+            EN VIVO
+          </span>
+        )}
+      </div>
+      <p className="text-xs text-stone-400 mt-1">{phaseLabel(phase)}</p>
+
+      {/* Mobile tabs */}
+      <div className="mt-4 flex gap-2 sm:hidden">
+        {ZONES.map((z) => {
+          const isActive = z === activeZone;
+          return (
+            <button
+              key={z}
+              onClick={() => setActiveZone(z)}
+              className={`min-h-[44px] flex-1 rounded-lg text-sm font-semibold transition-colors ${
+                isActive
+                  ? "bg-amber-700 text-white"
+                  : "bg-sand-100 text-stone-700 hover:bg-sand-200"
+              }`}
+            >
+              {zoneName(z)}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Tables grid */}
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-4">
+        {ZONES.map((z) => {
+          const rows = standings[z] ?? [];
+          const zoneTeams = zones[z] ?? [];
+          const isMobileActive = z === activeZone;
+
+          return (
+            <div
+              key={z}
+              className={isMobileActive ? "" : "hidden sm:block"}
+            >
+              <div className="rounded-xl border border-sand-200 bg-white/60 p-3">
+                {/* Zone header */}
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-bold text-stone-800">
+                    {zoneName(z)}
+                  </h3>
+                  <span className="inline-flex items-center justify-center rounded-full bg-sand-200 px-2 py-0.5 text-xs font-semibold text-stone-600">
+                    {zoneTeams.length}
+                  </span>
+                </div>
+
+                {/* Empty state */}
+                {rows.length === 0 && zoneTeams.length === 0 ? (
+                  <p className="py-4 text-center text-sm text-stone-400">
+                    Sin equipos
+                  </p>
+                ) : (
+                  <table className="w-full" aria-label={`Posiciones ${zoneName(z)}`}>
+                    <thead>
+                      <tr className="border-b border-sand-200 text-xs text-stone-500">
+                        <th className="w-8 py-1 text-left font-semibold">
+                          #
+                        </th>
+                        <th className="py-1 text-left font-semibold">
+                          Equipo
+                        </th>
+                        <th className="py-1 text-right font-semibold">
+                          PJ
+                        </th>
+                        <th className="py-1 text-right font-semibold">
+                          G
+                        </th>
+                        <th className="py-1 text-right font-semibold">
+                          P
+                        </th>
+                        <th className="py-1 text-right font-semibold">
+                          DG
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-sand-100">
+                      {rows.map((row, idx) => {
+                        const isLeader = idx === 0;
+                        const isLive = liveTeamIds.has(row.teamId);
+
+                        return (
+                          <tr
+                            key={row.teamId}
+                            className={
+                              isLive
+                                ? "bg-sand-50"
+                                : isLeader
+                                  ? "bg-amber-50/40"
+                                  : ""
+                            }
+                          >
+                            <td className="py-1.5">
+                              <span
+                                className={`font-bold ${
+                                  isLeader ? "text-amber-700" : "text-stone-500"
+                                }`}
+                              >
+                                {idx + 1}
+                              </span>
+                            </td>
+                            <td className="py-1.5">
+                              <span className="block truncate text-stone-800">
+                                {row.teamName}
+                              </span>
+                              {isLive && (
+                                <span className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-semibold text-ember-500">
+                                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ember-500" />
+                                  EN VIVO
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-1.5 text-right text-sm text-stone-600">
+                              {row.played}
+                            </td>
+                            <td className="py-1.5 text-right text-sm text-stone-600">
+                              {row.won}
+                            </td>
+                            <td className="py-1.5 text-right text-sm text-stone-600">
+                              {row.lost}
+                            </td>
+                            <td className="py-1.5 text-right text-sm text-stone-600">
+                              {row.setDiff}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}

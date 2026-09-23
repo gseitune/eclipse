@@ -1,15 +1,42 @@
 "use client";
 
+import { useMemo } from "react";
 import { useLiveState } from "@/lib/front/use-live-state";
 import { phaseLabel } from "@/lib/front/phase";
-import type { StateSnapshot } from "@/lib/front/types";
+import { liveMatchIds } from "@/lib/front/live";
+import type { StateSnapshot, ZoneId, TeamPublic } from "@/lib/front/types";
 import { Hero } from "./Hero";
+import { StandingsTables } from "./StandingsTables";
 
 export function PublicHome({ initial }: { initial: StateSnapshot | null }) {
   const { state, loading, error } = useLiveState({ initial });
 
   const live = state !== null;
   const phase = state?.phase ?? "GROUPS";
+
+  const { liveIds, liveTeamIds, initialZone } = useMemo(() => {
+    if (!state) {
+      return { liveIds: new Set<string>(), liveTeamIds: new Set<string>(), initialZone: "A" as ZoneId };
+    }
+
+    const ids = liveMatchIds(state.schedule, state.matchMinutes);
+
+    // The live match is the first PENDING one (back orders by slot). The
+    // snapshot exposes its zone/teams through nextMatch, not through the
+    // schedule rows (no zone field) nor the brackets (eliminatories only).
+    const next = state.nextMatch;
+    const nextLive = next !== null && ids.has(next.id);
+
+    const teamIds = new Set<string>();
+    if (nextLive) {
+      if (next.teamAId) teamIds.add(next.teamAId);
+      if (next.teamBId) teamIds.add(next.teamBId);
+    }
+
+    const zone: ZoneId = nextLive && next.zone ? next.zone : "A";
+
+    return { liveIds: ids, liveTeamIds: teamIds, initialZone: zone };
+  }, [state]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -41,12 +68,16 @@ export function PublicHome({ initial }: { initial: StateSnapshot | null }) {
         </div>
       </div>
 
-      {/* Placeholder sections for T4, T6, T8 */}
+      {/* Sections */}
       <div className="mx-auto w-full max-w-3xl px-6 py-6 space-y-6">
-        <section aria-label="Posiciones" className="rounded-2xl border border-sand-300 bg-white/70 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
-          <h2 className="text-lg font-semibold text-stone-900">Posiciones</h2>
-          <p className="mt-2 text-sm text-stone-500">…</p>
-        </section>
+        <StandingsTables
+          standings={state?.standings ?? {}}
+          zones={state?.zones ?? { A: [], B: [], C: [] } as Record<ZoneId, TeamPublic[]>}
+          liveIds={liveIds}
+          liveTeamIds={liveTeamIds}
+          initialZone={initialZone}
+          phase={phase}
+        />
 
         <section aria-label="Marcador" className="rounded-2xl border border-sand-300 bg-white/70 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
           <h2 className="text-lg font-semibold text-stone-900">Marcador</h2>
