@@ -61,7 +61,7 @@ export function distributeTeams(
   let cursor = 0;
   for (const [index, group] of groups.entries()) {
     const size = baseSize + (extraGroups.has(index) ? 1 : 0);
-    groups[index].teams = teamNames.slice(cursor, cursor + size);
+    group.teams = teamNames.slice(cursor, cursor + size);
     cursor += size;
   }
 

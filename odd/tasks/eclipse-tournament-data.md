@@ -24,6 +24,8 @@
 - [ ] T2: Seed `prisma/seed.ts` — 10 teams + 23 matches (stage/timeLabel/slot); `tsx` installed; `prisma.seed` config; `npx prisma db seed` runs clean
 - [ ] T3: Home footer shows team + match counts; build + dev boot OK
 - [ ] T4: Work-unit commits + push to `origin/main`
+- [ ] T5: Align schema Zone enum with engine — add `C` to `Zone` in `prisma/schema.prisma`, regenerate client, migrate if needed (SQLite stores TEXT; enum validation is app-level). Seed stays A/B (brief-canonical).
+- [ ] T6: Persistent test suite for the engine — `src/lib/tournament.test.ts` on `node:test` via `tsx` (zero new deps); cover: <6 throws, group counts at 6/10/11, balanced sizes (max diff 1) at 11/12/13, zone order preserved, injectable RNG determinism. `npm test` script.
 
 ## Progress
 
@@ -31,6 +33,9 @@
 - T2: DONE 2026-09-22 — idempotent seed via `prisma.config.ts` `migrations.seed` (Prisma 7 no longer reads `package.json` `prisma.seed`: "No seed command configured"); `npx prisma db seed` → "Seed OK — 10 teams, 23 matches (20 with fixed pairs, 3 bracket slots)".
 - T3: DONE 2026-09-22 — footer shows "10 equipos · 23 partidos cargados"; build passes; dev HTTP 200 with seeded names.
 - T4: DONE 2026-09-22 — 4 work-unit commits: `e6d4db5` engine, `92c4b4d` seed, `451b175` home counts, `bacdbfa` docs. Push pending.
+- T5/T6: added 2026-09-23 — Gabriel asked to "leave the logic side prepared" for future changes; scope confirmed: align schema+logic and add tests (6/10/11/13 edge cases). 3-zone playoff structure remains an open product decision (not in scope).
+- T5: DONE 2026-09-23 — `Zone` enum now A/B/C in `prisma/schema.prisma`; client regenerated. `migrate dev` reported "already in sync" (SQLite stores TEXT — no SQL-level CHECK constraint, enum is app-level). Seed unchanged and still A/B (brief-canonical).
+- T6: DONE 2026-09-23 — `src/lib/tournament.test.ts` on `node:test` via tsx (`npm test`): 12 tests pass — <6 throws, group counts at 6/10/11, balanced sizes (max diff 1) at 11/12/13, 50×random balance sweep for 6–20 teams, order/membership preserved, RNG-injection determinism. Also fixed `no-unused-vars` lint warning in `distributeTeams` (use `group.teams` instead of `groups[index].teams`). Build + lint + seed all green.
 
 ## Delivery
 

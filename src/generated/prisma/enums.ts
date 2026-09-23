@@ -11,7 +11,8 @@
 
 export const Zone = {
   A: 'A',
-  B: 'B'
+  B: 'B',
+  C: 'C'
 } as const
 
 export type Zone = (typeof Zone)[keyof typeof Zone]

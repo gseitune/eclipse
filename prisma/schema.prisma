@@ -10,6 +10,7 @@ datasource db {
 enum Zone {
   A
   B
+  C
 }
 
 enum Stage {
