@@ -90,8 +90,8 @@ export function computeSchedule(
       nextStart = new Date(anchor.recordedAt.getTime() + prepMinutes * MS);
     }
 
-    const start = nextStart;
-    const end = new Date(start.getTime() + matchMinutes * MS);
+    const start: Date = nextStart;
+    const end: Date = new Date(start.getTime() + matchMinutes * MS);
     rows.push({
       id: m.id,
       slot: m.slot,

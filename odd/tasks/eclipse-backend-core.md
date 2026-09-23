@@ -40,4 +40,8 @@ Back: prisma/schema.prisma + migration, prisma/seed.ts (state row only), src/lib
 - B3 ✅ standings pure lib + tests (won → setDiff → h2h → unresolved; WINNER_ONLY never invents sets)
 - B5 ✅ schedule pure lib + tests (chain prep/match minutes)
 - B6 ✅ brackets pure lib + tests (2 zonas A1×B2/B1×A2; 3 zonas A1×mejor2°, B1×C1; ties block generation conservatively)
-- Next: B4 results service (Prisma) → B9 API → B7 auth → B8 SSE → B10/B11 docs+cierre
+- B4 ✅ results service (src/lib/back.ts): recordResult validate COMPLETE/WINNER_ONLY, close match, derive nextMatch, phase transition + generate brackets on last group result, SSE publish (result/standings/schedule/phase); swapTeam/generateZones/confirmZonification with zoneConfirmed guard + valid-zone guard
+- B7 ✅ auth (src/lib/auth.ts): scrypt hash/verify, HMAC signed cookie (AUTH_SECRET, dev fallback only outside production), POST /api/auth/login|logout, organizer guard on mutate routes; scripts/create-organizer.ts para crear la cuenta (sin signup público)
+- B8 ✅ SSE (src/lib/events.ts + /api/events): bus in-memory, heartbeat 25s, eventos result-recorded/standings-changed/schedule-changed/phase-changed/brackets-*/zones-changed/zoning-confirmed
+- B9 ✅ API surface: /api/state (phase+standings+schedule+brackets+nextMatch+zones), /api/zonification (generate/swap/confirm), /api/results (record); smoke E2E OK (login→result→nextMatch→estimates; dup 409, unauth 401); fix: dev server requería restart tras `prisma generate` (módulo viejo cacheado)
+- Next: B10 tests finales + build ya pasados (35 tests ok, `npm run build` ok) → B11 docs criterios → commit único back

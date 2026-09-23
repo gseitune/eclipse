@@ -93,9 +93,9 @@ describe("computeZoneStandings", () => {
         teamBId: "t2",
         setAScore: 2,
         setBScore: 0,
-        resultStatus: "COMPLETE",
+        resultStatus: "COMPLETE" as const,
         winnerId: "t1",
-      },
+      } satisfies StandingInputMatch,
     ];
     const rows = computeZoneStandings(teams, matches, A);
     assert.equal(rows[0].played, 1, "only own-zone group matches count");
