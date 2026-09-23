@@ -67,7 +67,7 @@ export default async function Home() {
       <div className="relative z-10">
       <header className="mb-12 text-center">
         <div className="relative mx-auto mb-6 h-24 w-24">
-          <div className="absolute left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full shadow-[0_0_80px_rgba(249,115,22,0.4)]">
+          <div className="absolute left-1/2 top-1/2 h-[243px] w-[243px] -translate-x-1/2 -translate-y-1/2 rounded-full -z-10">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/sun-transparent.png"
