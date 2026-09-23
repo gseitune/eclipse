@@ -225,8 +225,22 @@ export default async function Home() {
         Base de datos conectada · {teams.length} equipos · {matches.length}
         partidos cargados.
       </footer>
+
+      <div className="mt-6 flex items-center justify-end gap-2 text-sm text-stone-500">
+        <EclipseLogo />
+        <span>GS proyecto eclipse</span>
+      </div>
       </div>
     </main>
+  );
+}
+
+function EclipseLogo() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" aria-hidden="true">
+      <circle cx="8.5" cy="12" r="6" fill="#fbbf24" />
+      <circle cx="15.5" cy="12" r="6" fill="#1c1917" />
+    </svg>
   );
 }
 
