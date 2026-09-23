@@ -15,6 +15,7 @@ enum Zone {
 
 enum Stage {
   GROUPS
+  DESEMPATE
   SEMIFINAL_1
   SEMIFINAL_2
   FINAL
@@ -28,6 +29,7 @@ enum ResultStatus {
 
 enum Phase {
   GROUPS
+  DESEMPATE
   ELIMINATORIES
 }
 

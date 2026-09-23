@@ -17,12 +17,35 @@ and brackets behave. Back feature doc: `odd/tasks/eclipse-backend-core.md`.
 Per zone, sorted by:
 
 1. **More wins** (games won).
-2. **Set difference**, computed from complete-score matches only.
+2. **Head-to-head**: within a zone, the winner of the direct match ranks
+   above. Works with any decided match — WINNER_ONLY is enough (uses
+   `winnerId`, no scoreboard needed) or a complete score.
+3. **Set difference**, computed from complete-score matches only.
    WINNER_ONLY matches never invent sets (they contribute wins only).
-3. **Head-to-head**: counts only among tied teams.
-4. **Unresolved** — if the second position (or any position the brackets need)
-   is still tied after H2H, the bracket generation **blocks** (`brackets-blocked`)
-   and the organizer decides (draw). The backend never fabricates a metric.
+4. **Deterministic draw**: if no metric separates the tied teams (including
+   the guard "they never faced each other", which should not happen in a
+   round-robin), order by name ascending, then id. Never fabricates a metric.
+
+Zone ties therefore always resolve into positions. The only tie case the
+system refuses to resolve silently is the cross-zone best-second fight
+(below).
+
+## Best second & DESEMPATE (3-zone format only)
+
+- Cross-zone seconds never faced each other: head-to-head does NOT apply.
+  Comparison is (wins, set difference).
+- **Unique best** → qualifies directly, brackets build immediately.
+- **Exactly two seconds tied** → a `DESEMPATE` match is created between them
+  for the qualifying spot. It is a regular Match: it enters the schedule
+  estimate chain (no base fixture time; estimated only), Andi loads it with
+  the normal result flow, and it fires the same SSE events (result + phase).
+  The bracket generation WAITS for its result.
+- **3+ seconds tied for the spot** → detected and reported WITHOUT breaking
+  the flow: `/api/state` exposes `bracketsBlocked` with the tied team ids,
+  and an SSE `brackets-blocked` event is published. Resolution is a future
+  product decision.
+
+Phases: `GROUPS` → `DESEMPATE` (only when needed) → `ELIMINATORIES`.
 
 ## Schedule
 
@@ -35,11 +58,16 @@ Per zone, sorted by:
 ## Brackets & phases
 
 - Phase starts at `GROUPS`. The last group result triggers position computation
-  and bracket generation; phase moves to `ELIMINATORIES`.
+  and bracket generation; phase moves to `DESEMPATE` (only if a best-second
+  playoff is needed) and then to `ELIMINATORIES` once every DESEMPATE is
+  resolved. Bracket generation never fires while a desempate is pending.
 - 2 zones: SF1 = A1 × B2, SF2 = B1 × A2, FINAL.
 - 3 zones: SF1 = A1 × best second, SF2 = B1 × C1, FINAL.
 - FINAL teams are filled when the semifinals return results (bracket slots hold
   no teams before that).
+- `/api/state` exposes `phase`, the ordered standings, `desempate`
+  (`needed` / `pending` / `match`) and `bracketsBlocked` (`reason` + `teamIds`)
+  when the 3+ edge is detected.
 
 ## Zones
 

@@ -5,14 +5,15 @@ import { computeSchedule, type ScheduleMatchInput } from "./schedule";
 
 function match(
   slot: number,
-  timeLabel: string,
+  timeLabel: string | null,
   status: "PENDING" | "WINNER_ONLY" | "COMPLETE" = "PENDING",
   recordedAt: Date | null = null,
+  stage = "GROUPS",
 ): ScheduleMatchInput {
   return {
     id: `m${slot}`,
     slot,
-    stage: "GROUPS",
+    stage,
     timeLabel,
     resultStatus: status,
     recordedAt,
@@ -69,5 +70,18 @@ describe("computeSchedule", () => {
     ];
     const rows = computeSchedule(matches, 0, 20);
     assert.equal(rows[1].estimated, "10:00 - 10:20", "prep 0 kept the window");
+  });
+
+  it("includes a DESEMPATE match in the estimate chain before the semis", () => {
+    const matches = [
+      match(1, "10:00 - 10:20", "COMPLETE", new Date(2026, 8, 23, 10, 0, 0)),
+      match(2, null, "PENDING", null, "DESEMPATE"),
+      match(3, "16:40 - 17:00", "PENDING", null, "SEMIFINAL_1"),
+    ];
+    const rows = computeSchedule(matches, 5, 20);
+    assert.equal(rows[1].scheduled, null, "desempate has no base fixture time");
+    assert.equal(rows[1].estimated, "10:05 - 10:25", "desempate chains from the result");
+    assert.equal(rows[1].stage, "DESEMPATE");
+    assert.equal(rows[2].estimated, "10:25 - 10:45", "semis chain after the desempate");
   });
 });

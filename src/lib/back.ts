@@ -2,8 +2,9 @@ import { prisma } from "./prisma";
 import { publishSse } from "./events";
 import { computeZoneStandings, type StandingRow } from "./standings";
 import { computeSchedule, type ScheduleRow } from "./schedule";
-import { buildBrackets } from "./brackets";
+import { buildBrackets, selectBestSecond, type BestSecondSelection } from "./brackets";
 import { regenerateZones, swapZone, type ZoneId } from "./zonification";
+import type { Zone } from "../generated/prisma/client";
 
 /**
  * SELVARENA backend operations (Prisma layer).
@@ -135,10 +136,95 @@ export async function getSchedule(): Promise<ScheduleRow[]> {
 
 export async function getNextMatch() {
   return prisma.match.findFirst({
-    where: { resultStatus: "PENDING" },
+    where: {
+      resultStatus: "PENDING",
+      teamAId: { not: null },
+      teamBId: { not: null },
+    },
     orderBy: { slot: "asc" },
     include: { teamA: true, teamB: true },
   });
+}
+
+/** Fills the semifinal slots and flips the phase; refuses while a tie keeps the second open. */
+async function finalizeBrackets(
+  standings: Partial<Record<Zone, StandingRow[]>>,
+  resolvedSecondId?: string,
+): Promise<{ ok: boolean; missing: string[] }> {
+  const { pairings, missing } = buildBrackets(standings, {
+    ...(resolvedSecondId ? { resolvedSecondId } : {}),
+  });
+  if (missing.length > 0 || pairings.length === 0) {
+    publishSse("brackets-blocked", { missing });
+    return { ok: false, missing };
+  }
+  for (const pairing of pairings) {
+    await prisma.match.updateMany({
+      where: { stage: pairing.stage },
+      data: { teamAId: pairing.teamAId, teamBId: pairing.teamBId },
+    });
+  }
+  await prisma.tournamentState.update({
+    where: { id: 1 },
+    data: { phase: "ELIMINATORIES" },
+  });
+  publishSse("phase-changed", { phase: "ELIMINATORIES" });
+  publishSse("brackets-generated", { pairings });
+  return { ok: true, missing: [] };
+}
+
+/**
+ * Creates the DESEMPATE match for the best-second spot (3-zone format).
+ * The match enters the schedule chain between the last group match and the
+ * eliminatories; existing bracket slots shift one slot later to make room.
+ */
+async function createDesempateMatch(selection: {
+  teamAId: string;
+  teamBId: string;
+}): Promise<boolean> {
+  const existing = await prisma.match.findFirst({
+    where: { stage: "DESEMPATE", resultStatus: "PENDING" },
+  });
+  if (existing) return false;
+
+  const state = await getState();
+  if (state.phase !== "GROUPS") return false;
+
+  const maxGroupSlot = await prisma.match.aggregate({
+    _max: { slot: true },
+    where: { stage: "GROUPS" },
+  });
+  const anchor = maxGroupSlot._max.slot ?? 0;
+
+  // Make room: push every slot after the groups one position later.
+  await prisma.match.updateMany({
+    where: { slot: { gt: anchor } },
+    data: { slot: { increment: 1 } },
+  });
+
+  const desempate = await prisma.match.create({
+    data: {
+      stage: "DESEMPATE",
+      slot: anchor + 1,
+      timeLabel: null,
+      teamAId: selection.teamAId,
+      teamBId: selection.teamBId,
+    },
+  });
+
+  await prisma.tournamentState.update({
+    where: { id: 1 },
+    data: { phase: "DESEMPATE" },
+  });
+
+  publishSse("desempate-created", {
+    matchId: desempate.id,
+    teamAId: selection.teamAId,
+    teamBId: selection.teamBId,
+  });
+  publishSse("phase-changed", { phase: "DESEMPATE" });
+  publishSse("schedule-changed", { matchId: desempate.id });
+  return true;
 }
 
 export async function getBracketsSnapshot() {
@@ -147,6 +233,83 @@ export async function getBracketsSnapshot() {
     orderBy: { slot: "asc" },
     include: { teamA: true, teamB: true, winner: true },
   });
+}
+
+/**
+ * Full public snapshot for GET /api/state.
+ * Exposes phase (GROUPS | DESEMPATE | ELIMINATORIES), the standings already
+ * ordered by the tiebreak criterion, and — when applicable — the DESEMPATE
+ * flag + assigned match, plus the 3+ seconds blocked edge as a report.
+ */
+export async function getStateSnapshot() {
+  const [state, standings, schedule, brackets, nextMatch, zones, desempateMatches] =
+    await Promise.all([
+      getState(),
+      getStandings(),
+      getSchedule(),
+      getBracketsSnapshot(),
+      getNextMatch(),
+      getTeamsByZone(),
+      prisma.match.findMany({
+        where: { stage: "DESEMPATE" },
+        include: { teamA: true, teamB: true },
+        orderBy: { slot: "asc" },
+      }),
+    ]);
+
+  const zonesPresent = Object.keys(standings) as Zone[];
+  let selection: BestSecondSelection | null = null;
+  if (state.phase !== "ELIMINATORIES" && zonesPresent.length === 3) {
+    selection = selectBestSecond(standings);
+  }
+
+  const pendingDesempate =
+    desempateMatches.find((m) => m.resultStatus === "PENDING") ?? null;
+
+  const desempate = {
+    needed:
+      state.phase === "DESEMPATE" ||
+      pendingDesempate !== null ||
+      selection?.kind === "playoff",
+    pending: pendingDesempate !== null,
+    match: pendingDesempate
+      ? {
+          id: pendingDesempate.id,
+          slot: pendingDesempate.slot,
+          teamA: pendingDesempate.teamA
+            ? {
+                id: pendingDesempate.teamA.id,
+                name: pendingDesempate.teamA.name,
+              }
+            : null,
+          teamB: pendingDesempate.teamB
+            ? {
+                id: pendingDesempate.teamB.id,
+                name: pendingDesempate.teamB.name,
+              }
+            : null,
+        }
+      : null,
+  };
+
+  const bracketsBlocked =
+    selection?.kind === "blocked"
+      ? { reason: "three_seconds_tie", teamIds: selection.teamIds }
+      : null;
+
+  return {
+    phase: state.phase,
+    zoneConfirmed: state.zoneConfirmed,
+    prepMinutes: state.prepMinutes,
+    matchMinutes: state.matchMinutes,
+    standings,
+    schedule,
+    brackets,
+    nextMatch,
+    zones,
+    desempate,
+    bracketsBlocked,
+  };
 }
 
 export interface RecordResultInput {
@@ -222,36 +385,49 @@ export async function recordResult(input: RecordResultInput) {
 
   let phaseChanged = false;
   let bracketsChanged = false;
-  const groupExpected = await prisma.match.count({
-    where: { stage: "GROUPS" },
-  });
-  const groupDecided = await prisma.match.count({
-    where: { stage: "GROUPS", resultStatus: { not: "PENDING" } },
-  });
+  let desempateCreated = false;
 
-  if (groupDecided === groupExpected) {
-    const state = await getState();
-    if (state.phase === "GROUPS") {
-      const standings = await getStandings();
-      const { pairings, missing } = buildBrackets(standings);
-      if (missing.length > 0) {
-        publishSse("brackets-blocked", { missing });
-      } else {
-        for (const pairing of pairings) {
-          await prisma.match.updateMany({
-            where: { stage: pairing.stage },
-            data: { teamAId: pairing.teamAId, teamBId: pairing.teamBId },
-          });
+  if (match.stage === "GROUPS") {
+    const groupExpected = await prisma.match.count({
+      where: { stage: "GROUPS" },
+    });
+    const groupDecided = await prisma.match.count({
+      where: { stage: "GROUPS", resultStatus: { not: "PENDING" } },
+    });
+
+    if (groupDecided === groupExpected) {
+      const state = await getState();
+      if (state.phase === "GROUPS") {
+        const standings = await getStandings();
+        const zones = Object.keys(standings) as Zone[];
+        if (zones.length === 3) {
+          const selection = selectBestSecond(standings);
+          if (selection?.kind === "playoff") {
+            desempateCreated = await createDesempateMatch(selection);
+          } else if (selection?.kind === "blocked") {
+            publishSse("brackets-blocked", {
+              reason: "three_seconds_tie",
+              teamIds: selection.teamIds,
+            });
+          } else {
+            const res = await finalizeBrackets(standings);
+            phaseChanged = res.ok;
+            bracketsChanged = res.ok;
+          }
+        } else {
+          const res = await finalizeBrackets(standings);
+          phaseChanged = res.ok;
+          bracketsChanged = res.ok;
         }
-        await prisma.tournamentState.update({
-          where: { id: 1 },
-          data: { phase: "ELIMINATORIES" },
-        });
-        phaseChanged = true;
-        bracketsChanged = true;
-        publishSse("phase-changed", { phase: "ELIMINATORIES" });
-        publishSse("brackets-generated", { pairings });
       }
+    }
+  } else if (match.stage === "DESEMPATE" && winnerId) {
+    const state = await getState();
+    if (state.phase === "DESEMPATE") {
+      const standings = await getStandings();
+      const res = await finalizeBrackets(standings, winnerId);
+      phaseChanged = res.ok;
+      bracketsChanged = res.ok;
     }
   }
 
@@ -262,6 +438,7 @@ export async function recordResult(input: RecordResultInput) {
     matchId: match.id,
     phaseChanged,
     bracketsChanged,
+    desempateCreated,
     nextMatch: await getNextMatch(),
   };
 }

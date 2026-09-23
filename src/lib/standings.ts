@@ -3,12 +3,20 @@ import type { ResultStatus, Zone } from "../generated/prisma/client";
 /**
  * Zone standings (POSITIONS) for SELVARENA.
  *
- * Tiebreak criterion (product decision, reported to the organizer):
+ * Tiebreak criterion (product decision — addendum 2026-09-23):
  *   1. More wins (PG).
- *   2. Set difference (sets for - sets against) counted ONLY from complete
+ *   2. Head-to-head among the tied teams: the winner of the direct match
+ *      ranks above (winnerId from ANY decided match — WINNER_ONLY is enough,
+ *      no score needed).
+ *   3. Set difference (sets for - sets against) counted ONLY from complete
  *      matches; WINNER_ONLY matches contribute no sets (never invent points).
- *   3. Head-to-head among the tied teams.
- *   4. Unresolved tie -> organizer draw; never fabricate a metric.
+ *   4. Deterministic draw: name ascending, then id ascending. Documented
+ *      fallback for the guard "they never faced each other" (should not
+ *      happen in round-robin). The backend never fabricates a metric.
+ *
+ * Zone ties always resolve into positions (no unresolvedTie anymore): the
+ * only still-open tie case is the cross-zone best-second fight, handled at
+ * the bracket level (DESEMPATE match / 3+ blocked edge).
  */
 
 export interface StandingInputTeam {
@@ -36,16 +44,8 @@ export interface StandingRow {
   won: number;
   lost: number;
   setDiff: number;
-  /** true when the tiebreak criteria could not fully separate this team from its clique. */
+  /** Kept for API compatibility; zone ties now resolve deterministically. */
   unresolvedTie: boolean;
-}
-
-function compareRows(a: StandingRow, b: StandingRow): number {
-  return (
-    b.won - a.won ||
-    b.setDiff - a.setDiff ||
-    a.teamName.localeCompare(b.teamName)
-  );
 }
 
 function pairKey(a: string, b: string): string {
@@ -67,57 +67,48 @@ function isDecidedGroupMatch(
   );
 }
 
+/** Wins in direct matches against the other members of the same won-clique. */
+function headToHeadWins(
+  slice: StandingRow[],
+  matches: StandingInputMatch[],
+): Map<string, number> {
+  const ids = new Set(slice.map((r) => r.teamId));
+  const wins = new Map<string, number>();
+  for (const m of matches) {
+    if (!isDecidedGroupMatch(m, ids)) continue;
+    if (m.winnerId) wins.set(m.winnerId, (wins.get(m.winnerId) ?? 0) + 1);
+  }
+  return wins;
+}
+
 /**
- * Reorders a tied clique [start..end] of `rows` by head-to-head and flags
- * unresolved ties. `rows` must already be sorted by (won, setDiff, name).
+ * Reorders an equal-wins clique [start..end] of `rows` with the full
+ * tiebreak chain: head-to-head first, then setDiff, then deterministic draw.
+ * `rows` must already be sorted by (won, name, id) so equal-wins teams are
+ * contiguous.
  */
-function resolveHeadToHead(
+function resolveClique(
   rows: StandingRow[],
   matches: StandingInputMatch[],
   start: number,
   end: number,
 ): void {
   const slice = rows.slice(start, end + 1);
-  const ids = new Set(slice.map((r) => r.teamId));
-  const direct = matches.filter((m) => isDecidedGroupMatch(m, ids));
-
-  const knownPairs = new Set<string>();
-  const h2hWins = new Map<string, number>();
-  for (const m of direct) {
-    knownPairs.add(pairKey(m.teamAId, m.teamBId));
-    if (m.winnerId) {
-      h2hWins.set(m.winnerId, (h2hWins.get(m.winnerId) ?? 0) + 1);
-    }
-  }
-
-  const expectedPairs = (slice.length * (slice.length - 1)) / 2;
-  const missingPair = knownPairs.size !== expectedPairs;
-
+  const h2h = headToHeadWins(slice, matches);
   slice.sort(
     (x, y) =>
-      (h2hWins.get(y.teamId) ?? 0) - (h2hWins.get(x.teamId) ?? 0) ||
-      x.teamName.localeCompare(y.teamName),
+      (h2h.get(y.teamId) ?? 0) - (h2h.get(x.teamId) ?? 0) ||
+      y.setDiff - x.setDiff ||
+      x.teamName.localeCompare(y.teamName) ||
+      x.teamId.localeCompare(y.teamId),
   );
-
-  // Flag unresolved: identical h2h wins OR a pair without a direct result.
-  const byWins = new Map<number, StandingRow[]>();
-  for (const row of slice) {
-    const w = h2hWins.get(row.teamId) ?? 0;
-    byWins.set(w, [...(byWins.get(w) ?? []), row]);
-  }
-  const tiedOnH2h = [...byWins.values()].some((group) => group.length > 1);
-
-  if (missingPair || tiedOnH2h) {
-    for (const row of slice) row.unresolvedTie = true;
-  }
-
   rows.splice(start, end - start + 1, ...slice);
 }
 
 /**
  * Computes the standings of one zone from group-phase matches only.
  * Match counts include WINNER_ONLY and COMPLETE results; sets count only
- * for COMPLETE results.
+ * for COMPLETE results; head-to-head uses winnerId from any decided match.
  */
 export function computeZoneStandings(
   teams: StandingInputTeam[],
@@ -162,24 +153,24 @@ export function computeZoneStandings(
 
   for (const row of rows.values()) row.lost = row.played - row.won;
 
-  const sorted = [...rows.values()].sort(compareRows);
+  // Base order: wins only (h2h precedes setDiff, so equal-wins teams must
+  // stay contiguous before the clique resolver applies the full chain).
+  const sorted = [...rows.values()].sort(
+    (a, b) =>
+      b.won - a.won ||
+      a.teamName.localeCompare(b.teamName) ||
+      a.teamId.localeCompare(b.teamId),
+  );
 
   let i = 0;
   while (i < sorted.length) {
     let j = i;
-    while (
-      j + 1 < sorted.length &&
-      sameRankKey(sorted[j], sorted[j + 1])
-    ) {
+    while (j + 1 < sorted.length && sorted[j + 1].won === sorted[i].won) {
       j += 1;
     }
-    if (j > i) resolveHeadToHead(sorted, matches, i, j);
+    if (j > i) resolveClique(sorted, matches, i, j);
     i = j + 1;
   }
 
   return sorted;
-}
-
-function sameRankKey(a: StandingRow, b: StandingRow): boolean {
-  return a.won === b.won && a.setDiff === b.setDiff;
 }

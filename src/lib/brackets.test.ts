@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 
 import type { Zone } from "../generated/prisma/client";
 import type { StandingRow } from "./standings";
-import { bestSecond, buildBrackets, isGroupPhaseComplete } from "./brackets";
+import { buildBrackets, isGroupPhaseComplete, selectBestSecond } from "./brackets";
 
 const A: Zone = "A";
 const B: Zone = "B";
@@ -29,23 +29,38 @@ describe("isGroupPhaseComplete", () => {
   });
 });
 
-describe("bestSecond", () => {
-  it("picks the strongest runner-up by wins then setDiff", () => {
+describe("selectBestSecond", () => {
+  it("picks the strongest runner-up by wins then setDiff (direct)", () => {
     const standings = {
       A: [row("a1", A, 4), row("a2", A, 3, 2)],
       B: [row("b1", B, 4), row("b2", B, 3, 4)],
+      C: [row("c1", C, 4), row("c2", C, 3, 2)],
     };
-    const second = bestSecond(standings);
-    assert.equal(second?.teamId, "b2");
+    const selection = selectBestSecond(standings);
+    assert.deepEqual(selection, { kind: "direct", teamId: "b2" });
   });
 
-  it("returns null when ANY runner-up is unresolved (organizer must resolve first)", () => {
+  it("generates a DESEMPATE match when exactly two seconds tie", () => {
     const standings = {
-      A: [row("a1", A, 4), row("a2", A, 3, 0, true)],
-      B: [row("b1", B, 4), row("b2", B, 3)],
+      A: [row("a1", A, 4), row("a2", A, 2, 2)],
+      B: [row("b1", B, 4), row("b2", B, 2, 2)],
+      C: [row("c1", C, 4), row("c2", C, 2, 0)],
     };
-    const second = bestSecond(standings);
-    assert.equal(second, null);
+    const selection = selectBestSecond(standings);
+    assert.deepEqual(selection, { kind: "playoff", teamAId: "a2", teamBId: "b2" });
+  });
+
+  it("detects and reports 3+ seconds tied for the spot (blocked edge)", () => {
+    const standings = {
+      A: [row("a1", A, 4), row("a2", A, 2, 2)],
+      B: [row("b1", B, 4), row("b2", B, 2, 2)],
+      C: [row("c1", C, 4), row("c2", C, 2, 2)],
+    };
+    const selection = selectBestSecond(standings);
+    assert.deepEqual(selection, {
+      kind: "blocked",
+      teamIds: ["a2", "b2", "c2"],
+    });
   });
 });
 
@@ -63,9 +78,9 @@ describe("buildBrackets - 2 zones", () => {
     ]);
   });
 
-  it("reports missing slots when a tie is unresolved", () => {
+  it("reports missing slots when a zone lacks a runner-up", () => {
     const standings = {
-      A: [row("a1", A, 4), row("a2", A, 3, 0, true)],
+      A: [row("a1", A, 4)],
       B: [row("b1", B, 4), row("b2", B, 3)],
     };
     const { pairings, missing } = buildBrackets(standings);
@@ -89,14 +104,41 @@ describe("buildBrackets - 3 zones", () => {
     ]);
   });
 
-  it("reports missing when the best second is unresolved", () => {
+  it("does NOT build while the best second is tied (desempate pending)", () => {
     const standings = {
-      A: [row("a1", A, 3), row("a2", A, 2, 3, true)],
-      B: [row("b1", B, 3), row("b2", B, 2, 1)],
+      A: [row("a1", A, 3), row("a2", A, 2, 2)],
+      B: [row("b1", B, 3), row("b2", B, 2, 2)],
       C: [row("c1", C, 3), row("c2", C, 2, 0)],
     };
     const { pairings, missing } = buildBrackets(standings);
+    assert.deepEqual(pairings, [], "brackets wait for the desempate result");
+    assert.deepEqual(missing, ["Best second (desempate)"]);
+  });
+
+  it("builds once the desempate winner resolves the second spot", () => {
+    const standings = {
+      A: [row("a1", A, 3), row("a2", A, 2, 2)],
+      B: [row("b1", B, 3), row("b2", B, 2, 2)],
+      C: [row("c1", C, 3), row("c2", C, 2, 0)],
+    };
+    const { pairings, missing } = buildBrackets(standings, {
+      resolvedSecondId: "a2",
+    });
+    assert.deepEqual(missing, []);
+    assert.deepEqual(pairings, [
+      { stage: "SEMIFINAL_1", teamAId: "a1", teamBId: "a2" },
+      { stage: "SEMIFINAL_2", teamAId: "b1", teamBId: "c1" },
+    ]);
+  });
+
+  it("reports the 3+ blocked edge without breaking the flow", () => {
+    const standings = {
+      A: [row("a1", A, 3), row("a2", A, 2, 2)],
+      B: [row("b1", B, 3), row("b2", B, 2, 2)],
+      C: [row("c1", C, 3), row("c2", C, 2, 2)],
+    };
+    const { pairings, missing } = buildBrackets(standings);
     assert.deepEqual(pairings, []);
-    assert.deepEqual(missing, ["Best second"]);
+    assert.deepEqual(missing, ["Best second (3+ tied)"]);
   });
 });
