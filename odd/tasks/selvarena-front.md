@@ -49,7 +49,7 @@ panel. The spec (2026-09-23) defines the product surface.
       (`src/lib/front/types.ts`, `src/lib/front/api.ts`, `src/lib/front/phase.ts`,
       `phase.test.ts`; package.json test script extended). Checks: tests 54/54,
       tsc clean, eslint clean.
-- [ ] T2 — Live state hook: fetch /api/state + EventSource /api/events with
+- [x] T2 — Live state hook: fetch /api/state + EventSource /api/events with
       reconnect + heartbeat check (`src/lib/front/use-live-state.ts`)
 - [ ] T3 — Root layout (lang es, metadata) + public home shell (server fetch
       /api/state, hero compacto, discreet "Organizador" link)
@@ -112,7 +112,13 @@ panel. The spec (2026-09-23) defines the product surface.
   verification
 
 ## Progress / evidence
-- Not started (T1 next).
+- T1 done — commit `4318f29` feat(front): API contract types, typed client,
+  phase helpers. Checks: `node --import tsx --test src/lib/front/phase.test.ts`
+  13/13, full `npm test` 54/54, `npx tsc --noEmit` clean, eslint clean.
+  RDD: off (not enabled by user) — no native review for this commit.
+- T2 done — commit `<next>` feat(front): live-state SSE hook. Checks: tsc
+  clean, eslint clean, existing tests still 13/13. RDD: off, no review.
+- Next: T3.
 
 ## Next step
 T1.
