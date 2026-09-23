@@ -221,15 +221,16 @@ export default async function Home() {
         </div>
       </section>
 
-      <footer className="mt-10 border-t border-sand-200 pt-5 text-sm text-stone-500">
-        Base de datos conectada · {teams.length} equipos · {matches.length}
-        partidos cargados.
+      <footer className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-sand-200 pt-5 text-sm text-stone-500">
+        <span>
+          Base de datos conectada · {teams.length} equipos · {matches.length}{" "}
+          partidos cargados.
+        </span>
+        <span className="flex items-center gap-0 font-bold uppercase">
+          GS proyecto eclipse
+          <EclipseLogo />
+        </span>
       </footer>
-
-      <div className="mt-6 flex items-center justify-end gap-2 text-sm text-stone-500">
-        <EclipseLogo />
-        <span>GS proyecto eclipse</span>
-      </div>
       </div>
     </main>
   );
@@ -237,10 +238,13 @@ export default async function Home() {
 
 function EclipseLogo() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" aria-hidden="true">
-      <circle cx="8.5" cy="12" r="6" fill="#fbbf24" />
-      <circle cx="15.5" cy="12" r="6" fill="#1c1917" />
-    </svg>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/sun-transparent.png"
+      alt=""
+      className="h-8 w-8 shrink-0 object-contain brightness-0"
+      draggable={false}
+    />
   );
 }
 
