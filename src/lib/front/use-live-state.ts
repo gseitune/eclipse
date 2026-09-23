@@ -21,7 +21,7 @@ const DEBOUNCE_MS = 250;
 const RECONNECT_INITIAL_MS = 1000;
 const RECONNECT_MAX_MS = 15000;
 
-export function useLiveState(): {
+export function useLiveState(options?: { initial?: StateSnapshot | null }): {
   state: StateSnapshot | null;
   loading: boolean;
   error: string | null;
@@ -29,8 +29,10 @@ export function useLiveState(): {
   refreshing: boolean;
   refetch: () => Promise<void>;
 } {
-  const [state, setState] = useState<StateSnapshot | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const hasInitial = options?.initial !== undefined;
+  const initialValue: StateSnapshot | null = hasInitial ? options.initial! : null;
+  const [state, setState] = useState<StateSnapshot | null>(initialValue);
+  const [loading, setLoading] = useState<boolean>(!hasInitial);
   const [error, setError] = useState<string | null>(null);
   const [lastEvent, setLastEvent] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -83,23 +85,25 @@ export function useLiveState(): {
   useEffect(() => {
     mountedRef.current = true;
 
-    // Initial fetch
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
-    fetchState()
-      .then((snapshot) => {
-        if (mountedRef.current) {
-          setState(snapshot);
-          setLoading(false);
-        }
-      })
-      .catch((err) => {
-        if (mountedRef.current) {
-          const msg = err instanceof ApiError ? err.message : String(err);
-          setError(msg);
-          setLoading(false);
-        }
-      });
+    // Initial fetch — skip when initial data provided
+    if (!hasInitial) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLoading(true);
+      fetchState()
+        .then((snapshot) => {
+          if (mountedRef.current) {
+            setState(snapshot);
+            setLoading(false);
+          }
+        })
+        .catch((err) => {
+          if (mountedRef.current) {
+            const msg = err instanceof ApiError ? err.message : String(err);
+            setError(msg);
+            setLoading(false);
+          }
+        });
+    }
 
     const createSource = () => {
       const es = new EventSource("/api/events");
@@ -169,7 +173,7 @@ export function useLiveState(): {
         debounceTimerRef.current = null;
       }
     };
-  }, [performRefetch]);
+  }, [performRefetch, hasInitial]);
 
   return { state, loading, error, lastEvent, refreshing, refetch };
 }

@@ -51,7 +51,7 @@ panel. The spec (2026-09-23) defines the product surface.
       tsc clean, eslint clean.
 - [x] T2 — Live state hook: fetch /api/state + EventSource /api/events with
       reconnect + heartbeat check (`src/lib/front/use-live-state.ts`)
-- [ ] T3 — Root layout (lang es, metadata) + public home shell (server fetch
+- [x] T3 — Root layout (lang es, metadata) + public home shell (server fetch
       /api/state, hero compacto, discreet "Organizador" link)
 - [ ] T4 — Standings position tables: mobile tabs A/B/C (auto-open zone with
       live match), desktop 3 columns
@@ -116,9 +116,12 @@ panel. The spec (2026-09-23) defines the product surface.
   phase helpers. Checks: `node --import tsx --test src/lib/front/phase.test.ts`
   13/13, full `npm test` 54/54, `npx tsc --noEmit` clean, eslint clean.
   RDD: off (not enabled by user) — no native review for this commit.
-- T2 done — commit `<next>` feat(front): live-state SSE hook. Checks: tsc
+- T2 done — commit `d8431d2` feat(front): live-state SSE hook. Checks: tsc
   clean, eslint clean, existing tests still 13/13. RDD: off, no review.
-- Next: T3.
+- T3 done — commit `<next>` feat(front): public home shell, compact hero,
+  es layout. Checks: tsc clean, eslint clean (1 pre-existing warning
+  pairKey in standings.ts, not ours), tests 13/13. RDD: off.
+- Next: T4.
 
 ## Next step
 T1.

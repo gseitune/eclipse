@@ -13,14 +13,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SELVARENA · Circuito Mixto Etapa 5",
-  description: "Circuito de beach vóley — Circuito Mixto Principiantes 2026, Etapa 5.",
+  title: "SELVARENA · En vivo",
+  description: "Circuito de beach vóley — Circuito Mixto Principiantes 2026, en vivo.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
-      lang="en"
+      lang="es"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
