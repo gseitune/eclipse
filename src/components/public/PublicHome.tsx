@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import { useLiveState } from "@/lib/front/use-live-state";
 import { phaseLabel } from "@/lib/front/phase";
 import { liveMatchIds } from "@/lib/front/live";
@@ -88,6 +89,13 @@ export function PublicHome({ initial }: { initial: StateSnapshot | null }) {
           desempate={state?.desempate ?? { needed: false, pending: false, match: null }}
           matchMinutes={state?.matchMinutes ?? 20}
         />
+
+        <Link
+          href="/agenda"
+          className="flex items-center justify-center rounded-xl border border-sand-300 bg-white/70 py-3 text-sm font-semibold text-stone-700 backdrop-blur ring-1 ring-inset ring-sand-200 hover:bg-sand-100 transition-colors min-h-[44px]"
+        >
+          Ver agenda completa
+        </Link>
 
         <section aria-label="Cuadro" className="rounded-2xl border border-sand-300 bg-white/70 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
           <h2 className="text-lg font-semibold text-stone-900">Cuadro</h2>

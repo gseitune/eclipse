@@ -63,7 +63,9 @@ panel. The spec (2026-09-23) defines the product surface.
       GRUPOS el snapshot solo expone nextMatch con equipos, así que
       "Anterior" queda "Sin resultados todavía" hasta eliminatorias — es
       límite del back contract, no bug front.
-- [ ] T7 — Full agenda behind "Ver agenda completa" link
+- [x] T7 — Full agenda behind "Ver agenda completa" link
+      (server fetch /api/state + client view, grouped by stage, live pulse,
+      manual refresh)
 - [ ] T8 — ELIMINATORIES mode: centered brackets (semis + final) replacing
       zones+ticker, classified banner, final-position team sheet, "VER
       POSICIONES FINALES" link; DESEMPATE in ticker + bracket waits;
@@ -139,4 +141,7 @@ panel. The spec (2026-09-23) defines the product surface.
   Checks: tsc clean, eslint clean, tests 21/21. Gatekeeper readback OK;
   documented limitation: no group-match details in snapshot -> "Anterior"
   empty until eliminatories. RDD: off.
-- Next: T7.
+- T7 done — commit `<next>` feat(front): full agenda at /agenda (server
+  fetch + grouped by stage + live pulse + manual refresh). Checks: tsc
+  clean, eslint clean, tests 21/21. RDD: off.
+- Next: T8.
