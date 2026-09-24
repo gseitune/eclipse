@@ -494,7 +494,8 @@ export async function recordResult(input: RecordResultInput) {
   };
 }
 
-export interface EditResultInput extends RecordResultInput {}
+/** EditResultInput is the same payload surface as recordResult. */
+export type EditResultInput = RecordResultInput;
 
 /**
  * Re-records the result of an already-played match (fixing a bad quick-capture
