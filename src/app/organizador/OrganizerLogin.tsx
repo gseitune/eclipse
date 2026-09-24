@@ -74,7 +74,7 @@ export function OrganizerLogin() {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-lg bg-amber-600 px-4 py-3 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50 transition-colors min-h-[44px]"
+        className="w-full rounded-lg bg-amber-600/70 px-4 py-3 text-sm font-semibold text-white hover:bg-amber-700/70 disabled:opacity-50 transition-colors min-h-[44px]"
       >
         {pending ? "Iniciando…" : "Iniciar sesión"}
       </button>
