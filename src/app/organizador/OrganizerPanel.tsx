@@ -144,6 +144,7 @@ export function OrganizerPanel({
   const [activeSection, setActiveSection] = useState<
     "resultados" | "zonificacion" | "posiciones" | "aviso" | null
   >(null);
+  const [view, setView] = useState<"panel" | "public">("panel");
 
   function handleSectionClick(label: string) {
     switch (label) {
@@ -188,46 +189,82 @@ export function OrganizerPanel({
             </h1>
             <span className="text-xs text-stone-400 mt-0.5">{email}</span>
           </div>
-          <button
-            onClick={handleLogout}
-            disabled={loggingOut}
-            className="rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-200 hover:bg-red-100 disabled:opacity-50 transition-colors min-h-[44px]"
-          >
-            {loggingOut ? "Cerrando…" : "Cerrar sesión"}
-          </button>
+          <div className="flex items-center gap-2">
+            {view === "panel" ? (
+              <>
+                <button
+                  onClick={() => setView("public")}
+                  className="rounded-lg border border-sand-300 bg-sand-50 px-4 py-2 text-xs font-semibold text-stone-700 ring-1 ring-inset ring-sand-200 hover:bg-sand-100 transition-colors min-h-[44px]"
+                >
+                  👁 Ver página
+                </button>
+                <button
+                  onClick={handleLogout}
+                  disabled={loggingOut}
+                  className="rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-200 hover:bg-red-100 disabled:opacity-50 transition-colors min-h-[44px]"
+                >
+                  {loggingOut ? "Cerrando…" : "Cerrar sesión"}
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setView("panel")}
+                className="rounded-lg border border-sand-300 bg-sand-50 px-4 py-2 text-xs font-semibold text-stone-700 ring-1 ring-inset ring-sand-200 hover:bg-sand-100 transition-colors min-h-[44px]"
+              >
+                ← Volver al panel
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
-{activeSection === "resultados" ? (
-        <ResultadosSection onBack={() => setActiveSection(null)} />
-      ) : activeSection === "zonificacion" ? (
-        <ZonificacionSection onBack={() => setActiveSection(null)} />
-      ) : activeSection === "posiciones" ? (
-        <PosicionesSection onBack={() => setActiveSection(null)} />
-      ) : activeSection === "aviso" ? (
-        <AvisoSection onBack={() => setActiveSection(null)} />
+      {view === "panel" ? (
+        activeSection === "resultados" ? (
+          <ResultadosSection onBack={() => setActiveSection(null)} />
+        ) : activeSection === "zonificacion" ? (
+          <ZonificacionSection onBack={() => setActiveSection(null)} />
+        ) : activeSection === "posiciones" ? (
+          <PosicionesSection onBack={() => setActiveSection(null)} />
+        ) : activeSection === "aviso" ? (
+          <AvisoSection onBack={() => setActiveSection(null)} />
+        ) : (
+          /* Sections list */
+          <main className="mx-auto w-full max-w-3xl px-6 py-8">
+            <nav aria-label="Secciones del panel" className="flex flex-col gap-3">
+              {SECTIONS.map((section) =>
+                section.kind === "actionable" ? (
+                  <SectionCard
+                    key={section.label}
+                    label={section.label}
+                    hint={section.hint}
+                    onClick={() => handleSectionClick(section.label)}
+                  />
+                ) : (
+                  <DisabledSectionCard
+                    key={section.label}
+                    label={section.label}
+                    hint={section.hint}
+                  />
+                )
+              )}
+            </nav>
+          </main>
+        )
       ) : (
-        /* Sections list */
-        <main className="mx-auto w-full max-w-3xl px-6 py-8">
-          <nav aria-label="Secciones del panel" className="flex flex-col gap-3">
-            {SECTIONS.map((section) =>
-              section.kind === "actionable" ? (
-                <SectionCard
-                  key={section.label}
-                  label={section.label}
-                  hint={section.hint}
-                  onClick={() => handleSectionClick(section.label)}
-                />
-              ) : (
-                <DisabledSectionCard
-                  key={section.label}
-                  label={section.label}
-                  hint={section.hint}
-                />
-              )
-            )}
-          </nav>
-        </main>
+        /* Public view — embedded iframe (same-origin, session preserved) */
+        <div className="flex-1 flex flex-col">
+          <div className="mx-auto w-full max-w-3xl px-6 py-3">
+            <span className="text-xs text-stone-500">
+              Vista previa pública — misma sesión
+            </span>
+          </div>
+          <iframe
+            src="/"
+            className="flex-1 w-full border-0"
+            title="Vista previa de la página pública"
+            sandbox="allow-same-origin allow-scripts allow-forms"
+          />
+        </div>
       )}
     </div>
   );

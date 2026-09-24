@@ -162,8 +162,10 @@ panel. The spec (2026-09-23) defines the product surface.
 - T12 done — commit `99e0a7a` feat(front): zonification section (generate/
   swap/confirm, locked view when confirmed). Checks: tsc clean, eslint clean,
   tests 23/23. RDD: off.
-- T13 done — commit `<next>` feat(front): chime v1 sound alert + live banner.
+- T13 done — commit `4ffdd18` feat(front): chime v1 sound alert + live banner.
   Checks: tsc clean, eslint clean, tests now 30/30 (8 live + 14 phase + 8
   chime). Gatekeeper correction: useChime now receives state.matchMinutes so
   chime follows the same live threshold as the views. RDD: off.
-- Next: T14.
+- T15-A done — commit `56bfe37` feat(front): winner-only result entry sends WINNER_ONLY payload (T15-A). Checks: tsc clean, eslint clean.
+- T15-C done — commit `3bc016c` feat(front): add in-panel public view preview toggle (T15-C). Added "👁 Ver página" button next to "Cerrar sesión" in OrganizerPanel, embedded iframe `<iframe src="/" />` for same-origin public view preview, "← Volver al panel" toggle to return to panel state. Checks: `npm run lint` clean, `npx tsc --noEmit` clean, `npm test` 105/105 pass. Manual browser test pending (organizer login credentials not shared).
+- Next: T14, T15-B (por definir).
