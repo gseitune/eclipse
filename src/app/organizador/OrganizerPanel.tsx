@@ -5,6 +5,7 @@ import { useState } from "react";
 import { ResultadosSection } from "./ResultadosSection";
 import { ZonificacionSection } from "./ZonificacionSection";
 import { AvisoSection } from "./AvisoSection";
+import { PosicionesSection } from "./PosicionesSection";
 
 /* ── Lock icon (inline SVG, no emoji, no external dependency) ── */
 function LockIcon() {
@@ -141,7 +142,7 @@ export function OrganizerPanel({
 }: OrganizerPanelProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [activeSection, setActiveSection] = useState<
-    "resultados" | "zonificacion" | "aviso" | null
+    "resultados" | "zonificacion" | "posiciones" | "aviso" | null
   >(null);
 
   function handleSectionClick(label: string) {
@@ -151,6 +152,9 @@ export function OrganizerPanel({
         break;
       case "Resultados":
         setActiveSection("resultados");
+        break;
+      case "Posiciones en vivo":
+        setActiveSection("posiciones");
         break;
       case "Aviso sonoro":
         setActiveSection("aviso");
@@ -198,6 +202,8 @@ export function OrganizerPanel({
         <ResultadosSection onBack={() => setActiveSection(null)} />
       ) : activeSection === "zonificacion" ? (
         <ZonificacionSection onBack={() => setActiveSection(null)} />
+      ) : activeSection === "posiciones" ? (
+        <PosicionesSection onBack={() => setActiveSection(null)} />
       ) : activeSection === "aviso" ? (
         <AvisoSection onBack={() => setActiveSection(null)} />
       ) : (
