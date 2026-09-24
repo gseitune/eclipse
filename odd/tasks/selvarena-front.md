@@ -72,7 +72,7 @@ panel. The spec (2026-09-23) defines the product surface.
       unknown phase -> generic state
 - [x] T9 — /organizador: login/logout (cookie session, multi-device), page
       gate reads session server-side (verifySessionToken + cookies())
-- [ ] T10 — Organizer panel shell + disabled placeholders (teams, stages,
+- [x] T10 — Organizer panel shell + disabled placeholders (teams, stages,
       reschedule -> "próximamente")
 - [ ] T11 — Mobile quick result entry (3 taps) + notebook checklist ("faltan
       N partidos") + result editing via POST /api/results
@@ -148,8 +148,10 @@ panel. The spec (2026-09-23) defines the product surface.
   banner + generic unknown-phase state; team sheet lifted to PublicHome;
   isKnownZone helper + tests. Checks: tests 23/23, tsc clean, eslint clean.
   Gatekeeper poly: zone "—" chip hidden (isKnownZone). RDD: off.
-- T9 done — commit `<next>` feat(front): organizer login/logout + server-side
+- T9 done — commit `e0ff62c` feat(front): organizer login/logout + server-side
   gate. Checks: tsc clean, eslint clean, tests 23/23, build dynamic route OK.
   Components colocated in src/app/organizador/ (Turbopack alias issue with
   new dirs). RDD: off.
-- Next: T10.
+- T10 done — commit `<next>` feat(front): organizer panel shell + disabled
+  placeholders. Checks: tsc clean, eslint clean, tests 23/23. RDD: off.
+- Next: T11.
