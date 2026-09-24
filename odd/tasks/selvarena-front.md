@@ -135,7 +135,7 @@ panel. The spec (2026-09-23) defines the product surface.
   Optimización user 2026-09-23: StandingsTables renders only zones with
   teams/rows (`state.zones` has empty arrays for unused zones; back arms
   A+B for 6–10, A+B+C for >10). RDD: off.
-- T6 done — commit `<next>` feat(front): match ticker Anterior/En vivo/Próximo.
+- T6 done — commit `a7221a7` feat(front): match ticker Anterior/En vivo/Próximo.
   Checks: tsc clean, eslint clean, tests 21/21. Gatekeeper readback OK;
   documented limitation: no group-match details in snapshot -> "Anterior"
   empty until eliminatories. RDD: off.
