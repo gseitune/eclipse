@@ -71,15 +71,16 @@ export async function zonificationConfirm(): Promise<ZonificationResponse> {
 
 export async function recordResult(input: {
   matchId: string;
-  setFormat: string;
-  sets: { teamA: number; teamB: number }[];
+  /** Full score path: setFormat is required when sets are provided. */
+  setFormat?: string;
+  /** Full score path: one entry per played set. */
+  sets?: { teamA: number; teamB: number }[];
+  /** Winner-only path: legal without sets (WINNER_ONLY). */
   winnerId?: string;
 }): Promise<ResultResponse> {
-  const body: Record<string, unknown> = {
-    matchId: input.matchId,
-    setFormat: input.setFormat,
-    sets: input.sets,
-  };
+  const body: Record<string, unknown> = { matchId: input.matchId };
+  if (input.setFormat !== undefined) body.setFormat = input.setFormat;
+  if (input.sets !== undefined) body.sets = input.sets;
   if (input.winnerId) body.winnerId = input.winnerId;
   const res = await fetch(`${BASE}/results`, {
     method: "POST",
