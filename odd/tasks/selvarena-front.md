@@ -126,12 +126,12 @@ panel. The spec (2026-09-23) defines the product surface.
   zone tabs, liveMatchIds helper + 8 tests. Checks: tests 21/21, tsc clean,
   eslint clean. Gatekeeper corrected initialZone to derive from nextMatch
   (not brackets — brackets only hold semis/final). RDD: off.
-- T5 done — same session as T4/T5 commit flow: team sheet hooked into
-  standings rows (bottom sheet mobile, floating panel desktop, digest +
-  brackets/desempate/next known matches, never invented). Optimización user:
-  StandingsTables renders only zones with teams/rows (`state.zones` has empty
-  arrays for unused zones; back arms A+B for 6–10, A+B+C for >10) —
-  commit `<committed>` includes the zone-filter change. RDD: off.
+- T5 done — commit `2d0eb0b` feat(front): team sheet bottom-sheet with
+  standings digest; show only existing zones (A+B up to 10 teams, C only
+  with 3 zones). Checks: tsc clean, eslint clean, tests 21/21.
+  Optimización user 2026-09-23: StandingsTables renders only zones with
+  teams/rows (`state.zones` has empty arrays for unused zones; back arms
+  A+B for 6–10, A+B+C for >10). RDD: off.
 
 ## Next step
 T1.
