@@ -187,13 +187,6 @@ export function PublicHome({ initial }: { initial: StateSnapshot | null }) {
         <span>SELVARENA · Circuito Mixto Principiantes 2026</span>
         <span className="flex items-center gap-1 font-bold uppercase">
           GS proyecto eclipse
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/sun-transparent.png"
-            alt=""
-            className="h-5 w-5 shrink-0 object-contain brightness-0"
-            draggable={false}
-          />
         </span>
       </footer>
     </div>
