@@ -7,6 +7,7 @@ import { liveMatchIds } from "@/lib/front/live";
 import { fetchState } from "@/lib/front/api";
 import { ApiError } from "@/lib/front/types";
 import type { StateSnapshot, ScheduleRow, MatchPublic, DesempateMatchInfo } from "@/lib/front/types";
+import { setWins } from "@/lib/front/types";
 
 interface MatchInfo {
   teamA: string | null;
@@ -34,14 +35,15 @@ function resolveMatch(
 ): MatchInfo {
   const m = matchMap.get(rowId);
   if (m) {
-    return {
-      teamA: m.teamA?.name ?? null,
-      teamB: m.teamB?.name ?? null,
-      status: m.resultStatus,
-      setA: m.setAScore,
-      setB: m.setBScore,
-      winnerName: m.winner?.name ?? null,
-    };
+    const sw = setWins(m.sets);
+      return {
+        teamA: m.teamA?.name ?? null,
+        teamB: m.teamB?.name ?? null,
+        status: m.resultStatus,
+        setA: sw.a,
+        setB: sw.b,
+        winnerName: m.winner?.name ?? null,
+      };
   }
   if (despMatch && despMatch.id === rowId) {
     return {

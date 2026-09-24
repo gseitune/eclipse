@@ -3,6 +3,7 @@
 import { useEffect, useRef, useMemo } from "react";
 import { stageLabel, zoneName, isKnownZone } from "@/lib/front/phase";
 import type { StateSnapshot, StandingRow, MatchPublic } from "@/lib/front/types";
+import { setWins } from "@/lib/front/types";
 
 interface TeamSheetProps {
   team: { id: string; name: string; zone: string } | null;
@@ -197,8 +198,8 @@ function matchResultLabel(
   switch (m.resultStatus) {
     case "COMPLETE": {
       const teamWon = m.winnerId === teamId;
-      const teamSets = m.teamAId === teamId ? (m.setAScore ?? 0) : (m.setBScore ?? 0);
-      const oppSets = m.teamAId === teamId ? (m.setBScore ?? 0) : (m.setAScore ?? 0);
+      const teamSets = m.teamAId === teamId ? setWins(m.sets).a : setWins(m.sets).b;
+      const oppSets = m.teamAId === teamId ? setWins(m.sets).b : setWins(m.sets).a;
       return teamWon ? `Ganó ${teamSets} - ${oppSets}` : `Perdió ${teamSets} - ${oppSets}`;
     }
     case "WINNER_ONLY": {

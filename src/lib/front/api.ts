@@ -71,15 +71,21 @@ export async function zonificationConfirm(): Promise<ZonificationResponse> {
 
 export async function recordResult(input: {
   matchId: string;
-  setAScore?: number | null;
-  setBScore?: number | null;
-  winnerId?: string | null;
+  setFormat: string;
+  sets: { teamA: number; teamB: number }[];
+  winnerId?: string;
 }): Promise<ResultResponse> {
+  const body: Record<string, unknown> = {
+    matchId: input.matchId,
+    setFormat: input.setFormat,
+    sets: input.sets,
+  };
+  if (input.winnerId) body.winnerId = input.winnerId;
   const res = await fetch(`${BASE}/results`, {
     method: "POST",
     credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
+    body: JSON.stringify(body),
     cache: "no-store",
   });
   return handleResponse<ResultResponse>(res);

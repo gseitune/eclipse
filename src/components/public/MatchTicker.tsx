@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { liveMatchIds } from "@/lib/front/live";
 import { stageLabel } from "@/lib/front/phase";
 import type { DesempateInfo, DesempateMatchInfo, MatchPublic, ScheduleRow } from "@/lib/front/types";
+import { setWins } from "@/lib/front/types";
 
 interface MatchTickerProps {
   schedule: ScheduleRow[];
@@ -50,10 +51,11 @@ function getResult(
 ): { status: MatchPublic["resultStatus"] | null; setA: number | null; setB: number | null; winnerName: string | null } {
   const m = map.get(matchId);
   if (m) {
+    const sw = setWins(m.sets);
     return {
       status: m.resultStatus,
-      setA: m.setAScore,
-      setB: m.setBScore,
+      setA: sw.a,
+      setB: sw.b,
       winnerName: m.winner?.name ?? null,
     };
   }

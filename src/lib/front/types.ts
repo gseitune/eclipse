@@ -57,12 +57,23 @@ export interface MatchPublic {
   teamBId: string | null;
   teamA: MatchPlayer | null;
   teamB: MatchPlayer | null;
-  setAScore: number | null;
-  setBScore: number | null;
+  setFormat: string | null;
+  sets: { teamA: number; teamB: number }[] | null;
   resultStatus: ResultStatus;
   winnerId: string | null;
   winner: MatchPlayer | null;
   recordedAt: string | null;
+}
+
+export function setWins(sets: { teamA: number; teamB: number }[] | null | undefined): { a: number; b: number } {
+  let a = 0;
+  let b = 0;
+  if (!sets) return { a, b };
+  for (const s of sets) {
+    if (s.teamA > s.teamB) a++;
+    else if (s.teamB > s.teamA) b++;
+  }
+  return { a, b };
 }
 
 export interface DesempateMatchInfo {

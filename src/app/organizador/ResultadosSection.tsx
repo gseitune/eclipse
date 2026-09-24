@@ -109,7 +109,7 @@ export function ResultadosSection({ onBack }: ResultadosSectionProps) {
 
   // Handle record result with error classification
   const handleRecord = useCallback(
-    async (input: { matchId: string; setAScore?: number; setBScore?: number; winnerId?: string }) => {
+    async (input: { matchId: string; setFormat: string; sets: { teamA: number; teamB: number }[]; winnerId?: string }) => {
       setSubmitting(true);
       setSubmitMsg(null);
       try {
@@ -157,14 +157,23 @@ export function ResultadosSection({ onBack }: ResultadosSectionProps) {
       setSubmitMsg("Los sets no pueden ser iguales.");
       return;
     }
-    handleRecord({ matchId: nextMatch.id, setAScore: a, setBScore: b });
+    handleRecord({
+      matchId: nextMatch.id,
+      setFormat: nextMatch.setFormat ?? "SINGLE_21",
+      sets: [{ teamA: a, teamB: b }],
+    });
   }, [nextMatch, setAScore, setBScore, handleRecord]);
 
   // Winner submission
   const handleWinnerSubmit = useCallback(
     (winnerId: string) => {
       if (!nextMatch) return;
-      handleRecord({ matchId: nextMatch.id, winnerId });
+      handleRecord({
+        matchId: nextMatch.id,
+        setFormat: nextMatch.setFormat ?? "SINGLE_21",
+        sets: [{ teamA: winnerId === nextMatch.teamAId ? 1 : 0, teamB: winnerId === nextMatch.teamBId ? 1 : 0 }],
+        winnerId,
+      });
     },
     [nextMatch, handleRecord],
   );

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { liveMatchIds } from "@/lib/front/live";
 import { stageLabel, phaseLabel, isKnownPhase } from "@/lib/front/phase";
 import type { MatchPublic, ScheduleRow } from "@/lib/front/types";
+import { setWins } from "@/lib/front/types";
 
 interface EliminatoriesViewProps {
   brackets: MatchPublic[];
@@ -60,9 +61,8 @@ export function EliminatoriesView({
   function matchResultLabel(m: MatchPublic) {
     switch (m.resultStatus) {
       case "COMPLETE": {
-        const setA = m.setAScore ?? 0;
-        const setB = m.setBScore ?? 0;
-        return `${setA} - ${setB}`;
+        const sw = setWins(m.sets);
+        return `${sw.a} - ${sw.b}`;
       }
       case "WINNER_ONLY":
         return m.winner ? `Ganó ${m.winner.name}` : "Ganó";
