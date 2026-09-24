@@ -82,20 +82,15 @@ export function PublicHome({ initial }: { initial: StateSnapshot | null }) {
       {/* Hero */}
       <Hero live={live} />
 
-{/* Live status strip */}
+      {/* Connection-lost banner — only when live stream drops */}
+      {error && (
         <div className="mx-auto w-full max-w-3xl px-6 py-3">
-          <div className="flex items-center justify-between rounded-2xl border border-sand-300 bg-white/70 px-4 py-2 backdrop-blur ring-1 ring-inset ring-sand-200">
-            <span className="text-sm font-semibold text-stone-900">
-              {phaseLabel(phase)}
-            </span>
-            {error && (
-              <span className="flex items-center gap-1.5 text-xs text-ember-500">
-                <span className="h-1.5 w-1.5 rounded-full bg-ember-500" />
-                Conexión perdida...
-              </span>
-            )}
+          <div className="flex items-center gap-1.5 rounded-2xl border border-ember-200 bg-ember-50/60 px-4 py-2 text-xs text-ember-600">
+            <span className="h-1.5 w-1.5 rounded-full bg-ember-500" />
+            Conexión perdida...
           </div>
         </div>
+      )}
 
         {/* Result-pending banner */}
         <ChimeBanner liveCount={liveIds.size} />
