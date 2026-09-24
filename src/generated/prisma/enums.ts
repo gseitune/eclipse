@@ -20,6 +20,7 @@ export type Zone = (typeof Zone)[keyof typeof Zone]
 
 export const Stage = {
   GROUPS: 'GROUPS',
+  DESEMPATE: 'DESEMPATE',
   SEMIFINAL_1: 'SEMIFINAL_1',
   SEMIFINAL_2: 'SEMIFINAL_2',
   FINAL: 'FINAL'
@@ -39,6 +40,7 @@ export type ResultStatus = (typeof ResultStatus)[keyof typeof ResultStatus]
 
 export const Phase = {
   GROUPS: 'GROUPS',
+  DESEMPATE: 'DESEMPATE',
   ELIMINATORIES: 'ELIMINATORIES'
 } as const
 

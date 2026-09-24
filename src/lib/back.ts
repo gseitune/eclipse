@@ -1,10 +1,14 @@
 import { prisma } from "./prisma";
 import { publishSse } from "./events";
 import { computeZoneStandings, type StandingRow } from "./standings";
-import { computeSchedule, type ScheduleRow } from "./schedule";
+import {
+  computeSchedule,
+  DESCENDANT_STAGES,
+  type ScheduleRow,
+} from "./schedule";
 import { buildBrackets, selectBestSecond, type BestSecondSelection } from "./brackets";
 import { regenerateZones, swapZone, type ZoneId } from "./zonification";
-import type { Zone } from "../generated/prisma/client";
+import type { Stage, Zone } from "../generated/prisma/client";
 
 /**
  * SELVARENA backend operations (Prisma layer).
@@ -15,6 +19,7 @@ export class BackError extends Error {
   constructor(
     message: string,
     public readonly status: number,
+    public readonly reason?: string,
   ) {
     super(message);
   }
@@ -319,29 +324,28 @@ export interface RecordResultInput {
   winnerId?: string | null;
 }
 
-export async function recordResult(input: RecordResultInput) {
-  const match = await prisma.match.findUnique({
-    where: { id: input.matchId },
-    include: { teamA: true, teamB: true },
-  });
-  if (!match) throw new BackError("Match not found.", 404);
-  if (match.resultStatus !== "PENDING") {
-    throw new BackError("Match already has a result.", 409);
-  }
-  if (!match.teamAId || !match.teamBId) {
-    throw new BackError("Bracket slot has no teams yet.", 409);
-  }
+interface ResolvedPayload {
+  setAScore: number | null;
+  setBScore: number | null;
+  resultStatus: "COMPLETE" | "WINNER_ONLY";
+  winnerId: string | null;
+}
 
+/**
+ * Shared result validation for record and edit: a full score (winner derived
+ * from it) OR an explicit winner — never a partial result, and the optional
+ * winnerId must agree with the score when both are present.
+ */
+function resolveResultPayload(
+  teamAId: string,
+  teamBId: string,
+  input: RecordResultInput,
+): ResolvedPayload {
   const hasSets =
     input.setAScore !== null &&
     input.setAScore !== undefined &&
     input.setBScore !== null &&
     input.setBScore !== undefined;
-
-  let resultStatus: "COMPLETE" | "WINNER_ONLY";
-  let winnerId: string | null;
-  let setAScore: number | null = null;
-  let setBScore: number | null = null;
 
   if (hasSets) {
     const a = input.setAScore!;
@@ -350,44 +354,54 @@ export async function recordResult(input: RecordResultInput) {
       throw new BackError("Sets must be positive.", 400);
     }
     if (a === b) throw new BackError("Sets cannot tie.", 400);
-    resultStatus = "COMPLETE";
-    winnerId = a > b ? match.teamAId : match.teamBId;
-    setAScore = a;
-    setBScore = b;
+    const winnerId = a > b ? teamAId : teamBId;
     if (input.winnerId && input.winnerId !== winnerId) {
       throw new BackError("winnerId does not match the set scores.", 400);
     }
-  } else if (input.winnerId) {
-    if (input.winnerId !== match.teamAId && input.winnerId !== match.teamBId) {
-      throw new BackError("winnerId must be one of the playing teams.", 400);
-    }
-    resultStatus = "WINNER_ONLY";
-    winnerId = input.winnerId;
-  } else {
-    throw new BackError(
-      "Provide a full score or an explicit winner — never a partial result.",
-      400,
-    );
+    return { setAScore: a, setBScore: b, resultStatus: "COMPLETE", winnerId };
   }
 
-  await prisma.match.update({
-    where: { id: match.id },
-    data: {
-      setAScore,
-      setBScore,
-      resultStatus,
-      winnerId,
-      recordedAt: new Date(),
-    },
-  });
+  if (input.winnerId) {
+    if (input.winnerId !== teamAId && input.winnerId !== teamBId) {
+      throw new BackError("winnerId must be one of the playing teams.", 400);
+    }
+    return {
+      setAScore: null,
+      setBScore: null,
+      resultStatus: "WINNER_ONLY",
+      winnerId: input.winnerId,
+    };
+  }
 
-  publishSse("result-recorded", { matchId: match.id, phase: null });
+  throw new BackError(
+    "Provide a full score or an explicit winner — never a partial result.",
+    400,
+  );
+}
 
+interface ReconcileOutcome {
+  phaseChanged: boolean;
+  bracketsChanged: boolean;
+  desempateCreated: boolean;
+}
+
+/**
+ * Re-runs the phase/bracket machinery after a result landed (record or edit):
+ * standings are always re-read, so positions and the estimate chain stay fresh;
+ * the GROUPS/DESEMPATE transitions only fire when the phase allows it.
+ * `allowBracketRebuild` lets an edit rebuild already-generated semis from the
+ * new standings — something a fresh result never needs (it only finalizes once).
+ */
+async function reconcileAfterMatch(
+  stage: string,
+  winnerId: string | null,
+  allowBracketRebuild: boolean,
+): Promise<ReconcileOutcome> {
   let phaseChanged = false;
   let bracketsChanged = false;
   let desempateCreated = false;
 
-  if (match.stage === "GROUPS") {
+  if (stage === "GROUPS") {
     const groupExpected = await prisma.match.count({
       where: { stage: "GROUPS" },
     });
@@ -397,13 +411,25 @@ export async function recordResult(input: RecordResultInput) {
 
     if (groupDecided === groupExpected) {
       const state = await getState();
-      if (state.phase === "GROUPS") {
+      const mayFinalize =
+        state.phase === "GROUPS" ||
+        (state.phase === "ELIMINATORIES" && allowBracketRebuild);
+      if (mayFinalize) {
         const standings = await getStandings();
         const zones = Object.keys(standings) as Zone[];
         if (zones.length === 3) {
           const selection = selectBestSecond(standings);
           if (selection?.kind === "playoff") {
-            desempateCreated = await createDesempateMatch(selection);
+            if (state.phase === "GROUPS") {
+              desempateCreated = await createDesempateMatch(selection);
+            } else {
+              // Rebuild after an edit would need a fresh desempate: report it.
+              publishSse("brackets-blocked", {
+                reason: "needs_desempate",
+                teamAId: selection.teamAId,
+                teamBId: selection.teamBId,
+              });
+            }
           } else if (selection?.kind === "blocked") {
             publishSse("brackets-blocked", {
               reason: "three_seconds_tie",
@@ -421,7 +447,7 @@ export async function recordResult(input: RecordResultInput) {
         }
       }
     }
-  } else if (match.stage === "DESEMPATE" && winnerId) {
+  } else if (stage === "DESEMPATE" && winnerId) {
     const state = await getState();
     if (state.phase === "DESEMPATE") {
       const standings = await getStandings();
@@ -431,14 +457,107 @@ export async function recordResult(input: RecordResultInput) {
     }
   }
 
+  return { phaseChanged, bracketsChanged, desempateCreated };
+}
+
+export async function recordResult(input: RecordResultInput) {
+  const match = await prisma.match.findUnique({
+    where: { id: input.matchId },
+    include: { teamA: true, teamB: true },
+  });
+  if (!match) throw new BackError("Match not found.", 404);
+  if (match.resultStatus !== "PENDING") {
+    throw new BackError("Match already has a result.", 409);
+  }
+  if (!match.teamAId || !match.teamBId) {
+    throw new BackError("Bracket slot has no teams yet.", 409);
+  }
+
+  const payload = resolveResultPayload(match.teamAId, match.teamBId, input);
+
+  await prisma.match.update({
+    where: { id: match.id },
+    data: { ...payload, recordedAt: new Date() },
+  });
+
+  publishSse("result-recorded", { matchId: match.id, phase: null });
+
+  const outcome = await reconcileAfterMatch(match.stage, payload.winnerId, false);
+
   publishSse("standings-changed", { matchId: match.id });
   publishSse("schedule-changed", { matchId: match.id });
 
   return {
     matchId: match.id,
-    phaseChanged,
-    bracketsChanged,
-    desempateCreated,
+    ...outcome,
+    nextMatch: await getNextMatch(),
+  };
+}
+
+export interface EditResultInput extends RecordResultInput {}
+
+/**
+ * Re-records the result of an already-played match (fixing a bad quick-capture
+ * from the phone). Same payload validation as recordResult. Guards:
+ * - nothing to edit when the match has no result (409 no_result_to_edit);
+ * - a played descendant phase closes the match: editing would invalidate the
+ *   bracket (409 editing_blocks_bracket).
+ * Zone confirmation does NOT block editing.
+ */
+export async function editResult(input: EditResultInput) {
+  const match = await prisma.match.findUnique({
+    where: { id: input.matchId },
+    include: { teamA: true, teamB: true },
+  });
+  if (!match) throw new BackError("Match not found.", 404);
+  if (match.resultStatus === "PENDING") {
+    throw new BackError(
+      "Nothing to edit: the match has no result yet.",
+      409,
+      "no_result_to_edit",
+    );
+  }
+
+  // Structural guard first: a blocked edit returns its reason regardless of
+  // the payload shape (validation errors never mask the bracket rule).
+  const descendants = DESCENDANT_STAGES[match.stage] ?? [];
+  if (descendants.length > 0) {
+    const played = await prisma.match.count({
+      where: {
+        stage: { in: [...descendants] as Stage[] },
+        resultStatus: { not: "PENDING" },
+      },
+    });
+    if (played > 0) {
+      throw new BackError(
+        "Cannot edit: a descendant phase already has a result — editing would invalidate the bracket.",
+        409,
+        "editing_blocks_bracket",
+      );
+    }
+  }
+
+  if (!match.teamAId || !match.teamBId) {
+    throw new BackError("Bracket slot has no teams yet.", 409);
+  }
+
+  const payload = resolveResultPayload(match.teamAId, match.teamBId, input);
+
+  await prisma.match.update({
+    where: { id: match.id },
+    data: { ...payload, recordedAt: new Date() },
+  });
+
+  publishSse("result-recorded", { matchId: match.id, phase: null });
+
+  const outcome = await reconcileAfterMatch(match.stage, payload.winnerId, true);
+
+  publishSse("standings-changed", { matchId: match.id });
+  publishSse("schedule-changed", { matchId: match.id });
+
+  return {
+    matchId: match.id,
+    ...outcome,
     nextMatch: await getNextMatch(),
   };
 }

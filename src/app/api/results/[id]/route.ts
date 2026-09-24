@@ -1,11 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { sessionCookieName, verifySessionToken } from "@/lib/auth";
-import { recordResult } from "@/lib/back";
+import { editResult } from "@/lib/back";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(request: NextRequest) {
+/**
+ * PATCH /api/results/:id — re-records the result of an already-played match.
+ * Same payload rules as POST /api/results (full score | explicit winner, never
+ * partial). Guards return 409 with a clear `reason`:
+ * - no_result_to_edit: the match has no result yet;
+ * - editing_blocks_bracket: a descendant phase already played.
+ */
+export async function PATCH(
+  request: NextRequest,
+  ctx: RouteContext<"/api/results/[id]">,
+) {
   const session = verifySessionToken(
     request.cookies.get(sessionCookieName)?.value,
   );
@@ -13,12 +23,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { id } = await ctx.params;
   const body = await request.json().catch(() => null);
-  const matchId = typeof body?.matchId === "string" ? body.matchId : "";
 
   try {
-    const result = await recordResult({
-      matchId,
+    const result = await editResult({
+      matchId: id,
       setAScore:
         typeof body?.setAScore === "number" ? body.setAScore : null,
       setBScore:

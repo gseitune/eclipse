@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { computeSchedule, type ScheduleMatchInput } from "./schedule";
+import { computeSchedule, isEditableMatch, type ScheduleMatchInput } from "./schedule";
 
 function match(
   slot: number,
@@ -83,5 +83,59 @@ describe("computeSchedule", () => {
     assert.equal(rows[1].estimated, "10:05 - 10:25", "desempate chains from the result");
     assert.equal(rows[1].stage, "DESEMPATE");
     assert.equal(rows[2].estimated, "10:25 - 10:45", "semis chain after the desempate");
+  });
+});
+
+describe("isEditableMatch (edit guard)", () => {
+  const played = (slot: number, stage = "GROUPS"): ScheduleMatchInput =>
+    match(slot, "10:00 - 10:20", "COMPLETE", new Date(2026, 8, 23, 10, 0, 0), stage);
+  const pending = (slot: number, stage = "GROUPS"): ScheduleMatchInput =>
+    match(slot, "10:00 - 10:20", "PENDING", null, stage);
+
+  it("is false for a match without a result", () => {
+    const all = [pending(1), pending(2)];
+    assert.equal(isEditableMatch(all[0], all), false);
+  });
+
+  it("is true for a GROUPS match while nothing downstream played", () => {
+    const all = [played(1), pending(2, "SEMIFINAL_1")];
+    assert.equal(isEditableMatch(all[0], all), true);
+  });
+
+  it("is false for a GROUPS match once a semifinal played", () => {
+    const all = [played(1), played(2, "SEMIFINAL_1")];
+    assert.equal(isEditableMatch(all[0], all), false, "group edit would invalidate the bracket");
+  });
+
+  it("is false for a GROUPS match once the DESEMPATE played", () => {
+    const all = [played(1), played(2, "DESEMPATE")];
+    assert.equal(isEditableMatch(all[0], all), false);
+  });
+
+  it("is true for a GROUPS match while the DESEMPATE is only pending", () => {
+    const all = [played(1), pending(2, "DESEMPATE"), pending(3, "SEMIFINAL_1")];
+    assert.equal(isEditableMatch(all[0], all), true);
+  });
+
+  it("is false for a semifinal once the final played", () => {
+    const all = [played(1, "SEMIFINAL_1"), played(2, "FINAL")];
+    assert.equal(isEditableMatch(all[0], all), false);
+  });
+
+  it("is true for a semifinal while the final is pending", () => {
+    const all = [played(1, "SEMIFINAL_1"), pending(2, "FINAL")];
+    assert.equal(isEditableMatch(all[0], all), true);
+  });
+
+  it("is true for a played FINAL (no descendants)", () => {
+    const all = [played(1, "FINAL")];
+    assert.equal(isEditableMatch(all[0], all), true);
+  });
+
+  it("exposes the flag on schedule rows", () => {
+    const all = [played(1), played(2, "SEMIFINAL_1")];
+    const rows = computeSchedule(all, 5, 20);
+    assert.equal(rows[0].editable, false, "group closed by played semi");
+    assert.equal(rows[1].editable, true, "semi before the final stays editable");
   });
 });
