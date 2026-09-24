@@ -23,7 +23,22 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="es"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <div
+          className="pointer-events-none fixed inset-0 z-0"
+          aria-hidden="true"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/jungle-bg.jpg"
+            alt=""
+            className="h-full w-full object-cover opacity-70"
+            draggable={false}
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-sand-50/50 via-sand-100/30 to-sand-200/50" />
+        </div>
+        <div className="relative z-10 flex flex-1 flex-col">{children}</div>
+      </body>
     </html>
   );
 }
