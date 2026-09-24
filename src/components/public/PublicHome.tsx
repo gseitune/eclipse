@@ -77,6 +77,7 @@ export function PublicHome({ initial }: { initial: StateSnapshot | null }) {
           liveTeamIds={liveTeamIds}
           initialZone={initialZone}
           phase={phase}
+          state={state}
         />
 
         <section aria-label="Marcador" className="rounded-2xl border border-sand-300 bg-white/70 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
