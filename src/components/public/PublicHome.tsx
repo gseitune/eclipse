@@ -184,7 +184,7 @@ export function PublicHome({ initial }: { initial: StateSnapshot | null }) {
 
       {/* Footer with GS badge */}
       <footer className="mt-auto flex items-center justify-between gap-4 border-t border-sand-200 px-6 py-5 text-sm text-stone-500">
-        <span>SELVARENA · deporte de playa - Beach Voley</span>
+        <span>SELVARENA · Deportes de playa - Beach Voley</span>
         <span className="flex items-center gap-1 font-bold uppercase">
           GS proyecto eclipse
         </span>
