@@ -27,6 +27,12 @@ enum ResultStatus {
   COMPLETE
 }
 
+enum SetFormat {
+  SINGLE_21
+  TWO_15_TIEBREAK
+  BEST_OF_3_21
+}
+
 enum Phase {
   GROUPS
   DESEMPATE
@@ -71,8 +77,9 @@ model Match {
   teamBId      String?
   teamA        Team?        @relation("TeamA", fields: [teamAId], references: [id])
   teamB        Team?        @relation("TeamB", fields: [teamBId], references: [id])
-  setAScore    Int?
-  setBScore    Int?
+  /// Played sets as [{"teamA":21,"teamB":19}, ...]; null for WINNER_ONLY.
+  sets         Json?
+  setFormat    SetFormat?
   resultStatus ResultStatus @default(PENDING)
   winnerId     String?
   winner       Team?        @relation("Winner", fields: [winnerId], references: [id])

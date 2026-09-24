@@ -1,16 +1,45 @@
 # SELVARENA Backend Criteria
 
 Reference for the organizer (and the front): how results, standings, schedule
-and brackets behave. Back feature doc: `odd/tasks/eclipse-backend-core.md`.
+and brackets behave. Back feature doc: `odd/tasks/eclipse-backend-core.md`
+and `odd/tasks/selvarena-back-multiset.md`.
 
 ## Results (the only input)
 
-- A result is recorded once per match. Re-recording returns `409`.
-- **Complete score**: both `setAScore` and `setBScore` (positive, no ties).
-  Winner is derived from the score; passing a conflicting `winnerId` returns `400`.
-- **WINNER_ONLY**: no sets, only an explicit `winnerId` that must be one of the
-  two teams. Never a partial score.
-- Missing both score and winner returns `400`.
+A result is recorded once per match via `POST /api/results` (and edited via
+`PATCH /api/results/:id`). Re-recording returns `409`. Both record and edit
+share ONE validation path (`resolveResultPayload`).
+
+Payload (either mode):
+
+- **Complete score (multi-set)**: `setFormat` + `sets[]` where each set is
+  `{ teamA: number, teamB: number }`. The winner is ALWAYS derived from the
+  sets; a conflicting explicit `winnerId` returns `400`.
+- **WINNER_ONLY**: no sets, only an explicit `winnerId` that must be one of
+  the two teams. Allowed in every stage. Never a partial score.
+- Missing both sets and winner returns `400`.
+
+### Formats by stage
+
+| Stage | Allowed setFormat | Set count |
+| --- | --- | --- |
+| GROUPS / DESEMPATE | `SINGLE_21` | exactly 1 set (to 21) |
+| SEMIFINAL_1 / SEMIFINAL_2 | `SINGLE_21` or `TWO_15_TIEBREAK` | 2 sets (2-0 sweep) or 3 (1-1 → third set REQUIRED) |
+| FINAL | `BEST_OF_3_21` | 2 sets (2-0, cuts) or 3 (2-1); never 1 or 4 |
+
+A format not allowed for the stage returns `400`. `setFormat` may be omitted
+per match (the organizer picks at load time) when sets are present; a payload
+with sets but no format returns `400`.
+
+### Win-by-2 set rule
+
+A set is valid when `high >= cap AND high - low >= 2` (cap: 21 for
+`SINGLE_21`/`BEST_OF_3_21`, 15 for `TWO_15_TIEBREAK` including the third
+set). So `21-20` and `15-14` are `400 invalid_set_score`; `22-20` and
+`16-14` are valid. Set-count / sweep violations return
+`400 invalid_set_count` (1 or 4 sets), `400 third_set_required` (2 sets at
+1-1) or `400 match_already_decided` (a set that continues after a 2-0
+sweep).
 
 ## Standings & tiebreak
 
@@ -20,7 +49,8 @@ Per zone, sorted by:
 2. **Head-to-head**: within a zone, the winner of the direct match ranks
    above. Works with any decided match — WINNER_ONLY is enough (uses
    `winnerId`, no scoreboard needed) or a complete score.
-3. **Set difference**, computed from complete-score matches only.
+3. **Set difference**, computed from complete-score matches only, counting
+   SETS WON per match (`sets[]` → wins per team; 2-1 gives set diff +1).
    WINNER_ONLY matches never invent sets (they contribute wins only).
 4. **Deterministic draw**: if no metric separates the tied teams (including
    the guard "they never faced each other", which should not happen in a
@@ -54,6 +84,18 @@ Phases: `GROUPS` → `DESEMPATE` (only when needed) → `ELIMINATORIES`.
   result's `recordedAt` + prep minutes (default 5, in TournamentState), and each
   later match starts at the previous estimated end (`matchMinutes`, default 20).
 - The first pending match of the day sequence is the derived "in progress" match.
+- Each row exposes the match payload (`sets`, `setFormat`) and an `editable`
+  flag (see edit guard below).
+
+## Editing results (PATCH)
+
+- `PATCH /api/results/:id` accepts the same payload as record (multi-set or
+  WINNER_ONLY) and re-runs the SAME validation + standings/bracket
+  reconciliation. Editing a match with no recorded result returns `409`; the
+  descendant guard (`editing_blocks_bracket`) blocks editing once a downstream
+  phase already played (e.g. a semifinal once the FINAL played).
+- `/api/state` exposes `sets[]`, `setFormat` and `editable` per match so the
+  front can offer editing only when it is safe.
 
 ## Brackets & phases
 

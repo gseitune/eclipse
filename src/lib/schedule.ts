@@ -1,4 +1,5 @@
 import type { ResultStatus } from "../generated/prisma/client";
+import type { SetFormatId, SetScore } from "./result-format";
 
 /**
  * Dynamic estimated schedule (HORARIOS ESTIMADOS).
@@ -14,6 +15,9 @@ export interface ScheduleMatchInput {
   slot: number;
   stage: string;
   timeLabel: string | null;
+  /** Full multi-set score; null for PENDING and WINNER_ONLY matches. */
+  sets: SetScore[] | null;
+  setFormat: SetFormatId | null;
   resultStatus: ResultStatus;
   recordedAt: Date | null;
 }
@@ -28,6 +32,40 @@ export interface ScheduleRow {
   estimated: string | null;
   /** True when the estimate comes from an actual recorded result chain. */
   estimatedFromResult: boolean;
+  /** Full multi-set score; null for PENDING and WINNER_ONLY matches. */
+  sets: SetScore[] | null;
+  setFormat: SetFormatId | null;
+  /**
+   * True when this match's result may be edited: it has a result AND no
+   * strictly-descendant phase has played one yet (editing would invalidate
+   * the bracket). FINAL is always editable once played.
+   */
+  editable: boolean;
+}
+
+/**
+ * Stage → strictly-descendant stages. A descendant with a result closes the
+ * current match for editing: changing it would invalidate the bracket.
+ */
+export const DESCENDANT_STAGES: Record<string, readonly string[]> = {
+  GROUPS: ["DESEMPATE", "SEMIFINAL_1", "SEMIFINAL_2", "FINAL"],
+  DESEMPATE: ["SEMIFINAL_1", "SEMIFINAL_2", "FINAL"],
+  SEMIFINAL_1: ["FINAL"],
+  SEMIFINAL_2: ["FINAL"],
+  FINAL: [],
+};
+
+/** Editing guard, pure: a match is editable iff it has a result and no descendant phase has one. */
+export function isEditableMatch(
+  match: ScheduleMatchInput,
+  all: ScheduleMatchInput[],
+): boolean {
+  if (match.resultStatus === "PENDING") return false;
+  const descendants = DESCENDANT_STAGES[match.stage] ?? [];
+  if (descendants.length === 0) return true;
+  return !all.some(
+    (x) => descendants.includes(x.stage) && x.resultStatus !== "PENDING",
+  );
 }
 
 const MS = 60_000;
@@ -59,6 +97,10 @@ export function computeSchedule(
   const rows: ScheduleRow[] = [];
   let nextStart: Date | null = null;
 
+  const editableByMatch = new Map(
+    ordered.map((m) => [m.id, isEditableMatch(m, ordered)]),
+  );
+
   for (const m of ordered) {
     if (firstRecordedSlot === undefined || m.slot <= firstRecordedSlot) {
       rows.push({
@@ -68,6 +110,9 @@ export function computeSchedule(
         scheduled: m.timeLabel ?? null,
         estimated: null,
         estimatedFromResult: false,
+        sets: m.sets,
+        setFormat: m.setFormat,
+        editable: editableByMatch.get(m.id) ?? false,
       });
       continue;
     }
@@ -84,6 +129,9 @@ export function computeSchedule(
           scheduled: m.timeLabel ?? null,
           estimated: null,
           estimatedFromResult: false,
+          sets: m.sets,
+          setFormat: m.setFormat,
+          editable: editableByMatch.get(m.id) ?? false,
         });
         continue;
       }
@@ -99,6 +147,9 @@ export function computeSchedule(
       scheduled: m.timeLabel ?? null,
       estimated: `${toTimeOnly(start.toISOString())} - ${toTimeOnly(end.toISOString())}`,
       estimatedFromResult: true,
+      sets: m.sets,
+      setFormat: m.setFormat,
+      editable: editableByMatch.get(m.id) ?? false,
     });
     nextStart = end;
   }

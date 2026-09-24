@@ -112,8 +112,8 @@ export const MatchScalarFieldEnum = {
   timeLabel: 'timeLabel',
   teamAId: 'teamAId',
   teamBId: 'teamBId',
-  setAScore: 'setAScore',
-  setBScore: 'setBScore',
+  sets: 'sets',
+  setFormat: 'setFormat',
   resultStatus: 'resultStatus',
   winnerId: 'winnerId',
   recordedAt: 'recordedAt',
@@ -130,6 +130,31 @@ export const SortOrder = {
 } as const
 
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
+
+
+export const NullableJsonNullValueInput = {
+  DbNull: DbNull,
+  JsonNull: JsonNull
+} as const
+
+export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
+
+
+export const JsonNullValueFilter = {
+  DbNull: DbNull,
+  JsonNull: JsonNull,
+  AnyNull: AnyNull
+} as const
+
+export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
+
+
+export const QueryMode = {
+  default: 'default',
+  insensitive: 'insensitive'
+} as const
+
+export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
 
 
 export const NullsOrder = {

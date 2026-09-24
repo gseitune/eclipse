@@ -48,10 +48,6 @@ export interface StandingRow {
   unresolvedTie: boolean;
 }
 
-function pairKey(a: string, b: string): string {
-  return a < b ? `${a}|${b}` : `${b}|${a}`;
-}
-
 function isDecidedGroupMatch(
   m: StandingInputMatch,
   ids: ReadonlySet<string>,
