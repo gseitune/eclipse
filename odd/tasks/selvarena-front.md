@@ -58,8 +58,11 @@ panel. The spec (2026-09-23) defines the product surface.
 - [x] T5 — Team sheet: mobile bottom sheet, desktop floating panel (played,
       results, times for that team). Optimización 2026-09-23: C aparece solo
       cuando hay 3 zonas (6–10 equipos -> A+B nada más).
-- [ ] T6 — Match ticker: previous (result) / live / next (time + prep);
-      WINNER_ONLY -> "Ganó X"; day edges -> clean empty state
+- [x] T6 — Match ticker: previous (result) / live / next (time + prep);
+      WINNER_ONLY -> "Ganó X"; day edges -> clean empty state. Nota: en
+      GRUPOS el snapshot solo expone nextMatch con equipos, así que
+      "Anterior" queda "Sin resultados todavía" hasta eliminatorias — es
+      límite del back contract, no bug front.
 - [ ] T7 — Full agenda behind "Ver agenda completa" link
 - [ ] T8 — ELIMINATORIES mode: centered brackets (semis + final) replacing
       zones+ticker, classified banner, final-position team sheet, "VER
@@ -132,6 +135,8 @@ panel. The spec (2026-09-23) defines the product surface.
   Optimización user 2026-09-23: StandingsTables renders only zones with
   teams/rows (`state.zones` has empty arrays for unused zones; back arms
   A+B for 6–10, A+B+C for >10). RDD: off.
-
-## Next step
-T1.
+- T6 done — commit `<next>` feat(front): match ticker Anterior/En vivo/Próximo.
+  Checks: tsc clean, eslint clean, tests 21/21. Gatekeeper readback OK;
+  documented limitation: no group-match details in snapshot -> "Anterior"
+  empty until eliminatories. RDD: off.
+- Next: T7.

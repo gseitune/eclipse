@@ -7,6 +7,7 @@ import { liveMatchIds } from "@/lib/front/live";
 import type { StateSnapshot, ZoneId, TeamPublic } from "@/lib/front/types";
 import { Hero } from "./Hero";
 import { StandingsTables } from "./StandingsTables";
+import { MatchTicker } from "./MatchTicker";
 
 export function PublicHome({ initial }: { initial: StateSnapshot | null }) {
   const { state, loading, error } = useLiveState({ initial });
@@ -80,10 +81,13 @@ export function PublicHome({ initial }: { initial: StateSnapshot | null }) {
           state={state}
         />
 
-        <section aria-label="Marcador" className="rounded-2xl border border-sand-300 bg-white/70 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
-          <h2 className="text-lg font-semibold text-stone-900">Marcador</h2>
-          <p className="mt-2 text-sm text-stone-500">…</p>
-        </section>
+        <MatchTicker
+          schedule={state?.schedule ?? []}
+          brackets={state?.brackets ?? []}
+          nextMatch={state?.nextMatch ?? null}
+          desempate={state?.desempate ?? { needed: false, pending: false, match: null }}
+          matchMinutes={state?.matchMinutes ?? 20}
+        />
 
         <section aria-label="Cuadro" className="rounded-2xl border border-sand-300 bg-white/70 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
           <h2 className="text-lg font-semibold text-stone-900">Cuadro</h2>
