@@ -77,7 +77,7 @@ panel. The spec (2026-09-23) defines the product surface.
 - [x] T11 — Mobile quick result entry (3 taps) + notebook checklist ("faltan
       N partidos") + result editing via POST /api/results. Nota verificado:
       back NO soporta edición (409 "already has a result") — UI read-only.
-- [ ] T12 — Zonification flow: arm (generate) -> review/adjust (swap with
+- [x] T12 — Zonification flow: arm (generate) -> review/adjust (swap with
       guard) -> confirm -> fixture; 409 handled as disabled + notice
 - [ ] T13 — CHIME v1: Web Audio (no permissions), banner "Cargá el resultado",
       "El partido sigue" snooze 5 min
@@ -155,8 +155,11 @@ panel. The spec (2026-09-23) defines the product surface.
   new dirs). RDD: off.
 - T10 done — commit `d1de7f9` feat(front): organizer panel shell + disabled
   placeholders. Checks: tsc clean, eslint clean, tests 23/23. RDD: off.
-- T11 done — commit `<next>` feat(front): quick result entry + checklist.
+- T11 done — commit `e354c3d` feat(front): quick result entry + checklist.
   Checks: tsc clean, eslint clean, tests 23/23. Verified contract: editing
   unsupported (409), checklist counts bracket+desempate pending only.
   RDD: off.
-- Next: T12.
+- T12 done — commit `<next>` feat(front): zonification section (generate/
+  swap/confirm, locked view when confirmed). Checks: tsc clean, eslint clean,
+  tests 23/23. RDD: off.
+- Next: T13.

@@ -3,6 +3,7 @@
 import { logout } from "@/lib/front/api";
 import { useState } from "react";
 import { ResultadosSection } from "./ResultadosSection";
+import { ZonificacionSection } from "./ZonificacionSection";
 
 /* ── Lock icon (inline SVG, no emoji, no external dependency) ── */
 function LockIcon() {
@@ -73,7 +74,6 @@ const SECTIONS: readonly SectionConfig[] = [
 /* ── Props ── */
 export interface OrganizerPanelProps {
   readonly email: string;
-  readonly onSectionClick?: (label: string) => void;
 }
 
 /* ── Subcomponent: Actionable card ── */
@@ -137,10 +137,24 @@ function DisabledSectionCard({
 /* ── Main panel ── */
 export function OrganizerPanel({
   email,
-  onSectionClick,
 }: OrganizerPanelProps) {
   const [loggingOut, setLoggingOut] = useState(false);
-  const [activeSection, setActiveSection] = useState<"resultados" | null>(null);
+  const [activeSection, setActiveSection] = useState<
+    "resultados" | "zonificacion" | null
+  >(null);
+
+  function handleSectionClick(label: string) {
+    switch (label) {
+      case "Zonificación":
+        setActiveSection("zonificacion");
+        break;
+      case "Resultados":
+        setActiveSection("resultados");
+        break;
+      default:
+        setActiveSection(null);
+    }
+  }
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -176,8 +190,10 @@ export function OrganizerPanel({
         </div>
       </header>
 
-      {activeSection === "resultados" ? (
+{activeSection === "resultados" ? (
         <ResultadosSection onBack={() => setActiveSection(null)} />
+      ) : activeSection === "zonificacion" ? (
+        <ZonificacionSection onBack={() => setActiveSection(null)} />
       ) : (
         /* Sections list */
         <main className="mx-auto w-full max-w-3xl px-6 py-8">
@@ -188,7 +204,7 @@ export function OrganizerPanel({
                   key={section.label}
                   label={section.label}
                   hint={section.hint}
-                  onClick={() => onSectionClick?.(section.label)}
+                  onClick={() => handleSectionClick(section.label)}
                 />
               ) : (
                 <DisabledSectionCard
