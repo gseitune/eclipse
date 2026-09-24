@@ -3,7 +3,7 @@ export function Hero({ live }: { live: boolean }) {
     <header className="mx-auto w-full max-w-3xl px-6 py-8 text-center">
       {/* Logo mark */}
       <div className="relative mx-auto mb-6 h-20 w-20">
-        <div className="absolute left-1/2 top-1/2 h-36 w-36 -translate-x-1/2 -translate-y-1/2 rounded-full -z-10">
+        <div className="absolute left-1/2 top-1/2 h-[216px] w-[216px] -translate-x-1/2 -translate-y-1/2 rounded-full -z-10">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/sun-transparent.png"
