@@ -70,8 +70,8 @@ panel. The spec (2026-09-23) defines the product surface.
       zones+ticker, classified banner, final-position team sheet, "VER
       POSICIONES FINALES" link; DESEMPATE in ticker + bracket waits;
       unknown phase -> generic state
-- [ ] T9 — /organizador: login/logout (cookie session, multi-device), page
-      gate reads session server-side
+- [x] T9 — /organizador: login/logout (cookie session, multi-device), page
+      gate reads session server-side (verifySessionToken + cookies())
 - [ ] T10 — Organizer panel shell + disabled placeholders (teams, stages,
       reschedule -> "próximamente")
 - [ ] T11 — Mobile quick result entry (3 taps) + notebook checklist ("faltan
@@ -148,4 +148,8 @@ panel. The spec (2026-09-23) defines the product surface.
   banner + generic unknown-phase state; team sheet lifted to PublicHome;
   isKnownZone helper + tests. Checks: tests 23/23, tsc clean, eslint clean.
   Gatekeeper poly: zone "—" chip hidden (isKnownZone). RDD: off.
-- Next: T9.
+- T9 done — commit `<next>` feat(front): organizer login/logout + server-side
+  gate. Checks: tsc clean, eslint clean, tests 23/23, build dynamic route OK.
+  Components colocated in src/app/organizador/ (Turbopack alias issue with
+  new dirs). RDD: off.
+- Next: T10.
