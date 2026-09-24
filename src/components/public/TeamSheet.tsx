@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useMemo } from "react";
-import { stageLabel, zoneName } from "@/lib/front/phase";
+import { stageLabel, zoneName, isKnownZone } from "@/lib/front/phase";
 import type { StateSnapshot, StandingRow, MatchPublic } from "@/lib/front/types";
 
 interface TeamSheetProps {
@@ -9,10 +9,10 @@ interface TeamSheetProps {
   onClose: () => void;
   state: StateSnapshot | null;
   standingsRow: StandingRow | null;
-  position: number;
+  position?: number;
 }
 
-export function TeamSheet({ team, onClose, state, standingsRow, position }: TeamSheetProps) {
+export function TeamSheet({ team, onClose, state, standingsRow, position = 0 }: TeamSheetProps) {
   const closeRef = useRef<HTMLButtonElement>(null);
 
   // Scroll lock
@@ -54,7 +54,7 @@ export function TeamSheet({ team, onClose, state, standingsRow, position }: Team
 
   if (team === null) return null;
 
-  const zoneLabel = zoneName(team.zone);
+  const zoneLabel = isKnownZone(team.zone) ? zoneName(team.zone) : null;
 
   // Build matches list
   const matches = buildMatches(team, state, scheduleMap);
@@ -72,15 +72,17 @@ export function TeamSheet({ team, onClose, state, standingsRow, position }: Team
         className={`relative w-full max-w-lg sm:max-w-md rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl transition-transform duration-200 sm:max-h-[85vh] overflow-y-auto ${team ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}`}
         role="dialog"
         aria-modal="true"
-        aria-label={`${team.name} — ${zoneLabel}`}
+        aria-label={zoneLabel ? `${team.name} — ${zoneLabel}` : team.name}
       >
         {/* Header */}
         <div className="sticky top-0 flex items-center justify-between bg-white px-6 py-4 border-b border-sand-200 rounded-t-2xl sm:rounded-t-2xl">
           <div>
             <h3 className="text-lg font-bold text-stone-900">{team.name}</h3>
-            <span className="inline-flex items-center rounded-full bg-amber-700/10 px-2 py-0.5 text-xs font-semibold text-amber-700">
-              {zoneLabel}
-            </span>
+            {zoneLabel && (
+              <span className="inline-flex items-center rounded-full bg-amber-700/10 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                {zoneLabel}
+              </span>
+            )}
           </div>
           <button
             ref={closeRef}

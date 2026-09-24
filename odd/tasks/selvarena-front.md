@@ -66,7 +66,7 @@ panel. The spec (2026-09-23) defines the product surface.
 - [x] T7 — Full agenda behind "Ver agenda completa" link
       (server fetch /api/state + client view, grouped by stage, live pulse,
       manual refresh)
-- [ ] T8 — ELIMINATORIES mode: centered brackets (semis + final) replacing
+- [x] T8 — ELIMINATORIES mode: centered brackets (semis + final) replacing
       zones+ticker, classified banner, final-position team sheet, "VER
       POSICIONES FINALES" link; DESEMPATE in ticker + bracket waits;
       unknown phase -> generic state
@@ -141,7 +141,11 @@ panel. The spec (2026-09-23) defines the product surface.
   Checks: tsc clean, eslint clean, tests 21/21. Gatekeeper readback OK;
   documented limitation: no group-match details in snapshot -> "Anterior"
   empty until eliminatories. RDD: off.
-- T7 done — commit `<next>` feat(front): full agenda at /agenda (server
+- T7 done — commit `353b733` feat(front): full agenda at /agenda (server
   fetch + grouped by stage + live pulse + manual refresh). Checks: tsc
   clean, eslint clean, tests 21/21. RDD: off.
-- Next: T8.
+- T8 done — commit `<next>` feat(front): eliminatories mode + desempate
+  banner + generic unknown-phase state; team sheet lifted to PublicHome;
+  isKnownZone helper + tests. Checks: tests 23/23, tsc clean, eslint clean.
+  Gatekeeper poly: zone "—" chip hidden (isKnownZone). RDD: off.
+- Next: T9.

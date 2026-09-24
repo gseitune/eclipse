@@ -1,14 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useLiveState } from "@/lib/front/use-live-state";
-import { phaseLabel } from "@/lib/front/phase";
+import { phaseLabel, isKnownPhase } from "@/lib/front/phase";
 import { liveMatchIds } from "@/lib/front/live";
-import type { StateSnapshot, ZoneId, TeamPublic } from "@/lib/front/types";
+import type { StateSnapshot, ZoneId, TeamPublic, StandingRow } from "@/lib/front/types";
 import { Hero } from "./Hero";
 import { StandingsTables } from "./StandingsTables";
 import { MatchTicker } from "./MatchTicker";
+import { EliminatoriesView } from "./EliminatoriesView";
+import { TeamSheet } from "./TeamSheet";
 
 export function PublicHome({ initial }: { initial: StateSnapshot | null }) {
   const { state, loading, error } = useLiveState({ initial });
@@ -23,9 +25,6 @@ export function PublicHome({ initial }: { initial: StateSnapshot | null }) {
 
     const ids = liveMatchIds(state.schedule, state.matchMinutes);
 
-    // The live match is the first PENDING one (back orders by slot). The
-    // snapshot exposes its zone/teams through nextMatch, not through the
-    // schedule rows (no zone field) nor the brackets (eliminatories only).
     const next = state.nextMatch;
     const nextLive = next !== null && ids.has(next.id);
 
@@ -39,6 +38,21 @@ export function PublicHome({ initial }: { initial: StateSnapshot | null }) {
 
     return { liveIds: ids, liveTeamIds: teamIds, initialZone: zone };
   }, [state]);
+
+  // Lifted openTeam state — shared between StandingsTables and EliminatoriesView
+  const [openTeam, setOpenTeam] = useState<{ id: string; name: string; zone: string } | null>(null);
+
+  function handleOpenTeam(team: { id: string; name: string; zone: string }) {
+    setOpenTeam(team);
+  }
+
+  function handleCloseTeamSheet() {
+    setOpenTeam(null);
+  }
+
+  const isEliminatories = phase === "ELIMINATORIES";
+  const isDesempate = phase === "DESEMPATE";
+  const known = isKnownPhase(phase);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -72,36 +86,90 @@ export function PublicHome({ initial }: { initial: StateSnapshot | null }) {
 
       {/* Sections */}
       <div className="mx-auto w-full max-w-3xl px-6 py-6 space-y-6">
-        <StandingsTables
-          standings={state?.standings ?? {}}
-          zones={state?.zones ?? { A: [], B: [], C: [] } as Record<ZoneId, TeamPublic[]>}
-          liveIds={liveIds}
-          liveTeamIds={liveTeamIds}
-          initialZone={initialZone}
-          phase={phase}
-          state={state}
-        />
+        {/* DESEMPATE banner above standings */}
+        {isDesempate && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3 text-sm text-amber-700">
+            Zonas definidas — desempate por el segundo mejor.
+          </div>
+        )}
 
-        <MatchTicker
-          schedule={state?.schedule ?? []}
-          brackets={state?.brackets ?? []}
-          nextMatch={state?.nextMatch ?? null}
-          desempate={state?.desempate ?? { needed: false, pending: false, match: null }}
-          matchMinutes={state?.matchMinutes ?? 20}
-        />
+        {/* Phase-branched content */}
+        {isEliminatories ? (
+          <EliminatoriesView
+            brackets={state?.brackets ?? []}
+            phase={phase}
+            schedule={state?.schedule ?? []}
+            matchMinutes={state?.matchMinutes ?? 20}
+            onOpenTeam={handleOpenTeam}
+          />
+        ) : (
+          <>
+            <StandingsTables
+              standings={state?.standings ?? {}}
+              zones={state?.zones ?? { A: [], B: [], C: [] } as Record<ZoneId, TeamPublic[]>}
+              liveIds={liveIds}
+              liveTeamIds={liveTeamIds}
+              initialZone={initialZone}
+              phase={phase}
+              onOpenTeam={handleOpenTeam}
+            />
 
-        <Link
-          href="/agenda"
-          className="flex items-center justify-center rounded-xl border border-sand-300 bg-white/70 py-3 text-sm font-semibold text-stone-700 backdrop-blur ring-1 ring-inset ring-sand-200 hover:bg-sand-100 transition-colors min-h-[44px]"
-        >
-          Ver agenda completa
-        </Link>
+            <MatchTicker
+              schedule={state?.schedule ?? []}
+              brackets={state?.brackets ?? []}
+              nextMatch={state?.nextMatch ?? null}
+              desempate={state?.desempate ?? { needed: false, pending: false, match: null }}
+              matchMinutes={state?.matchMinutes ?? 20}
+            />
+          </>
+        )}
 
-        <section aria-label="Cuadro" className="rounded-2xl border border-sand-300 bg-white/70 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
-          <h2 className="text-lg font-semibold text-stone-900">Cuadro</h2>
-          <p className="mt-2 text-sm text-stone-500">…</p>
-        </section>
+        {/* Agenda / Final positions link */}
+        {isEliminatories || isDesempate ? (
+          <Link
+            href="/agenda"
+            className="flex items-center justify-center rounded-xl border border-sand-300 bg-white/70 py-3 text-sm font-semibold text-stone-700 backdrop-blur ring-1 ring-inset ring-sand-200 hover:bg-sand-100 transition-colors min-h-[44px]"
+          >
+            Ver posiciones finales
+          </Link>
+        ) : (
+          <Link
+            href="/agenda"
+            className="flex items-center justify-center rounded-xl border border-sand-300 bg-white/70 py-3 text-sm font-semibold text-stone-700 backdrop-blur ring-1 ring-inset ring-sand-200 hover:bg-sand-100 transition-colors min-h-[44px]"
+          >
+            Ver agenda completa
+          </Link>
+        )}
+
+        {/* Unknown phase fallback — keep standings/ticker working */}
+        {!known && (
+          <div className="rounded-2xl border border-sand-300 bg-white/70 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
+            <h2 className="text-lg font-semibold text-stone-900">Estado del torneo</h2>
+            <p className="mt-2 text-sm text-stone-500">
+              {phaseLabel(phase)}
+            </p>
+          </div>
+        )}
       </div>
+
+      {/* TeamSheet modal — rendered at PublicHome level */}
+      {openTeam && (
+        <TeamSheet
+          team={openTeam}
+          onClose={handleCloseTeamSheet}
+          state={state}
+          standingsRow={(() => {
+            if (openTeam.zone === "—") return null;
+            const rows = state?.standings[openTeam.zone as keyof typeof state.standings] ?? [];
+            return rows.find((r: StandingRow) => r.teamId === openTeam.id) ?? null;
+          })()}
+          position={(() => {
+            if (openTeam.zone === "—") return 0;
+            const rows = state?.standings[openTeam.zone as keyof typeof state.standings] ?? [];
+            return rows.findIndex((r: StandingRow) => r.teamId === openTeam.id) + 1;
+          })()}
+        />
+      )}
 
       {/* Footer with GS badge */}
       <footer className="mt-auto flex items-center justify-between gap-4 border-t border-sand-200 px-6 py-5 text-sm text-stone-500">

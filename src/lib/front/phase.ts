@@ -58,3 +58,9 @@ export function zoneName(z: string): string {
       return `Zona ${z}`;
   }
 }
+
+const KNOWN_ZONES = ["A", "B", "C"] as const;
+
+export function isKnownZone(z: string): boolean {
+  return (KNOWN_ZONES as readonly string[]).includes(z);
+}

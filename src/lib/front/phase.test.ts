@@ -8,6 +8,7 @@ import {
   needsBrackets,
   stageLabel,
   zoneName,
+  isKnownZone,
 } from "./phase";
 
 describe("isKnownPhase", () => {
@@ -89,5 +90,19 @@ describe("zoneName", () => {
   it("returns generic label for unknown zone", () => {
     assert.equal(zoneName("D"), "Zona D");
     assert.equal(zoneName(""), "Zona ");
+  });
+});
+
+describe("isKnownZone", () => {
+  it("returns true for A, B and C", () => {
+    assert.equal(isKnownZone("A"), true);
+    assert.equal(isKnownZone("B"), true);
+    assert.equal(isKnownZone("C"), true);
+  });
+
+  it("returns false for unknown zones", () => {
+    assert.equal(isKnownZone("D"), false);
+    assert.equal(isKnownZone("—"), false);
+    assert.equal(isKnownZone(""), false);
   });
 });

@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { zoneName, phaseLabel } from "@/lib/front/phase";
-import type { ZoneId, StandingRow, TeamPublic, StateSnapshot } from "@/lib/front/types";
-import { TeamSheet } from "./TeamSheet";
+import type { ZoneId, StandingRow, TeamPublic } from "@/lib/front/types";
 
 const ZONES: ZoneId[] = ["A", "B", "C"];
 
@@ -14,7 +13,7 @@ interface StandingsTablesProps {
   liveTeamIds: Set<string>;
   initialZone: ZoneId;
   phase: string;
-  state: StateSnapshot | null;
+  onOpenTeam: (team: { id: string; name: string; zone: string }) => void;
 }
 
 export function StandingsTables({
@@ -24,10 +23,9 @@ export function StandingsTables({
   liveTeamIds,
   initialZone,
   phase,
-  state,
+  onOpenTeam,
 }: StandingsTablesProps) {
   const [activeZone, setActiveZone] = useState<ZoneId>(initialZone);
-  const [openTeam, setOpenTeam] = useState<{ id: string; name: string; zone: string } | null>(null);
 
   // Only render zones that actually exist: a zone with teams or standings rows.
   // The back arms A+B for up to 10 teams and A+B+C above that, so C only shows
@@ -40,11 +38,7 @@ export function StandingsTables({
   const shownZone = displayZones.includes(activeZone) ? activeZone : displayZones[0];
 
   function openTeamSheet(row: StandingRow) {
-    setOpenTeam({ id: row.teamId, name: row.teamName, zone: row.zone });
-  }
-
-  function closeTeamSheet() {
-    setOpenTeam(null);
+    onOpenTeam({ id: row.teamId, name: row.teamName, zone: row.zone });
   }
 
   return (
@@ -202,23 +196,6 @@ export function StandingsTables({
           );
         })}
       </div>
-
-      {/* Team Sheet */}
-      {openTeam && (
-        <TeamSheet
-          team={openTeam}
-          onClose={closeTeamSheet}
-          state={state}
-          standingsRow={(() => {
-            const rows = state?.standings[openTeam.zone as keyof typeof state.standings] ?? [];
-            return rows.find((r) => r.teamId === openTeam.id) ?? null;
-          })()}
-          position={(() => {
-            const rows = state?.standings[openTeam.zone as keyof typeof state.standings] ?? [];
-            return rows.findIndex((r) => r.teamId === openTeam.id) + 1;
-          })()}
-        />
-      )}
     </section>
   );
 }

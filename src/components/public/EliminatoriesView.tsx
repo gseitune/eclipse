@@ -1,0 +1,275 @@
+"use client";
+
+import { useMemo } from "react";
+import Link from "next/link";
+import { liveMatchIds } from "@/lib/front/live";
+import { stageLabel, phaseLabel, isKnownPhase } from "@/lib/front/phase";
+import type { MatchPublic, ScheduleRow } from "@/lib/front/types";
+
+interface EliminatoriesViewProps {
+  brackets: MatchPublic[];
+  phase: string;
+  schedule: ScheduleRow[];
+  matchMinutes: number;
+  onOpenTeam: (team: { id: string; name: string; zone: string }) => void;
+}
+
+export function EliminatoriesView({
+  brackets,
+  phase,
+  schedule,
+  matchMinutes,
+  onOpenTeam,
+}: EliminatoriesViewProps) {
+  const liveIds = useMemo(
+    () => liveMatchIds(schedule, matchMinutes),
+    [schedule, matchMinutes],
+  );
+
+  const semis = useMemo(
+    () =>
+      brackets.filter(
+        (b) => b.stage === "SEMIFINAL_1" || b.stage === "SEMIFINAL_2",
+      ),
+    [brackets],
+  );
+
+  const semifinal1 = semis.find((b) => b.stage === "SEMIFINAL_1") ?? null;
+  const semifinal2 = semis.find((b) => b.stage === "SEMIFINAL_2") ?? null;
+  const finalMatch = brackets.find((b) => b.stage === "FINAL") ?? null;
+
+  const isEliminatories = phase === "ELIMINATORIES";
+  const isDesempate = phase === "DESEMPATE";
+
+  // Champion from FINAL match
+  const champion = finalMatch?.winner;
+  const finalComplete =
+    finalMatch &&
+    (finalMatch.resultStatus === "COMPLETE" ||
+      finalMatch.resultStatus === "WINNER_ONLY");
+
+  function handleOpenTeam(
+    match: MatchPublic,
+    side: "A" | "B",
+  ) {
+    const player = side === "A" ? match.teamA : match.teamB;
+    if (!player) return;
+    onOpenTeam({ id: player.id, name: player.name, zone: "—" });
+  }
+
+  function matchResultLabel(m: MatchPublic) {
+    switch (m.resultStatus) {
+      case "COMPLETE": {
+        const setA = m.setAScore ?? 0;
+        const setB = m.setBScore ?? 0;
+        return `${setA} - ${setB}`;
+      }
+      case "WINNER_ONLY":
+        return m.winner ? `Ganó ${m.winner.name}` : "Ganó";
+      case "PENDING":
+        return m.timeLabel ? `vs ${m.timeLabel}` : "vs";
+      default:
+        return "";
+    }
+  }
+
+  function isLiveMatch(m: MatchPublic | null) {
+    if (!m) return false;
+    return liveIds.has(m.id);
+  }
+
+  // Unknown phase: render generic strip
+  if (!isKnownPhase(phase)) {
+    return (
+      <section aria-label="Cuadro" className="rounded-2xl border border-sand-300 bg-white/70 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
+        <h2 className="text-lg font-semibold text-stone-900">Cuadro</h2>
+        <p className="mt-2 text-sm text-stone-500">
+          Estado del torneo: {phaseLabel(phase)}
+        </p>
+      </section>
+    );
+  }
+
+  // DESEMPATE waiting state
+  if (isDesempate) {
+    return (
+      <section aria-label="Cuadro" className="rounded-2xl border border-sand-300 bg-white/70 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
+        <h2 className="text-lg font-semibold text-stone-900">Cuadro</h2>
+        <div className="mt-4 flex items-center justify-center rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-6 text-sm text-amber-700">
+          <p>Cuadro disponible al finalizar el desempate</p>
+        </div>
+      </section>
+    );
+  }
+
+  // Empty brackets edge case
+  if (brackets.length === 0) {
+    return (
+      <section aria-label="Cuadro" className="rounded-2xl border border-sand-300 bg-white/70 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
+        <h2 className="text-lg font-semibold text-stone-900">Cuadro</h2>
+        <p className="mt-2 text-sm text-stone-500">Generando cuadro…</p>
+      </section>
+    );
+  }
+
+  return (
+    <section aria-label="Cuadro" className="rounded-2xl border border-sand-300 bg-white/70 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
+      <h2 className="text-lg font-semibold text-stone-900">Cuadro</h2>
+
+      {/* Semifinal cards — two side by side on sm+ */}
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {[semifinal1, semifinal2].map((match) => {
+          if (!match) {
+            return (
+              <div
+                key="semi-slot"
+                className="rounded-xl border border-sand-200 bg-white/60 p-4"
+              >
+                <p className="text-sm text-stone-400">—</p>
+              </div>
+            );
+          }
+          const live = isLiveMatch(match);
+          const winner = match.winner;
+          const isWinnerA =
+            match.resultStatus === "COMPLETE" ||
+            match.resultStatus === "WINNER_ONLY"
+              ? match.winnerId === match.teamAId
+              : false;
+          const isWinnerB =
+            match.resultStatus === "COMPLETE" ||
+            match.resultStatus === "WINNER_ONLY"
+              ? match.winnerId === match.teamBId
+              : false;
+
+          return (
+            <div
+              key={match.id}
+              className={`rounded-xl border p-4 ${
+                live
+                  ? "ring-2 ring-ember-500 ring-inset animate-pulse"
+                  : "border-sand-200 bg-white/60"
+              } ${
+                winner ? "ring-2 ring-amber-500 ring-inset" : ""
+              }`}
+            >
+              <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
+                {stageLabel(match.stage)}
+              </p>
+              {live && (
+                <span className="mt-1 inline-flex items-center gap-1.5 text-[10px] font-semibold text-ember-500">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ember-500" />
+                  EN VIVO
+                </span>
+              )}
+              <div className="mt-3 space-y-2">
+                {/* Team A */}
+                <button
+                  onClick={() => handleOpenTeam(match, "A")}
+                  className={`min-h-[44px] w-full rounded-lg px-3 py-2 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 ${
+                    isWinnerA
+                      ? "bg-amber-50 text-amber-800 font-bold ring-2 ring-amber-400"
+                      : "text-stone-800 hover:bg-sand-100"
+                  }`}
+                >
+                  {match.teamA?.name ?? "—"}
+                </button>
+                {/* Team B */}
+                <button
+                  onClick={() => handleOpenTeam(match, "B")}
+                  className={`min-h-[44px] w-full rounded-lg px-3 py-2 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 ${
+                    isWinnerB
+                      ? "bg-amber-50 text-amber-800 font-bold ring-2 ring-amber-400"
+                      : "text-stone-800 hover:bg-sand-100"
+                  }`}
+                >
+                  {match.teamB?.name ?? "—"}
+                </button>
+                {/* Result */}
+                <p className="text-center text-sm font-semibold text-stone-700">
+                  {matchResultLabel(match)}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* FINAL card — centered below, winner ascends */}
+      {finalMatch && (
+        <div className="mt-4 flex justify-center">
+          <div
+            className={`w-full max-w-xs rounded-xl border p-4 ${
+              finalComplete
+                ? "ring-2 ring-amber-500 ring-inset bg-amber-50/40"
+                : "border-sand-200 bg-white/60"
+            }`}
+          >
+            <p className="text-center text-xs font-semibold uppercase tracking-wider text-stone-400">
+              {stageLabel(finalMatch.stage)}
+            </p>
+            <div className="mt-3 space-y-2">
+              <button
+                onClick={() => handleOpenTeam(finalMatch, "A")}
+                className={`min-h-[44px] w-full rounded-lg px-3 py-2 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 ${
+                  finalMatch.winnerId === finalMatch.teamAId && finalComplete
+                    ? "bg-amber-50 text-amber-800 font-bold ring-2 ring-amber-400"
+                    : "text-stone-800 hover:bg-sand-100"
+                }`}
+              >
+                {finalMatch.teamA?.name ?? "—"}
+              </button>
+              <button
+                onClick={() => handleOpenTeam(finalMatch, "B")}
+                className={`min-h-[44px] w-full rounded-lg px-3 py-2 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 ${
+                  finalMatch.winnerId === finalMatch.teamBId && finalComplete
+                    ? "bg-amber-50 text-amber-800 font-bold ring-2 ring-amber-400"
+                    : "text-stone-800 hover:bg-sand-100"
+                }`}
+              >
+                {finalMatch.teamB?.name ?? "—"}
+              </button>
+              <p className="text-center text-sm font-semibold text-stone-700">
+                {matchResultLabel(finalMatch)}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Champion card */}
+      <div className="mt-4 flex justify-center">
+        {finalComplete && champion ? (
+          <div className="w-full max-w-xs rounded-xl border border-amber-400 bg-amber-50/60 p-6 text-center ring-2 ring-amber-300 ring-inset">
+            <p className="text-xs font-semibold uppercase tracking-wider text-amber-700">
+              CAMPEÓN
+            </p>
+            <p className="mt-2 text-2xl font-bold text-stone-900">
+              {champion.name}
+            </p>
+          </div>
+        ) : (
+          <div className="w-full max-w-xs rounded-xl border border-sand-200 bg-white/60 p-6 text-center">
+            <p className="text-sm text-stone-400">
+              {isEliminatories
+                ? "La final se juega ahora"
+                : "Próximamente"}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* VER POSICIONES FINALES link */}
+      {(isEliminatories || isDesempate) && (
+        <div className="mt-4 text-center">
+          <Link
+            href="/agenda"
+            className="inline-flex items-center justify-center rounded-xl border border-sand-300 bg-white/70 px-4 py-2 text-sm font-semibold text-stone-700 backdrop-blur ring-1 ring-inset ring-sand-200 hover:bg-sand-100 transition-colors min-h-[44px]"
+          >
+            Ver posiciones finales
+          </Link>
+        </div>
+      )}
+      </section>
+    );
+  }
