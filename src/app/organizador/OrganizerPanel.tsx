@@ -4,6 +4,7 @@ import { logout } from "@/lib/front/api";
 import { useState } from "react";
 import { ResultadosSection } from "./ResultadosSection";
 import { ZonificacionSection } from "./ZonificacionSection";
+import { AvisoSection } from "./AvisoSection";
 
 /* ── Lock icon (inline SVG, no emoji, no external dependency) ── */
 function LockIcon() {
@@ -140,7 +141,7 @@ export function OrganizerPanel({
 }: OrganizerPanelProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [activeSection, setActiveSection] = useState<
-    "resultados" | "zonificacion" | null
+    "resultados" | "zonificacion" | "aviso" | null
   >(null);
 
   function handleSectionClick(label: string) {
@@ -150,6 +151,9 @@ export function OrganizerPanel({
         break;
       case "Resultados":
         setActiveSection("resultados");
+        break;
+      case "Aviso sonoro":
+        setActiveSection("aviso");
         break;
       default:
         setActiveSection(null);
@@ -194,6 +198,8 @@ export function OrganizerPanel({
         <ResultadosSection onBack={() => setActiveSection(null)} />
       ) : activeSection === "zonificacion" ? (
         <ZonificacionSection onBack={() => setActiveSection(null)} />
+      ) : activeSection === "aviso" ? (
+        <AvisoSection onBack={() => setActiveSection(null)} />
       ) : (
         /* Sections list */
         <main className="mx-auto w-full max-w-3xl px-6 py-8">

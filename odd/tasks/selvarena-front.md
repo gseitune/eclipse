@@ -79,7 +79,7 @@ panel. The spec (2026-09-23) defines the product surface.
       back NO soporta edición (409 "already has a result") — UI read-only.
 - [x] T12 — Zonification flow: arm (generate) -> review/adjust (swap with
       guard) -> confirm -> fixture; 409 handled as disabled + notice
-- [ ] T13 — CHIME v1: Web Audio (no permissions), banner "Cargá el resultado",
+- [x] T13 — CHIME v1: Web Audio (no permissions), banner "Cargá el resultado",
       "El partido sigue" snooze 5 min
 - [ ] T14 — Panel live standings + final verification: lint, build, tests,
       manual mobile/desktop pass
@@ -159,7 +159,11 @@ panel. The spec (2026-09-23) defines the product surface.
   Checks: tsc clean, eslint clean, tests 23/23. Verified contract: editing
   unsupported (409), checklist counts bracket+desempate pending only.
   RDD: off.
-- T12 done — commit `<next>` feat(front): zonification section (generate/
+- T12 done — commit `99e0a7a` feat(front): zonification section (generate/
   swap/confirm, locked view when confirmed). Checks: tsc clean, eslint clean,
   tests 23/23. RDD: off.
-- Next: T13.
+- T13 done — commit `<next>` feat(front): chime v1 sound alert + live banner.
+  Checks: tsc clean, eslint clean, tests now 30/30 (8 live + 14 phase + 8
+  chime). Gatekeeper correction: useChime now receives state.matchMinutes so
+  chime follows the same live threshold as the views. RDD: off.
+- Next: T14.

@@ -5,15 +5,20 @@ import Link from "next/link";
 import { useLiveState } from "@/lib/front/use-live-state";
 import { phaseLabel, isKnownPhase } from "@/lib/front/phase";
 import { liveMatchIds } from "@/lib/front/live";
+import { useChime } from "@/lib/front/chime";
 import type { StateSnapshot, ZoneId, TeamPublic, StandingRow } from "@/lib/front/types";
 import { Hero } from "./Hero";
 import { StandingsTables } from "./StandingsTables";
 import { MatchTicker } from "./MatchTicker";
 import { EliminatoriesView } from "./EliminatoriesView";
 import { TeamSheet } from "./TeamSheet";
+import { ChimeBanner } from "./ChimeBanner";
 
 export function PublicHome({ initial }: { initial: StateSnapshot | null }) {
   const { state, loading, error } = useLiveState({ initial });
+
+  // Mount chime hook — triggers audio on new live matches
+  useChime({ state, matchMinutes: state?.matchMinutes ?? 20 });
 
   const live = state !== null;
   const phase = state?.phase ?? "GROUPS";
@@ -69,22 +74,25 @@ export function PublicHome({ initial }: { initial: StateSnapshot | null }) {
       {/* Hero */}
       <Hero live={live} />
 
-      {/* Live status strip */}
-      <div className="mx-auto w-full max-w-3xl px-6 py-3">
-        <div className="flex items-center justify-between rounded-2xl border border-sand-300 bg-white/70 px-4 py-2 backdrop-blur ring-1 ring-inset ring-sand-200">
-          <span className="text-sm font-semibold text-stone-900">
-            {phaseLabel(phase)}
-          </span>
-          {error && (
-            <span className="flex items-center gap-1.5 text-xs text-ember-500">
-              <span className="h-1.5 w-1.5 rounded-full bg-ember-500" />
-              Conexión perdida...
+{/* Live status strip */}
+        <div className="mx-auto w-full max-w-3xl px-6 py-3">
+          <div className="flex items-center justify-between rounded-2xl border border-sand-300 bg-white/70 px-4 py-2 backdrop-blur ring-1 ring-inset ring-sand-200">
+            <span className="text-sm font-semibold text-stone-900">
+              {phaseLabel(phase)}
             </span>
-          )}
+            {error && (
+              <span className="flex items-center gap-1.5 text-xs text-ember-500">
+                <span className="h-1.5 w-1.5 rounded-full bg-ember-500" />
+                Conexión perdida...
+              </span>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Sections */}
+        {/* Result-pending banner */}
+        <ChimeBanner liveCount={liveIds.size} />
+
+        {/* Sections */}
       <div className="mx-auto w-full max-w-3xl px-6 py-6 space-y-6">
         {/* DESEMPATE banner above standings */}
         {isDesempate && (
