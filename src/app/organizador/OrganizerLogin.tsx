@@ -7,7 +7,7 @@ import { ApiError } from "@/lib/front/types";
 
 export function OrganizerLogin() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -18,7 +18,7 @@ export function OrganizerLogin() {
     setPending(true);
 
     try {
-      await login(email, password);
+      await login(username, password);
       router.refresh();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -36,15 +36,15 @@ export function OrganizerLogin() {
       <h2 className="text-xl font-bold text-stone-900">Acceso al Organizador</h2>
 
       <div>
-        <label htmlFor="org-email" className="block text-sm font-medium text-stone-700 mb-1">
-          Email
+        <label htmlFor="org-username" className="block text-sm font-medium text-stone-700 mb-1">
+          Usuario
         </label>
         <input
-          id="org-email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          autoComplete="email"
+          id="org-username"
+          type="text"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          autoComplete="username"
           required
           className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[44px]"
         />

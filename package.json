@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --import tsx --test src/lib/tournament.test.ts src/lib/standings.test.ts src/lib/zonification.test.ts src/lib/brackets.test.ts src/lib/schedule.test.ts src/lib/front/phase.test.ts src/lib/result-format.test.ts src/lib/back.integration.test.ts"
+    "test": "node --import tsx --test src/lib/tournament.test.ts src/lib/standings.test.ts src/lib/zonification.test.ts src/lib/brackets.test.ts src/lib/schedule.test.ts src/lib/front/phase.test.ts src/lib/result-format.test.ts src/lib/auth.test.ts src/lib/back.integration.test.ts"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.10.0",

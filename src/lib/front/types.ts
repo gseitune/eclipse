@@ -122,7 +122,7 @@ export type ResultResponse = {
   nextMatch: MatchPublic | null;
 };
 
-export type LoginResponse = { ok: true; email: string };
+export type LoginResponse = { ok: true; email: string; username: string };
 
 export type ApiErrorBody = { error: string };
 

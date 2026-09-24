@@ -93,14 +93,14 @@ export async function recordResult(input: {
 }
 
 export async function login(
-  email: string,
+  identifier: string,
   password: string,
 ): Promise<LoginResponse> {
   const res = await fetch(`${BASE}/auth/login`, {
     method: "POST",
     credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ identifier, password }),
     cache: "no-store",
   });
   return handleResponse<LoginResponse>(res);

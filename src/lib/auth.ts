@@ -91,12 +91,15 @@ export function createSessionToken(user: {
 export const sessionCookieName = SESSION_COOKIE;
 
 export async function login(
-  email: string,
+  identifier: string,
   password: string,
-): Promise<{ id: string; email: string } | null> {
-  const normalized = email.trim().toLowerCase();
-  const user = await prisma.user.findUnique({ where: { email: normalized } });
+): Promise<{ id: string; email: string; username: string } | null> {
+  const normalized = identifier.trim().toLowerCase();
+  // Try username first, then fall back to email
+  const user =
+    (await prisma.user.findUnique({ where: { username: normalized } })) ??
+    (await prisma.user.findUnique({ where: { email: normalized } }));
   if (!user) return null;
   if (!verifyPassword(password, user.passwordHash)) return null;
-  return { id: user.id, email: user.email };
+  return { id: user.id, email: user.email, username: user.username };
 }
