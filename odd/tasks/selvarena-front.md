@@ -144,7 +144,7 @@ panel. The spec (2026-09-23) defines the product surface.
 - T7 done — commit `353b733` feat(front): full agenda at /agenda (server
   fetch + grouped by stage + live pulse + manual refresh). Checks: tsc
   clean, eslint clean, tests 21/21. RDD: off.
-- T8 done — commit `<next>` feat(front): eliminatories mode + desempate
+- T8 done — commit `4ffdd18` feat(front): eliminatories mode + desempate
   banner + generic unknown-phase state; team sheet lifted to PublicHome;
   isKnownZone helper + tests. Checks: tests 23/23, tsc clean, eslint clean.
   Gatekeeper poly: zone "—" chip hidden (isKnownZone). RDD: off.
