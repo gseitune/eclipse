@@ -126,12 +126,6 @@ export function StandingsTables({
                         <th className="py-1 text-right font-semibold">
                           G
                         </th>
-                        <th className="py-1 text-right font-semibold">
-                          P
-                        </th>
-                        <th className="py-1 text-right font-semibold">
-                          DG
-                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-sand-100">
@@ -178,12 +172,6 @@ export function StandingsTables({
                             </td>
                             <td className="py-1.5 text-right text-sm text-stone-600">
                               {row.won}
-                            </td>
-                            <td className="py-1.5 text-right text-sm text-stone-600">
-                              {row.lost}
-                            </td>
-                            <td className="py-1.5 text-right text-sm text-stone-600">
-                              {row.setDiff}
                             </td>
                           </tr>
                         );

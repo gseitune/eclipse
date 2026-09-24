@@ -50,9 +50,7 @@ function ZoneStandingsTable({
               <th className="w-8 py-1 text-left font-semibold">#</th>
               <th className="py-1 text-left font-semibold">Equipo</th>
               <th className="py-1 text-right font-semibold">PJ</th>
-              <th className="py-1 text-right font-semibold">PG</th>
-              <th className="py-1 text-right font-semibold">PP</th>
-              <th className="py-1 text-right font-semibold">DG</th>
+              <th className="py-1 text-right font-semibold">G</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-sand-100">
@@ -86,12 +84,6 @@ function ZoneStandingsTable({
                   </td>
                   <td className="py-1.5 text-right text-sm text-stone-600">
                     {row.won}
-                  </td>
-                  <td className="py-1.5 text-right text-sm text-stone-600">
-                    {row.lost}
-                  </td>
-                  <td className="py-1.5 text-right text-sm text-stone-600">
-                    {row.setDiff}
                   </td>
                 </tr>
               );
