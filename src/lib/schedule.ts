@@ -1,4 +1,5 @@
 import type { ResultStatus } from "../generated/prisma/client";
+import type { SetFormatId, SetScore } from "./result-format";
 
 /**
  * Dynamic estimated schedule (HORARIOS ESTIMADOS).
@@ -14,6 +15,9 @@ export interface ScheduleMatchInput {
   slot: number;
   stage: string;
   timeLabel: string | null;
+  /** Full multi-set score; null for PENDING and WINNER_ONLY matches. */
+  sets: SetScore[] | null;
+  setFormat: SetFormatId | null;
   resultStatus: ResultStatus;
   recordedAt: Date | null;
 }
@@ -28,6 +32,9 @@ export interface ScheduleRow {
   estimated: string | null;
   /** True when the estimate comes from an actual recorded result chain. */
   estimatedFromResult: boolean;
+  /** Full multi-set score; null for PENDING and WINNER_ONLY matches. */
+  sets: SetScore[] | null;
+  setFormat: SetFormatId | null;
   /**
    * True when this match's result may be edited: it has a result AND no
    * strictly-descendant phase has played one yet (editing would invalidate
@@ -103,6 +110,8 @@ export function computeSchedule(
         scheduled: m.timeLabel ?? null,
         estimated: null,
         estimatedFromResult: false,
+        sets: m.sets,
+        setFormat: m.setFormat,
         editable: editableByMatch.get(m.id) ?? false,
       });
       continue;
@@ -120,6 +129,8 @@ export function computeSchedule(
           scheduled: m.timeLabel ?? null,
           estimated: null,
           estimatedFromResult: false,
+          sets: m.sets,
+          setFormat: m.setFormat,
           editable: editableByMatch.get(m.id) ?? false,
         });
         continue;
@@ -136,6 +147,8 @@ export function computeSchedule(
       scheduled: m.timeLabel ?? null,
       estimated: `${toTimeOnly(start.toISOString())} - ${toTimeOnly(end.toISOString())}`,
       estimatedFromResult: true,
+      sets: m.sets,
+      setFormat: m.setFormat,
       editable: editableByMatch.get(m.id) ?? false,
     });
     nextStart = end;

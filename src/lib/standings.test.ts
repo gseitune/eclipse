@@ -132,6 +132,19 @@ describe("computeZoneStandings", () => {
     assert.equal(rows[0].setDiff, 0, "no sets may be invented");
   });
 
+  it("counts multi-set matches by sets won (2-1 gives set diff +1)", () => {
+    const teams = [team("t1", A), team("t2", A)];
+    const matches = [
+      groupMatch({ a: "t1", b: "t2", zone: A, status: "COMPLETE", winner: "t1", sets: [2, 1] }),
+    ];
+    const rows = computeZoneStandings(teams, matches, A);
+    assert.equal(rows[0].teamId, "t1");
+    assert.equal(rows[0].won, 1);
+    assert.equal(rows[0].played, 1);
+    assert.equal(rows[0].setDiff, 1, "2 sets won - 1 set lost");
+    assert.equal(rows[1].setDiff, -1);
+  });
+
   it("ignores PENDING matches, other zones and eliminatories", () => {
     const teams = [team("t1", A), team("t2", A), team("t3", B)];
     const matches = [

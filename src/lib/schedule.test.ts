@@ -9,12 +9,16 @@ function match(
   status: "PENDING" | "WINNER_ONLY" | "COMPLETE" = "PENDING",
   recordedAt: Date | null = null,
   stage = "GROUPS",
+  sets: { teamA: number; teamB: number }[] | null = null,
+  setFormat: "SINGLE_21" | "TWO_15_TIEBREAK" | "BEST_OF_3_21" | null = null,
 ): ScheduleMatchInput {
   return {
     id: `m${slot}`,
     slot,
     stage,
     timeLabel,
+    sets,
+    setFormat,
     resultStatus: status,
     recordedAt,
   };
@@ -83,6 +87,26 @@ describe("computeSchedule", () => {
     assert.equal(rows[1].estimated, "10:05 - 10:25", "desempate chains from the result");
     assert.equal(rows[1].stage, "DESEMPATE");
     assert.equal(rows[2].estimated, "10:25 - 10:45", "semis chain after the desempate");
+  });
+
+  it("exposes the multi-set score and format on rows (passthrough)", () => {
+    const matches = [
+      match(
+        1,
+        "10:00 - 10:20",
+        "COMPLETE",
+        new Date(2026, 8, 23, 10, 0, 0),
+        "GROUPS",
+        [{ teamA: 21, teamB: 19 }],
+        "SINGLE_21",
+      ),
+      match(2, "10:20 - 10:40"),
+    ];
+    const rows = computeSchedule(matches, 5, 20);
+    assert.deepEqual(rows[0].sets, [{ teamA: 21, teamB: 19 }]);
+    assert.equal(rows[0].setFormat, "SINGLE_21");
+    assert.equal(rows[1].sets, null);
+    assert.equal(rows[1].setFormat, null);
   });
 });
 

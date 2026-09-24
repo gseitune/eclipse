@@ -28,14 +28,10 @@ export type AggregateMatch = {
 
 export type MatchAvgAggregateOutputType = {
   slot: number | null
-  setAScore: number | null
-  setBScore: number | null
 }
 
 export type MatchSumAggregateOutputType = {
   slot: number | null
-  setAScore: number | null
-  setBScore: number | null
 }
 
 export type MatchMinAggregateOutputType = {
@@ -46,8 +42,7 @@ export type MatchMinAggregateOutputType = {
   timeLabel: string | null
   teamAId: string | null
   teamBId: string | null
-  setAScore: number | null
-  setBScore: number | null
+  setFormat: $Enums.SetFormat | null
   resultStatus: $Enums.ResultStatus | null
   winnerId: string | null
   recordedAt: Date | null
@@ -63,8 +58,7 @@ export type MatchMaxAggregateOutputType = {
   timeLabel: string | null
   teamAId: string | null
   teamBId: string | null
-  setAScore: number | null
-  setBScore: number | null
+  setFormat: $Enums.SetFormat | null
   resultStatus: $Enums.ResultStatus | null
   winnerId: string | null
   recordedAt: Date | null
@@ -80,8 +74,8 @@ export type MatchCountAggregateOutputType = {
   timeLabel: number
   teamAId: number
   teamBId: number
-  setAScore: number
-  setBScore: number
+  sets: number
+  setFormat: number
   resultStatus: number
   winnerId: number
   recordedAt: number
@@ -93,14 +87,10 @@ export type MatchCountAggregateOutputType = {
 
 export type MatchAvgAggregateInputType = {
   slot?: true
-  setAScore?: true
-  setBScore?: true
 }
 
 export type MatchSumAggregateInputType = {
   slot?: true
-  setAScore?: true
-  setBScore?: true
 }
 
 export type MatchMinAggregateInputType = {
@@ -111,8 +101,7 @@ export type MatchMinAggregateInputType = {
   timeLabel?: true
   teamAId?: true
   teamBId?: true
-  setAScore?: true
-  setBScore?: true
+  setFormat?: true
   resultStatus?: true
   winnerId?: true
   recordedAt?: true
@@ -128,8 +117,7 @@ export type MatchMaxAggregateInputType = {
   timeLabel?: true
   teamAId?: true
   teamBId?: true
-  setAScore?: true
-  setBScore?: true
+  setFormat?: true
   resultStatus?: true
   winnerId?: true
   recordedAt?: true
@@ -145,8 +133,8 @@ export type MatchCountAggregateInputType = {
   timeLabel?: true
   teamAId?: true
   teamBId?: true
-  setAScore?: true
-  setBScore?: true
+  sets?: true
+  setFormat?: true
   resultStatus?: true
   winnerId?: true
   recordedAt?: true
@@ -249,8 +237,8 @@ export type MatchGroupByOutputType = {
   timeLabel: string | null
   teamAId: string | null
   teamBId: string | null
-  setAScore: number | null
-  setBScore: number | null
+  sets: runtime.JsonValue | null
+  setFormat: $Enums.SetFormat | null
   resultStatus: $Enums.ResultStatus
   winnerId: string | null
   recordedAt: Date | null
@@ -289,8 +277,8 @@ export type MatchWhereInput = {
   timeLabel?: Prisma.StringNullableFilter<"Match"> | string | null
   teamAId?: Prisma.StringNullableFilter<"Match"> | string | null
   teamBId?: Prisma.StringNullableFilter<"Match"> | string | null
-  setAScore?: Prisma.IntNullableFilter<"Match"> | number | null
-  setBScore?: Prisma.IntNullableFilter<"Match"> | number | null
+  sets?: Prisma.JsonNullableFilter<"Match">
+  setFormat?: Prisma.EnumSetFormatNullableFilter<"Match"> | $Enums.SetFormat | null
   resultStatus?: Prisma.EnumResultStatusFilter<"Match"> | $Enums.ResultStatus
   winnerId?: Prisma.StringNullableFilter<"Match"> | string | null
   recordedAt?: Prisma.DateTimeNullableFilter<"Match"> | Date | string | null
@@ -309,8 +297,8 @@ export type MatchOrderByWithRelationInput = {
   timeLabel?: Prisma.SortOrderInput | Prisma.SortOrder
   teamAId?: Prisma.SortOrderInput | Prisma.SortOrder
   teamBId?: Prisma.SortOrderInput | Prisma.SortOrder
-  setAScore?: Prisma.SortOrderInput | Prisma.SortOrder
-  setBScore?: Prisma.SortOrderInput | Prisma.SortOrder
+  sets?: Prisma.SortOrderInput | Prisma.SortOrder
+  setFormat?: Prisma.SortOrderInput | Prisma.SortOrder
   resultStatus?: Prisma.SortOrder
   winnerId?: Prisma.SortOrderInput | Prisma.SortOrder
   recordedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -332,8 +320,8 @@ export type MatchWhereUniqueInput = Prisma.AtLeast<{
   timeLabel?: Prisma.StringNullableFilter<"Match"> | string | null
   teamAId?: Prisma.StringNullableFilter<"Match"> | string | null
   teamBId?: Prisma.StringNullableFilter<"Match"> | string | null
-  setAScore?: Prisma.IntNullableFilter<"Match"> | number | null
-  setBScore?: Prisma.IntNullableFilter<"Match"> | number | null
+  sets?: Prisma.JsonNullableFilter<"Match">
+  setFormat?: Prisma.EnumSetFormatNullableFilter<"Match"> | $Enums.SetFormat | null
   resultStatus?: Prisma.EnumResultStatusFilter<"Match"> | $Enums.ResultStatus
   winnerId?: Prisma.StringNullableFilter<"Match"> | string | null
   recordedAt?: Prisma.DateTimeNullableFilter<"Match"> | Date | string | null
@@ -352,8 +340,8 @@ export type MatchOrderByWithAggregationInput = {
   timeLabel?: Prisma.SortOrderInput | Prisma.SortOrder
   teamAId?: Prisma.SortOrderInput | Prisma.SortOrder
   teamBId?: Prisma.SortOrderInput | Prisma.SortOrder
-  setAScore?: Prisma.SortOrderInput | Prisma.SortOrder
-  setBScore?: Prisma.SortOrderInput | Prisma.SortOrder
+  sets?: Prisma.SortOrderInput | Prisma.SortOrder
+  setFormat?: Prisma.SortOrderInput | Prisma.SortOrder
   resultStatus?: Prisma.SortOrder
   winnerId?: Prisma.SortOrderInput | Prisma.SortOrder
   recordedAt?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -377,8 +365,8 @@ export type MatchScalarWhereWithAggregatesInput = {
   timeLabel?: Prisma.StringNullableWithAggregatesFilter<"Match"> | string | null
   teamAId?: Prisma.StringNullableWithAggregatesFilter<"Match"> | string | null
   teamBId?: Prisma.StringNullableWithAggregatesFilter<"Match"> | string | null
-  setAScore?: Prisma.IntNullableWithAggregatesFilter<"Match"> | number | null
-  setBScore?: Prisma.IntNullableWithAggregatesFilter<"Match"> | number | null
+  sets?: Prisma.JsonNullableWithAggregatesFilter<"Match">
+  setFormat?: Prisma.EnumSetFormatNullableWithAggregatesFilter<"Match"> | $Enums.SetFormat | null
   resultStatus?: Prisma.EnumResultStatusWithAggregatesFilter<"Match"> | $Enums.ResultStatus
   winnerId?: Prisma.StringNullableWithAggregatesFilter<"Match"> | string | null
   recordedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Match"> | Date | string | null
@@ -392,8 +380,8 @@ export type MatchCreateInput = {
   zone?: $Enums.Zone | null
   slot: number
   timeLabel?: string | null
-  setAScore?: number | null
-  setBScore?: number | null
+  sets?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  setFormat?: $Enums.SetFormat | null
   resultStatus?: $Enums.ResultStatus
   recordedAt?: Date | string | null
   createdAt?: Date | string
@@ -411,8 +399,8 @@ export type MatchUncheckedCreateInput = {
   timeLabel?: string | null
   teamAId?: string | null
   teamBId?: string | null
-  setAScore?: number | null
-  setBScore?: number | null
+  sets?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  setFormat?: $Enums.SetFormat | null
   resultStatus?: $Enums.ResultStatus
   winnerId?: string | null
   recordedAt?: Date | string | null
@@ -426,8 +414,8 @@ export type MatchUpdateInput = {
   zone?: Prisma.NullableEnumZoneFieldUpdateOperationsInput | $Enums.Zone | null
   slot?: Prisma.IntFieldUpdateOperationsInput | number
   timeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  setAScore?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  setBScore?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  sets?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -445,8 +433,8 @@ export type MatchUncheckedUpdateInput = {
   timeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   teamAId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   teamBId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  setAScore?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  setBScore?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  sets?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   winnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -462,8 +450,8 @@ export type MatchCreateManyInput = {
   timeLabel?: string | null
   teamAId?: string | null
   teamBId?: string | null
-  setAScore?: number | null
-  setBScore?: number | null
+  sets?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  setFormat?: $Enums.SetFormat | null
   resultStatus?: $Enums.ResultStatus
   winnerId?: string | null
   recordedAt?: Date | string | null
@@ -477,8 +465,8 @@ export type MatchUpdateManyMutationInput = {
   zone?: Prisma.NullableEnumZoneFieldUpdateOperationsInput | $Enums.Zone | null
   slot?: Prisma.IntFieldUpdateOperationsInput | number
   timeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  setAScore?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  setBScore?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  sets?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -493,8 +481,8 @@ export type MatchUncheckedUpdateManyInput = {
   timeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   teamAId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   teamBId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  setAScore?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  setBScore?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  sets?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   winnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -520,8 +508,8 @@ export type MatchCountOrderByAggregateInput = {
   timeLabel?: Prisma.SortOrder
   teamAId?: Prisma.SortOrder
   teamBId?: Prisma.SortOrder
-  setAScore?: Prisma.SortOrder
-  setBScore?: Prisma.SortOrder
+  sets?: Prisma.SortOrder
+  setFormat?: Prisma.SortOrder
   resultStatus?: Prisma.SortOrder
   winnerId?: Prisma.SortOrder
   recordedAt?: Prisma.SortOrder
@@ -531,8 +519,6 @@ export type MatchCountOrderByAggregateInput = {
 
 export type MatchAvgOrderByAggregateInput = {
   slot?: Prisma.SortOrder
-  setAScore?: Prisma.SortOrder
-  setBScore?: Prisma.SortOrder
 }
 
 export type MatchMaxOrderByAggregateInput = {
@@ -543,8 +529,7 @@ export type MatchMaxOrderByAggregateInput = {
   timeLabel?: Prisma.SortOrder
   teamAId?: Prisma.SortOrder
   teamBId?: Prisma.SortOrder
-  setAScore?: Prisma.SortOrder
-  setBScore?: Prisma.SortOrder
+  setFormat?: Prisma.SortOrder
   resultStatus?: Prisma.SortOrder
   winnerId?: Prisma.SortOrder
   recordedAt?: Prisma.SortOrder
@@ -560,8 +545,7 @@ export type MatchMinOrderByAggregateInput = {
   timeLabel?: Prisma.SortOrder
   teamAId?: Prisma.SortOrder
   teamBId?: Prisma.SortOrder
-  setAScore?: Prisma.SortOrder
-  setBScore?: Prisma.SortOrder
+  setFormat?: Prisma.SortOrder
   resultStatus?: Prisma.SortOrder
   winnerId?: Prisma.SortOrder
   recordedAt?: Prisma.SortOrder
@@ -571,8 +555,6 @@ export type MatchMinOrderByAggregateInput = {
 
 export type MatchSumOrderByAggregateInput = {
   slot?: Prisma.SortOrder
-  setAScore?: Prisma.SortOrder
-  setBScore?: Prisma.SortOrder
 }
 
 export type MatchCreateNestedManyWithoutTeamAInput = {
@@ -713,12 +695,8 @@ export type NullableStringFieldUpdateOperationsInput = {
   set?: string | null
 }
 
-export type NullableIntFieldUpdateOperationsInput = {
-  set?: number | null
-  increment?: number
-  decrement?: number
-  multiply?: number
-  divide?: number
+export type NullableEnumSetFormatFieldUpdateOperationsInput = {
+  set?: $Enums.SetFormat | null
 }
 
 export type EnumResultStatusFieldUpdateOperationsInput = {
@@ -735,8 +713,8 @@ export type MatchCreateWithoutTeamAInput = {
   zone?: $Enums.Zone | null
   slot: number
   timeLabel?: string | null
-  setAScore?: number | null
-  setBScore?: number | null
+  sets?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  setFormat?: $Enums.SetFormat | null
   resultStatus?: $Enums.ResultStatus
   recordedAt?: Date | string | null
   createdAt?: Date | string
@@ -752,8 +730,8 @@ export type MatchUncheckedCreateWithoutTeamAInput = {
   slot: number
   timeLabel?: string | null
   teamBId?: string | null
-  setAScore?: number | null
-  setBScore?: number | null
+  sets?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  setFormat?: $Enums.SetFormat | null
   resultStatus?: $Enums.ResultStatus
   winnerId?: string | null
   recordedAt?: Date | string | null
@@ -776,8 +754,8 @@ export type MatchCreateWithoutTeamBInput = {
   zone?: $Enums.Zone | null
   slot: number
   timeLabel?: string | null
-  setAScore?: number | null
-  setBScore?: number | null
+  sets?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  setFormat?: $Enums.SetFormat | null
   resultStatus?: $Enums.ResultStatus
   recordedAt?: Date | string | null
   createdAt?: Date | string
@@ -793,8 +771,8 @@ export type MatchUncheckedCreateWithoutTeamBInput = {
   slot: number
   timeLabel?: string | null
   teamAId?: string | null
-  setAScore?: number | null
-  setBScore?: number | null
+  sets?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  setFormat?: $Enums.SetFormat | null
   resultStatus?: $Enums.ResultStatus
   winnerId?: string | null
   recordedAt?: Date | string | null
@@ -817,8 +795,8 @@ export type MatchCreateWithoutWinnerInput = {
   zone?: $Enums.Zone | null
   slot: number
   timeLabel?: string | null
-  setAScore?: number | null
-  setBScore?: number | null
+  sets?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  setFormat?: $Enums.SetFormat | null
   resultStatus?: $Enums.ResultStatus
   recordedAt?: Date | string | null
   createdAt?: Date | string
@@ -835,8 +813,8 @@ export type MatchUncheckedCreateWithoutWinnerInput = {
   timeLabel?: string | null
   teamAId?: string | null
   teamBId?: string | null
-  setAScore?: number | null
-  setBScore?: number | null
+  sets?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  setFormat?: $Enums.SetFormat | null
   resultStatus?: $Enums.ResultStatus
   recordedAt?: Date | string | null
   createdAt?: Date | string
@@ -879,8 +857,8 @@ export type MatchScalarWhereInput = {
   timeLabel?: Prisma.StringNullableFilter<"Match"> | string | null
   teamAId?: Prisma.StringNullableFilter<"Match"> | string | null
   teamBId?: Prisma.StringNullableFilter<"Match"> | string | null
-  setAScore?: Prisma.IntNullableFilter<"Match"> | number | null
-  setBScore?: Prisma.IntNullableFilter<"Match"> | number | null
+  sets?: Prisma.JsonNullableFilter<"Match">
+  setFormat?: Prisma.EnumSetFormatNullableFilter<"Match"> | $Enums.SetFormat | null
   resultStatus?: Prisma.EnumResultStatusFilter<"Match"> | $Enums.ResultStatus
   winnerId?: Prisma.StringNullableFilter<"Match"> | string | null
   recordedAt?: Prisma.DateTimeNullableFilter<"Match"> | Date | string | null
@@ -927,8 +905,8 @@ export type MatchCreateManyTeamAInput = {
   slot: number
   timeLabel?: string | null
   teamBId?: string | null
-  setAScore?: number | null
-  setBScore?: number | null
+  sets?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  setFormat?: $Enums.SetFormat | null
   resultStatus?: $Enums.ResultStatus
   winnerId?: string | null
   recordedAt?: Date | string | null
@@ -943,8 +921,8 @@ export type MatchCreateManyTeamBInput = {
   slot: number
   timeLabel?: string | null
   teamAId?: string | null
-  setAScore?: number | null
-  setBScore?: number | null
+  sets?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  setFormat?: $Enums.SetFormat | null
   resultStatus?: $Enums.ResultStatus
   winnerId?: string | null
   recordedAt?: Date | string | null
@@ -960,8 +938,8 @@ export type MatchCreateManyWinnerInput = {
   timeLabel?: string | null
   teamAId?: string | null
   teamBId?: string | null
-  setAScore?: number | null
-  setBScore?: number | null
+  sets?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  setFormat?: $Enums.SetFormat | null
   resultStatus?: $Enums.ResultStatus
   recordedAt?: Date | string | null
   createdAt?: Date | string
@@ -974,8 +952,8 @@ export type MatchUpdateWithoutTeamAInput = {
   zone?: Prisma.NullableEnumZoneFieldUpdateOperationsInput | $Enums.Zone | null
   slot?: Prisma.IntFieldUpdateOperationsInput | number
   timeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  setAScore?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  setBScore?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  sets?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -991,8 +969,8 @@ export type MatchUncheckedUpdateWithoutTeamAInput = {
   slot?: Prisma.IntFieldUpdateOperationsInput | number
   timeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   teamBId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  setAScore?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  setBScore?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  sets?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   winnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1007,8 +985,8 @@ export type MatchUncheckedUpdateManyWithoutTeamAInput = {
   slot?: Prisma.IntFieldUpdateOperationsInput | number
   timeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   teamBId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  setAScore?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  setBScore?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  sets?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   winnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1022,8 +1000,8 @@ export type MatchUpdateWithoutTeamBInput = {
   zone?: Prisma.NullableEnumZoneFieldUpdateOperationsInput | $Enums.Zone | null
   slot?: Prisma.IntFieldUpdateOperationsInput | number
   timeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  setAScore?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  setBScore?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  sets?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1039,8 +1017,8 @@ export type MatchUncheckedUpdateWithoutTeamBInput = {
   slot?: Prisma.IntFieldUpdateOperationsInput | number
   timeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   teamAId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  setAScore?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  setBScore?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  sets?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   winnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1055,8 +1033,8 @@ export type MatchUncheckedUpdateManyWithoutTeamBInput = {
   slot?: Prisma.IntFieldUpdateOperationsInput | number
   timeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   teamAId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  setAScore?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  setBScore?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  sets?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   winnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1070,8 +1048,8 @@ export type MatchUpdateWithoutWinnerInput = {
   zone?: Prisma.NullableEnumZoneFieldUpdateOperationsInput | $Enums.Zone | null
   slot?: Prisma.IntFieldUpdateOperationsInput | number
   timeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  setAScore?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  setBScore?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  sets?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1088,8 +1066,8 @@ export type MatchUncheckedUpdateWithoutWinnerInput = {
   timeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   teamAId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   teamBId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  setAScore?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  setBScore?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  sets?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1104,8 +1082,8 @@ export type MatchUncheckedUpdateManyWithoutWinnerInput = {
   timeLabel?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   teamAId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   teamBId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  setAScore?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  setBScore?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  sets?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1122,8 +1100,8 @@ export type MatchSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   timeLabel?: boolean
   teamAId?: boolean
   teamBId?: boolean
-  setAScore?: boolean
-  setBScore?: boolean
+  sets?: boolean
+  setFormat?: boolean
   resultStatus?: boolean
   winnerId?: boolean
   recordedAt?: boolean
@@ -1142,8 +1120,8 @@ export type MatchSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   timeLabel?: boolean
   teamAId?: boolean
   teamBId?: boolean
-  setAScore?: boolean
-  setBScore?: boolean
+  sets?: boolean
+  setFormat?: boolean
   resultStatus?: boolean
   winnerId?: boolean
   recordedAt?: boolean
@@ -1162,8 +1140,8 @@ export type MatchSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   timeLabel?: boolean
   teamAId?: boolean
   teamBId?: boolean
-  setAScore?: boolean
-  setBScore?: boolean
+  sets?: boolean
+  setFormat?: boolean
   resultStatus?: boolean
   winnerId?: boolean
   recordedAt?: boolean
@@ -1182,8 +1160,8 @@ export type MatchSelectScalar = {
   timeLabel?: boolean
   teamAId?: boolean
   teamBId?: boolean
-  setAScore?: boolean
-  setBScore?: boolean
+  sets?: boolean
+  setFormat?: boolean
   resultStatus?: boolean
   winnerId?: boolean
   recordedAt?: boolean
@@ -1191,7 +1169,7 @@ export type MatchSelectScalar = {
   updatedAt?: boolean
 }
 
-export type MatchOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "stage" | "zone" | "slot" | "timeLabel" | "teamAId" | "teamBId" | "setAScore" | "setBScore" | "resultStatus" | "winnerId" | "recordedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["match"]>
+export type MatchOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "stage" | "zone" | "slot" | "timeLabel" | "teamAId" | "teamBId" | "sets" | "setFormat" | "resultStatus" | "winnerId" | "recordedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["match"]>
 export type MatchInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   teamA?: boolean | Prisma.Match$teamAArgs<ExtArgs>
   teamB?: boolean | Prisma.Match$teamBArgs<ExtArgs>
@@ -1223,8 +1201,11 @@ export type $MatchPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     timeLabel: string | null
     teamAId: string | null
     teamBId: string | null
-    setAScore: number | null
-    setBScore: number | null
+    /**
+     * Played sets as [{"teamA":21,"teamB":19}, ...]; null for WINNER_ONLY.
+     */
+    sets: runtime.JsonValue | null
+    setFormat: $Enums.SetFormat | null
     resultStatus: $Enums.ResultStatus
     winnerId: string | null
     recordedAt: Date | null
@@ -1663,8 +1644,8 @@ export interface MatchFieldRefs {
   readonly timeLabel: Prisma.FieldRef<"Match", 'String'>
   readonly teamAId: Prisma.FieldRef<"Match", 'String'>
   readonly teamBId: Prisma.FieldRef<"Match", 'String'>
-  readonly setAScore: Prisma.FieldRef<"Match", 'Int'>
-  readonly setBScore: Prisma.FieldRef<"Match", 'Int'>
+  readonly sets: Prisma.FieldRef<"Match", 'Json'>
+  readonly setFormat: Prisma.FieldRef<"Match", 'SetFormat'>
   readonly resultStatus: Prisma.FieldRef<"Match", 'ResultStatus'>
   readonly winnerId: Prisma.FieldRef<"Match", 'String'>
   readonly recordedAt: Prisma.FieldRef<"Match", 'DateTime'>

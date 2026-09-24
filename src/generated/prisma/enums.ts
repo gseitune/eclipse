@@ -38,6 +38,15 @@ export const ResultStatus = {
 export type ResultStatus = (typeof ResultStatus)[keyof typeof ResultStatus]
 
 
+export const SetFormat = {
+  SINGLE_21: 'SINGLE_21',
+  TWO_15_TIEBREAK: 'TWO_15_TIEBREAK',
+  BEST_OF_3_21: 'BEST_OF_3_21'
+} as const
+
+export type SetFormat = (typeof SetFormat)[keyof typeof SetFormat]
+
+
 export const Phase = {
   GROUPS: 'GROUPS',
   DESEMPATE: 'DESEMPATE',

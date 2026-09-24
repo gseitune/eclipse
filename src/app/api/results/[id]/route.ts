@@ -29,10 +29,9 @@ export async function PATCH(
   try {
     const result = await editResult({
       matchId: id,
-      setAScore:
-        typeof body?.setAScore === "number" ? body.setAScore : null,
-      setBScore:
-        typeof body?.setBScore === "number" ? body.setBScore : null,
+      setFormat:
+        typeof body?.setFormat === "string" ? body.setFormat : null,
+      sets: Array.isArray(body?.sets) ? body.sets : null,
       winnerId:
         typeof body?.winnerId === "string" ? body.winnerId : null,
     });

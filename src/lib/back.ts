@@ -4,11 +4,19 @@ import { computeZoneStandings, type StandingRow } from "./standings";
 import {
   computeSchedule,
   DESCENDANT_STAGES,
+  type ScheduleMatchInput,
   type ScheduleRow,
 } from "./schedule";
 import { buildBrackets, selectBestSecond, type BestSecondSelection } from "./brackets";
 import { regenerateZones, swapZone, type ZoneId } from "./zonification";
+import {
+  countSetWins,
+  resolveResultPayload,
+  type SetFormatId,
+  type SetScore,
+} from "./result-format";
 import type { Stage, Zone } from "../generated/prisma/client";
+import { Prisma } from "../generated/prisma/client";
 
 /**
  * SELVARENA backend operations (Prisma layer).
@@ -107,8 +115,7 @@ export async function getStandings(): Promise<Partial<Record<string, StandingRow
         zone: true,
         teamAId: true,
         teamBId: true,
-        setAScore: true,
-        setBScore: true,
+        sets: true,
         resultStatus: true,
         winnerId: true,
       },
@@ -116,7 +123,24 @@ export async function getStandings(): Promise<Partial<Record<string, StandingRow
   ]);
   const standings: Partial<Record<string, StandingRow[]>> = {};
   for (const zone of ["A", "B", "C"] as const) {
-    const rows = computeZoneStandings(teams, matches, zone);
+    const rows = computeZoneStandings(
+      teams,
+      matches.map((m) => {
+        const sets = (m.sets ?? null) as SetScore[] | null;
+        const wins = sets ? countSetWins(sets) : { a: null, b: null };
+        return {
+          stage: m.stage,
+          zone: m.zone,
+          teamAId: m.teamAId,
+          teamBId: m.teamBId,
+          setAScore: wins.a,
+          setBScore: wins.b,
+          resultStatus: m.resultStatus,
+          winnerId: m.winnerId,
+        };
+      }),
+      zone,
+    );
     if (rows.length > 0) standings[zone] = rows;
   }
   return standings;
@@ -131,12 +155,24 @@ export async function getSchedule(): Promise<ScheduleRow[]> {
         slot: true,
         stage: true,
         timeLabel: true,
+        sets: true,
+        setFormat: true,
         resultStatus: true,
         recordedAt: true,
       },
     }),
   ]);
-  return computeSchedule(matches, state.prepMinutes, state.matchMinutes);
+  const input: ScheduleMatchInput[] = matches.map((m) => ({
+    id: m.id,
+    slot: m.slot,
+    stage: m.stage,
+    timeLabel: m.timeLabel,
+    sets: (m.sets ?? null) as SetScore[] | null,
+    setFormat: m.setFormat,
+    resultStatus: m.resultStatus,
+    recordedAt: m.recordedAt,
+  }));
+  return computeSchedule(input, state.prepMinutes, state.matchMinutes);
 }
 
 export async function getNextMatch() {
@@ -319,65 +355,18 @@ export async function getStateSnapshot() {
 
 export interface RecordResultInput {
   matchId: string;
-  setAScore?: number | null;
-  setBScore?: number | null;
+  setFormat?: SetFormatId | null;
+  sets?: SetScore[] | null;
   winnerId?: string | null;
 }
 
-interface ResolvedPayload {
-  setAScore: number | null;
-  setBScore: number | null;
-  resultStatus: "COMPLETE" | "WINNER_ONLY";
-  winnerId: string | null;
-}
-
 /**
- * Shared result validation for record and edit: a full score (winner derived
- * from it) OR an explicit winner — never a partial result, and the optional
- * winnerId must agree with the score when both are present.
+ * Shared result payload for record and edit: a full multi-set score (the
+ * winner is derived from the sets, WINNER_ONLY stays legal everywhere) OR an
+ * explicit winner — never a partial result, and the optional winnerId must
+ * agree with the score when both are present. All format rules (win-by-2,
+ * per-stage formats, set counts) live in result-format.ts.
  */
-function resolveResultPayload(
-  teamAId: string,
-  teamBId: string,
-  input: RecordResultInput,
-): ResolvedPayload {
-  const hasSets =
-    input.setAScore !== null &&
-    input.setAScore !== undefined &&
-    input.setBScore !== null &&
-    input.setBScore !== undefined;
-
-  if (hasSets) {
-    const a = input.setAScore!;
-    const b = input.setBScore!;
-    if (a <= 0 || b <= 0) {
-      throw new BackError("Sets must be positive.", 400);
-    }
-    if (a === b) throw new BackError("Sets cannot tie.", 400);
-    const winnerId = a > b ? teamAId : teamBId;
-    if (input.winnerId && input.winnerId !== winnerId) {
-      throw new BackError("winnerId does not match the set scores.", 400);
-    }
-    return { setAScore: a, setBScore: b, resultStatus: "COMPLETE", winnerId };
-  }
-
-  if (input.winnerId) {
-    if (input.winnerId !== teamAId && input.winnerId !== teamBId) {
-      throw new BackError("winnerId must be one of the playing teams.", 400);
-    }
-    return {
-      setAScore: null,
-      setBScore: null,
-      resultStatus: "WINNER_ONLY",
-      winnerId: input.winnerId,
-    };
-  }
-
-  throw new BackError(
-    "Provide a full score or an explicit winner — never a partial result.",
-    400,
-  );
-}
 
 interface ReconcileOutcome {
   phaseChanged: boolean;
@@ -473,11 +462,26 @@ export async function recordResult(input: RecordResultInput) {
     throw new BackError("Bracket slot has no teams yet.", 409);
   }
 
-  const payload = resolveResultPayload(match.teamAId, match.teamBId, input);
+  const payload = resolveResultPayload(
+    match.teamAId,
+    match.teamBId,
+    match.stage,
+    input,
+  );
 
   await prisma.match.update({
     where: { id: match.id },
-    data: { ...payload, recordedAt: new Date() },
+    data: {
+      // Prisma Json fields reject interface-shaped arrays (index signature),
+      // so the validated value is cast at the write boundary.
+      sets: payload.sets
+        ? (payload.sets as unknown as Prisma.InputJsonValue)
+        : Prisma.DbNull,
+      setFormat: payload.setFormat,
+      resultStatus: payload.resultStatus,
+      winnerId: payload.winnerId,
+      recordedAt: new Date(),
+    },
   });
 
   publishSse("result-recorded", { matchId: match.id, phase: null });
@@ -542,11 +546,24 @@ export async function editResult(input: EditResultInput) {
     throw new BackError("Bracket slot has no teams yet.", 409);
   }
 
-  const payload = resolveResultPayload(match.teamAId, match.teamBId, input);
+  const payload = resolveResultPayload(
+    match.teamAId,
+    match.teamBId,
+    match.stage,
+    input,
+  );
 
   await prisma.match.update({
     where: { id: match.id },
-    data: { ...payload, recordedAt: new Date() },
+    data: {
+      sets: payload.sets
+        ? (payload.sets as unknown as Prisma.InputJsonValue)
+        : Prisma.DbNull,
+      setFormat: payload.setFormat,
+      resultStatus: payload.resultStatus,
+      winnerId: payload.winnerId,
+      recordedAt: new Date(),
+    },
   });
 
   publishSse("result-recorded", { matchId: match.id, phase: null });

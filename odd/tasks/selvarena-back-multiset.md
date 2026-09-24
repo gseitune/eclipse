@@ -96,31 +96,43 @@ cleanup artifact remain dev-side, documented.
 
 ## Checklist
 
-- [ ] (C1) New pure module `src/lib/result-format.ts` (types + `validateSets`
+- [x] (C1) New pure module `src/lib/result-format.ts` (types + `validateSets`
       + `deriveWinnerFromSets` + `resolveResultPayload`) + tests
       `src/lib/result-format.test.ts`. Run: result-format tests + tsc + lint.
-      Commit: `feat(back): multi-set result validation (win-by-2, only on
-      groups DEV/; stage→format map)`.
-- [ ] (C2) `prisma/schema.prisma`: `Match.sets` (Json? / SetScore[]),
+      Commit: `7cf338a` `feat(back): multi-set result validation module
+      (win-by-2, per-stage formats)` — 6 files, +685/−6.
+- [x] (C2) `prisma/schema.prisma`: `Match.sets` (Json? / SetScore[]),
       `Match.setFormat` (SetFormat?), drop `setAScore/setBScore`;
       migration + regenerate; run `npm test`, `npx tsc --noEmit`, lint.
-- [ ] (C2) `src/lib/back.ts`: `RecordResultInput`/`EditResultInput` →
+- [x] (C2) `src/lib/back.ts`: `RecordResultInput`/`EditResultInput` →
       `{ setFormat, sets, winnerId }`; `recordResult`/`editResult` resolve +
       persist `sets[]`/`setFormat`, derive winner; `recordedAt` stamped on
       edit; standings mapping reads `sets[]` as set-won counts; payload shape
       moved to `resolveResultPayload` (single source shared by record+edit).
-- [ ] (C2) `src/app/api/results/route.ts` + `[id]/route.ts`: parse new payload,
+- [x] (C2) `src/app/api/results/route.ts` + `[id]/route.ts`: parse new payload,
       same guards (405/409), `reason` passthrough preserved; drop old fields.
-- [ ] (C2) `src/lib/schedule.ts`: `ScheduleRow.editable` already merged;
+- [x] (C2) `src/lib/schedule.ts`: `ScheduleRow.editable` already merged;
       `schedule.test.ts` multi-set rows. `src/lib/standings.ts`: mapping
       rename (reads `sets[]`); `standings.test.ts` updated.
-- [ ] (C2) `src/lib/back.integration.test.ts`: record/edit multi-set cases,
+- [x] (C2) `src/lib/back.integration.test.ts`: record/edit multi-set cases,
       win-by-2 400s, winner-mismatch 400, descendant guard keeps blocking.
 - [ ] (C2) `src/lib/schedule.test.ts` guard tests (already in C1/C0 patch).
 - [ ] (C2) `docs/backend-criteria.md` — Results/Standings/schedule sections
       on the multi-set model + editable flag; commit `docs(back): ...`.
 - [ ] Final: `npm test` green (56 + new), tsc clean, lint clean; report hash
       + remaining WIP; restore branch state exactly as front/back continued.
+
+## Progress log
+
+### C2 (commit pending) — schema + consumers + integration
+
+- `prisma/schema.prisma`: enum `SetFormat { SINGLE_21 TWO_15_TIEBREAK BEST_OF_3_21 }`; `Match.sets Json?`, `Match.setFormat SetFormat?`; dropped `setAScore`/`setBScore`.
+- Migration `20260923215000_multi_set_results` (RedefineTables, no indexes): written by hand via `prisma migrate diff` (interactive `migrate dev` not usable), applied with `migrate deploy`; regenerated Prisma Client 7.10.0 under `src/generated/prisma`.
+- dev.db slot-1 artifact cleanup inside migration (UPDATE → PENDING); verified via check script: 23 matches all PENDING, sets=null, fmt=null.
+- `prisma/seed.ts`: GROUPS matches get `setFormat: SINGLE_21`; semis/final keep null (organizer picks).
+- `src/lib/back.ts`: record+edit persist `sets`/`setFormat`/`resultStatus`/`winnerId`/`recordedAt`; sets written via `Prisma.DbNull` when null and cast at write boundary (Prisma TS index-signature limitation with `InputJsonValue`).
+- `schedule.test.ts` passthrough multi-set row; `standings.test.ts` +multi-set count; integration test rewritten (11 cases).
+- Checks: npm test 90/90, tsc clean, lint clean (final pass after cast fix).
 
 ## Notes
 

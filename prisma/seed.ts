@@ -91,6 +91,9 @@ async function main(): Promise<void> {
         timeLabel: match.time,
         stage: match.stage,
         zone: match.zone ?? null,
+        // Groups are always single-set to 21; semis/final pick their format
+        // live at load time (SINGLE_21 | TWO_15_TIEBREAK | BEST_OF_3_21).
+        setFormat: match.stage === "GROUPS" ? "SINGLE_21" : null,
         teamAId: match.teamA ? (teamIdByName.get(match.teamA) ?? null) : null,
         teamBId: match.teamB ? (teamIdByName.get(match.teamB) ?? null) : null,
         resultStatus: "PENDING",
