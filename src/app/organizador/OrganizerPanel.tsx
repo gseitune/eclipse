@@ -2,6 +2,7 @@
 
 import { logout } from "@/lib/front/api";
 import { useState } from "react";
+import { ResultadosSection } from "./ResultadosSection";
 
 /* ── Lock icon (inline SVG, no emoji, no external dependency) ── */
 function LockIcon() {
@@ -139,6 +140,7 @@ export function OrganizerPanel({
   onSectionClick,
 }: OrganizerPanelProps) {
   const [loggingOut, setLoggingOut] = useState(false);
+  const [activeSection, setActiveSection] = useState<"resultados" | null>(null);
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -174,27 +176,31 @@ export function OrganizerPanel({
         </div>
       </header>
 
-      {/* Sections list */}
-      <main className="mx-auto w-full max-w-3xl px-6 py-8">
-        <nav aria-label="Secciones del panel" className="flex flex-col gap-3">
-          {SECTIONS.map((section) =>
-            section.kind === "actionable" ? (
-              <SectionCard
-                key={section.label}
-                label={section.label}
-                hint={section.hint}
-                onClick={() => onSectionClick?.(section.label)}
-              />
-            ) : (
-              <DisabledSectionCard
-                key={section.label}
-                label={section.label}
-                hint={section.hint}
-              />
-            )
-          )}
-        </nav>
-      </main>
+      {activeSection === "resultados" ? (
+        <ResultadosSection onBack={() => setActiveSection(null)} />
+      ) : (
+        /* Sections list */
+        <main className="mx-auto w-full max-w-3xl px-6 py-8">
+          <nav aria-label="Secciones del panel" className="flex flex-col gap-3">
+            {SECTIONS.map((section) =>
+              section.kind === "actionable" ? (
+                <SectionCard
+                  key={section.label}
+                  label={section.label}
+                  hint={section.hint}
+                  onClick={() => onSectionClick?.(section.label)}
+                />
+              ) : (
+                <DisabledSectionCard
+                  key={section.label}
+                  label={section.label}
+                  hint={section.hint}
+                />
+              )
+            )}
+          </nav>
+        </main>
+      )}
     </div>
   );
 }

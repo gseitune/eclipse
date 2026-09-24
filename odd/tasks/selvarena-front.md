@@ -74,8 +74,9 @@ panel. The spec (2026-09-23) defines the product surface.
       gate reads session server-side (verifySessionToken + cookies())
 - [x] T10 — Organizer panel shell + disabled placeholders (teams, stages,
       reschedule -> "próximamente")
-- [ ] T11 — Mobile quick result entry (3 taps) + notebook checklist ("faltan
-      N partidos") + result editing via POST /api/results
+- [x] T11 — Mobile quick result entry (3 taps) + notebook checklist ("faltan
+      N partidos") + result editing via POST /api/results. Nota verificado:
+      back NO soporta edición (409 "already has a result") — UI read-only.
 - [ ] T12 — Zonification flow: arm (generate) -> review/adjust (swap with
       guard) -> confirm -> fixture; 409 handled as disabled + notice
 - [ ] T13 — CHIME v1: Web Audio (no permissions), banner "Cargá el resultado",
@@ -152,6 +153,10 @@ panel. The spec (2026-09-23) defines the product surface.
   gate. Checks: tsc clean, eslint clean, tests 23/23, build dynamic route OK.
   Components colocated in src/app/organizador/ (Turbopack alias issue with
   new dirs). RDD: off.
-- T10 done — commit `<next>` feat(front): organizer panel shell + disabled
+- T10 done — commit `d1de7f9` feat(front): organizer panel shell + disabled
   placeholders. Checks: tsc clean, eslint clean, tests 23/23. RDD: off.
-- Next: T11.
+- T11 done — commit `<next>` feat(front): quick result entry + checklist.
+  Checks: tsc clean, eslint clean, tests 23/23. Verified contract: editing
+  unsupported (409), checklist counts bracket+desempate pending only.
+  RDD: off.
+- Next: T12.
