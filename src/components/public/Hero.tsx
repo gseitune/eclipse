@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 export function Hero({ live }: { live: boolean }) {
   return (
     <header className="mx-auto w-full max-w-3xl px-6 py-8 text-center">
@@ -43,16 +41,6 @@ export function Hero({ live }: { live: boolean }) {
           EN VIVO
         </div>
       )}
-
-      {/* Organizer link */}
-      <div className="mt-6">
-        <Link
-          href="/organizador"
-          className="rounded-lg border border-sand-300 bg-sand-50 px-4 py-2 text-xs font-semibold text-stone-600 ring-1 ring-inset ring-sand-300 transition-colors hover:bg-sand-100 min-h-[44px] inline-flex items-center"
-        >
-          Organizador
-        </Link>
-      </div>
     </header>
   );
 }
