@@ -88,7 +88,7 @@ export function PublicHome({
       {/* Top bar — static, scrolls with the page */}
       <div className="flex items-start justify-between px-3 pt-3">
         <div className="pointer-events-none">
-          <div className="-ml-14 mt-10 w-40 rotate-[-45deg] bg-amber-600 py-1 text-center text-[11px] font-bold uppercase tracking-widest text-white shadow-md">
+          <div className="-ml-11 mt-4 w-40 rotate-[-45deg] bg-amber-600 py-1 text-center text-[11px] font-bold uppercase tracking-widest text-white shadow-md">
             BETA TEST
           </div>
         </div>
