@@ -2,8 +2,10 @@
 
 import { logout } from "@/lib/front/api";
 import { useState } from "react";
+import { useLiveState } from "@/lib/front/use-live-state";
+import { setWins } from "@/lib/front/types";
+import type { MatchPublic } from "@/lib/front/types";
 import { ResultadosSection } from "./ResultadosSection";
-import { PosicionesSection } from "./PosicionesSection";
 import { CircuitosSection } from "./CircuitosSection";
 
 /* ── Lock icon (inline SVG, no emoji, no external dependency) ── */
@@ -38,11 +40,6 @@ const SECTIONS: readonly SectionConfig[] = [
   {
     label: "Resultados",
     hint: "Cargar o corregir resultados",
-    kind: "actionable",
-  },
-  {
-    label: "Posiciones en vivo",
-    hint: "Ver la tabla de posiciones en tiempo real",
     kind: "actionable",
   },
   {
@@ -125,23 +122,84 @@ function DisabledSectionCard({
   );
 }
 
+/* ── Subcomponent: Results scoreboard card (live match, replaces block button) ── */
+function ResultsScoreboardCard({
+  match,
+  loading,
+  onOpen,
+}: {
+  readonly match: MatchPublic | null;
+  readonly loading: boolean;
+  readonly onOpen: () => void;
+}) {
+  const wins = match ? setWins(match.sets) : { a: 0, b: 0 };
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="flex w-full items-center gap-4 rounded-xl border border-sand-300 bg-sand-50 px-5 py-4 text-left ring-1 ring-inset ring-sand-200 hover:bg-sand-100 hover:ring-sand-300 transition-colors min-h-[44px]"
+    >
+      <span className="flex-1 min-w-0">
+        <span className="block text-sm font-semibold text-stone-900">
+          Resultados
+        </span>
+        <span className="mt-0.5 block text-xs text-stone-500">
+          Cargar o corregir resultados
+        </span>
+
+        {/* Live board */}
+        {match ? (
+          <span className="mt-3 flex items-center gap-3 rounded-lg border border-sand-300 bg-white px-4 py-3">
+            <span className="flex-1 truncate text-sm font-semibold text-stone-900 text-right">
+              {match.teamA?.name ?? "?"}
+            </span>
+            <span className="flex items-baseline gap-1.5">
+              <span className="w-8 text-center text-lg font-bold text-stone-900">
+                {wins.a}
+              </span>
+              <span className="text-stone-400 font-bold">:</span>
+              <span className="w-8 text-center text-lg font-bold text-stone-900">
+                {wins.b}
+              </span>
+            </span>
+            <span className="flex-1 truncate text-sm font-semibold text-stone-900 text-left">
+              {match.teamB?.name ?? "?"}
+            </span>
+          </span>
+        ) : (
+          <span className="mt-3 flex items-center justify-center gap-2 rounded-lg border border-sand-200 bg-stone-100/70 px-4 py-4 text-stone-400">
+            <LockIcon />
+            <span className="text-sm font-medium">
+              {loading ? "Cargando…" : "Sin partido activo"}
+            </span>
+          </span>
+        )}
+      </span>
+      <span className="text-sunset-500 text-sm font-medium flex-shrink-0 self-center">
+        →
+      </span>
+    </button>
+  );
+}
+
 /* ── Main panel ── */
 export function OrganizerPanel({
   email,
 }: OrganizerPanelProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [activeSection, setActiveSection] = useState<
-    "resultados" | "posiciones" | "circuitos" | null
+    "resultados" | "circuitos" | null
   >(null);
   const [view, setView] = useState<"panel" | "public">("panel");
+
+  const { state: liveState, loading } = useLiveState();
+  const nextMatch = liveState?.nextMatch ?? null;
 
   function handleSectionClick(label: string) {
     switch (label) {
       case "Resultados":
         setActiveSection("resultados");
-        break;
-      case "Posiciones en vivo":
-        setActiveSection("posiciones");
         break;
       case "Circuitos y etapas":
         setActiveSection("circuitos");
@@ -207,14 +265,17 @@ export function OrganizerPanel({
       {view === "panel" ? (
         activeSection === "resultados" ? (
           <ResultadosSection onBack={() => setActiveSection(null)} />
-        ) : activeSection === "posiciones" ? (
-          <PosicionesSection onBack={() => setActiveSection(null)} />
         ) : activeSection === "circuitos" ? (
           <CircuitosSection onBack={() => setActiveSection(null)} />
         ) : (
           /* Sections list */
           <main className="mx-auto w-full max-w-3xl px-6 py-8">
             <nav aria-label="Secciones del panel" className="flex flex-col gap-3">
+              <ResultsScoreboardCard
+                match={nextMatch}
+                loading={loading}
+                onOpen={() => setActiveSection("resultados")}
+              />
               {SECTIONS.map((section) =>
                 section.kind === "actionable" ? (
                   <SectionCard
