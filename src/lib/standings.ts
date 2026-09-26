@@ -23,6 +23,8 @@ export interface StandingInputTeam {
   id: string;
   name: string;
   zone: Zone;
+  maleName?: string | null;
+  femaleName?: string | null;
 }
 
 export interface StandingInputMatch {
@@ -44,6 +46,8 @@ export interface StandingRow {
   won: number;
   lost: number;
   setDiff: number;
+  maleName: string | null;
+  femaleName: string | null;
   /** Kept for API compatibility; zone ties now resolve deterministically. */
   unresolvedTie: boolean;
 }
@@ -124,6 +128,8 @@ export function computeZoneStandings(
       won: 0,
       lost: 0,
       setDiff: 0,
+      maleName: t.maleName ?? null,
+      femaleName: t.femaleName ?? null,
       unresolvedTie: false,
     });
   }

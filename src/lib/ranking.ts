@@ -14,6 +14,8 @@ export function positionPoints(position: number): number {
 export interface EtapaPosition {
   teamId: string;
   teamName: string;
+  maleName: string | null;
+  femaleName: string | null;
   position: number;
   points: number;
   zone: Zone | null;
@@ -86,6 +88,9 @@ export function computeFinalPositions(
       (m.stage === "SEMIFINAL_1" || m.stage === "SEMIFINAL_2") &&
       m.resultStatus !== "PENDING",
   );
+  const bronzeMatch = matches.find(
+    (m) => m.stage === "BRONZE" && m.resultStatus !== "PENDING",
+  );
 
   if (!finalMatch || !finalMatch.teamAId || !finalMatch.teamBId) {
     return []; // not finished
@@ -97,13 +102,6 @@ export function computeFinalPositions(
   const winnerId = finalMatch.winnerId;
   const loserId =
     winnerId === finalMatch.teamAId ? finalMatch.teamBId : finalMatch.teamAId;
-
-  // Build a map of all teams in the bracket semis (semifinal participants)
-  const bracketTeamIds = new Set<string>();
-  for (const sm of semiMatches) {
-    if (sm.teamAId) bracketTeamIds.add(sm.teamAId);
-    if (sm.teamBId) bracketTeamIds.add(sm.teamBId);
-  }
 
   // Collect semifinal losers (3rd/4th)
   const semiLosers: Array<{ teamId: string; teamName: string; setDiff: number }> = [];
@@ -123,50 +121,68 @@ export function computeFinalPositions(
       });
     }
   }
-
-  // Sort semifinal losers by setDiff desc, then teamName asc, then id asc
   semiLosers.sort((a, b) => b.setDiff - a.setDiff || a.teamName.localeCompare(b.teamName) || a.teamId.localeCompare(b.teamId));
 
-  // Determine 3rd and 4th
-  const thirdTeamId = semiLosers[0]?.teamId ?? null;
-  const fourthTeamId = semiLosers[1]?.teamId ?? null;
+  // Determine 3rd and 4th: BRONZE match overrides semifinal losers
+  let thirdTeamId: string | null;
+  let fourthTeamId: string | null;
+  if (bronzeMatch && bronzeMatch.winnerId) {
+    thirdTeamId = bronzeMatch.winnerId;
+    fourthTeamId = bronzeMatch.winnerId === bronzeMatch.teamAId
+      ? bronzeMatch.teamBId
+      : bronzeMatch.teamAId;
+  } else {
+    thirdTeamId = semiLosers[0]?.teamId ?? null;
+    fourthTeamId = semiLosers[1]?.teamId ?? null;
+  }
 
-  // Build position list
+  // 1st
   if (winnerId) {
     const winnerRow = getStandingRowForTeam(standings, winnerId);
     positions.push({
       teamId: winnerId,
       teamName: winnerRow?.teamName ?? winnerId,
+      maleName: winnerRow?.maleName ?? null,
+      femaleName: winnerRow?.femaleName ?? null,
       position: 1,
       points: positionPoints(1),
       zone: winnerRow?.zone ?? null,
     });
   }
+  // 2nd
   if (loserId) {
     const loserRow = getStandingRowForTeam(standings, loserId);
     positions.push({
       teamId: loserId,
       teamName: loserRow?.teamName ?? loserId,
+      maleName: loserRow?.maleName ?? null,
+      femaleName: loserRow?.femaleName ?? null,
       position: 2,
       points: positionPoints(2),
       zone: loserRow?.zone ?? null,
     });
   }
+  // 3rd
   if (thirdTeamId) {
     const row = getStandingRowForTeam(standings, thirdTeamId);
     positions.push({
       teamId: thirdTeamId,
       teamName: row?.teamName ?? thirdTeamId,
+      maleName: row?.maleName ?? null,
+      femaleName: row?.femaleName ?? null,
       position: 3,
       points: positionPoints(3),
       zone: row?.zone ?? null,
     });
   }
+  // 4th
   if (fourthTeamId) {
     const row = getStandingRowForTeam(standings, fourthTeamId);
     positions.push({
       teamId: fourthTeamId,
       teamName: row?.teamName ?? fourthTeamId,
+      maleName: row?.maleName ?? null,
+      femaleName: row?.femaleName ?? null,
       position: 4,
       points: positionPoints(4),
       zone: row?.zone ?? null,
@@ -180,25 +196,25 @@ export function computeFinalPositions(
     ...semiMatches.flatMap((m) => [m.teamAId, m.teamBId].filter((id): id is string => id !== null)),
   ]);
 
-  // Collect all teams from standings across all zones
-  const allStandingTeams: Array<{ teamId: string; teamName: string; setDiff: number; zone: Zone | null; zoneRank: number }> = [];
+  const allStandingTeams: Array<{ teamId: string; teamName: string; setDiff: number; zone: Zone | null; zoneRank: number; maleName: string | null; femaleName: string | null }> = [];
   for (const zone of ["A", "B", "C"] as Zone[]) {
     const rows = standings[zone];
     if (!rows) continue;
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
-      if (bracketSet.has(r.teamId)) continue; // skip bracket teams
+      if (bracketSet.has(r.teamId)) continue;
       allStandingTeams.push({
         teamId: r.teamId,
         teamName: r.teamName,
         setDiff: r.setDiff,
         zone: r.zone,
         zoneRank: i + 1,
+        maleName: r.maleName ?? null,
+        femaleName: r.femaleName ?? null,
       });
     }
   }
 
-  // Sort by zone position first, then setDiff desc, then teamName asc, then id asc
   allStandingTeams.sort((a, b) => {
     if (a.zoneRank !== b.zoneRank) return a.zoneRank - b.zoneRank;
     if (a.setDiff !== b.setDiff) return b.setDiff - a.setDiff;
@@ -210,13 +226,14 @@ export function computeFinalPositions(
     positions.push({
       teamId: team.teamId,
       teamName: team.teamName,
+      maleName: team.maleName,
+      femaleName: team.femaleName,
       position: positionNum++,
       points: positionPoints(positionNum - 1),
       zone: team.zone,
     });
   }
 
-  // Sort positions by position number
   positions.sort((a, b) => a.position - b.position);
   return positions;
 }

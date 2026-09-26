@@ -7,6 +7,7 @@ import {
   computeFinalPositions,
 } from "./ranking";
 
+import { nextRoundPairings } from "./brackets";
 import type { StandingRow } from "./standings";
 import type { Zone } from "../generated/prisma/client";
 
@@ -14,7 +15,7 @@ const A: Zone = "A";
 const B: Zone = "B";
 const C: Zone = "C";
 
-function row(teamId: string, zone: Zone, won: number, setDiff = 0): StandingRow {
+function row(teamId: string, zone: Zone, won: number, setDiff = 0, maleName: string | null = null, femaleName: string | null = null): StandingRow {
   return {
     teamId,
     teamName: teamId.toUpperCase(),
@@ -23,6 +24,8 @@ function row(teamId: string, zone: Zone, won: number, setDiff = 0): StandingRow 
     won,
     lost: 0,
     setDiff,
+    maleName,
+    femaleName,
     unresolvedTie: false,
   };
 }
@@ -154,5 +157,72 @@ describe("computeFinalPositions", () => {
     // tA2 vs tB1 both have setDiff 3; tA2 < tB1 alphabetically
     assert.equal(positions[2].teamId, "tA2", "name tie-break gives tA2 3rd");
     assert.equal(positions[3].teamId, "tB1");
+  });
+
+  it("BRONZE match overrides semifinal losers for 3rd/4th in REPECHAJE format", () => {
+    // SEMIFINAL losers would be tB1 and tA2, but BRONZE determines final 3rd/4th
+    const matches = [
+      groupMatch({ stage: "SEMIFINAL_1", a: "tA1", b: "tB1", winner: "tA1", resultStatus: "COMPLETE" }),
+      groupMatch({ stage: "SEMIFINAL_2", a: "tA2", b: "tB2", winner: "tB2", resultStatus: "COMPLETE" }),
+      groupMatch({ stage: "BRONZE", a: "tB1", b: "tA2", winner: "tB1", resultStatus: "COMPLETE" }),
+      groupMatch({ stage: "FINAL", a: "tA1", b: "tB2", winner: "tA1", resultStatus: "COMPLETE" }),
+    ];
+    const standings = {
+      A: [row("tA1", A, 2, 5), row("tA2", A, 1, 2)],
+      B: [row("tB1", B, 2, 5), row("tB2", B, 1, 2)],
+    };
+    const positions = computeFinalPositions(matches, standings);
+    assert.equal(positions.length, 4);
+    // BRONZE winner = tB1 is 3rd, loser = tA2 is 4th
+    assert.equal(positions[2].teamId, "tB1", "BRONZE winner = 3rd");
+    assert.equal(positions[3].teamId, "tA2", "BRONZE loser = 4th");
+  });
+
+  it("fallback to semifinal losers when BRONZE has no result", () => {
+    // No BRONZE result yet — falls back to semifinal losers
+    const matches = [
+      groupMatch({ stage: "SEMIFINAL_1", a: "tA1", b: "tB1", winner: "tA1", resultStatus: "COMPLETE" }),
+      groupMatch({ stage: "SEMIFINAL_2", a: "tA2", b: "tB2", winner: "tB2", resultStatus: "COMPLETE" }),
+      groupMatch({ stage: "FINAL", a: "tA1", b: "tB1", winner: "tA1", resultStatus: "COMPLETE" }),
+    ];
+    const standings = {
+      A: [row("tA1", A, 2, 5), row("tA2", A, 1, 2)],
+      B: [row("tB1", B, 2, 5), row("tB2", B, 1, 2)],
+    };
+    const positions = computeFinalPositions(matches, standings);
+    assert.equal(positions.length, 4);
+    assert.equal(positions[2].teamId, "tB1", "semifinal loser = 3rd");
+    assert.equal(positions[3].teamId, "tA2");
+  });
+
+  it("nextRoundPairings fills REPECHAJE flow: RE1/RE2 → semis → BRONZE/FINAL", () => {
+    const standings = {
+      A: [row("a1", A, 4), row("a2", A, 3)],
+      B: [row("b1", B, 4), row("b2", B, 3)],
+    };
+    // REPECHAJE_1 and REPECHAJE_2 both decided → fill SEMIFINAL_1 and SEMIFINAL_2
+    const semiPairings = nextRoundPairings(standings, {
+      REPECHAJE_1: "a2",
+      REPECHAJE_2: "b2",
+    });
+    assert.equal(semiPairings.length, 2);
+    assert.equal(semiPairings[0].stage, "SEMIFINAL_1");
+    assert.equal(semiPairings[0].teamAId, "a1");
+    assert.equal(semiPairings[0].teamBId, "b2");
+    assert.equal(semiPairings[1].stage, "SEMIFINAL_2");
+    assert.equal(semiPairings[1].teamAId, "b1");
+    assert.equal(semiPairings[1].teamBId, "a2");
+
+    // Both semis have winners → fill BRONZE and FINAL
+    const finalPairings = nextRoundPairings(standings, {
+      REPECHAJE_1: "a2",
+      REPECHAJE_2: "b2",
+      SEMIFINAL_1: "a1",
+      SEMIFINAL_2: "b1",
+    });
+    assert.equal(finalPairings.length, 2);
+    const stages = finalPairings.map((p) => p.stage);
+    assert.ok(stages.includes("BRONZE"), "BRONZE should be filled");
+    assert.ok(stages.includes("FINAL"), "FINAL should be filled");
   });
 });

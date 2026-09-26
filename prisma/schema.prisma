@@ -13,12 +13,20 @@ enum Zone {
   C
 }
 
+enum BracketFormat {
+  STANDARD
+  REPECHAJE
+}
+
 enum Stage {
   GROUPS
   DESEMPATE
   SEMIFINAL_1
   SEMIFINAL_2
   FINAL
+  REPECHAJE_1
+  REPECHAJE_2
+  BRONZE
 }
 
 enum ResultStatus {
@@ -49,16 +57,17 @@ model User {
 }
 
 model Etapa {
-  id        String            @id @default(cuid())
-  name      String
-  date      DateTime?
-  sortOrder Int               @default(1)
-  teams     Team[]
-  matches   Match[]
-  state     TournamentState?
-  closedAt  DateTime?         /// inmutable: no results/zones edits after close
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
+  id           String            @id @default(cuid())
+  name         String
+  date         DateTime?
+  sortOrder    Int               @default(1)
+  bracketFormat BracketFormat    @default(STANDARD)
+  teams        Team[]
+  matches      Match[]
+  state        TournamentState?
+  closedAt     DateTime?         /// inmutable: no results/zones edits after close
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 }
 
 model TournamentState {

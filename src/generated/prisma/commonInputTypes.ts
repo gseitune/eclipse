@@ -92,6 +92,13 @@ export type IntFilter<$PrismaModel = never> = {
   not?: Prisma.NestedIntFilter<$PrismaModel> | number
 }
 
+export type EnumBracketFormatFilter<$PrismaModel = never> = {
+  equals?: $Enums.BracketFormat | Prisma.EnumBracketFormatFieldRefInput<$PrismaModel>
+  in?: $Enums.BracketFormat[]
+  notIn?: $Enums.BracketFormat[]
+  not?: Prisma.NestedEnumBracketFormatFilter<$PrismaModel> | $Enums.BracketFormat
+}
+
 export type SortOrderInput = {
   sort: Prisma.SortOrder
   nulls?: Prisma.NullsOrder
@@ -125,6 +132,16 @@ export type IntWithAggregatesFilter<$PrismaModel = never> = {
   _sum?: Prisma.NestedIntFilter<$PrismaModel>
   _min?: Prisma.NestedIntFilter<$PrismaModel>
   _max?: Prisma.NestedIntFilter<$PrismaModel>
+}
+
+export type EnumBracketFormatWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.BracketFormat | Prisma.EnumBracketFormatFieldRefInput<$PrismaModel>
+  in?: $Enums.BracketFormat[]
+  notIn?: $Enums.BracketFormat[]
+  not?: Prisma.NestedEnumBracketFormatWithAggregatesFilter<$PrismaModel> | $Enums.BracketFormat
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumBracketFormatFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumBracketFormatFilter<$PrismaModel>
 }
 
 export type EnumPhaseFilter<$PrismaModel = never> = {
@@ -392,6 +409,13 @@ export type NestedDateTimeNullableFilter<$PrismaModel = never> = {
   not?: Prisma.NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
 }
 
+export type NestedEnumBracketFormatFilter<$PrismaModel = never> = {
+  equals?: $Enums.BracketFormat | Prisma.EnumBracketFormatFieldRefInput<$PrismaModel>
+  in?: $Enums.BracketFormat[]
+  notIn?: $Enums.BracketFormat[]
+  not?: Prisma.NestedEnumBracketFormatFilter<$PrismaModel> | $Enums.BracketFormat
+}
+
 export type NestedDateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
   equals?: Date | string | Prisma.DateTimeFieldRefInput<$PrismaModel> | null
   in?: Date[] | string[] | null
@@ -442,6 +466,16 @@ export type NestedFloatFilter<$PrismaModel = never> = {
   gt?: number | Prisma.FloatFieldRefInput<$PrismaModel>
   gte?: number | Prisma.FloatFieldRefInput<$PrismaModel>
   not?: Prisma.NestedFloatFilter<$PrismaModel> | number
+}
+
+export type NestedEnumBracketFormatWithAggregatesFilter<$PrismaModel = never> = {
+  equals?: $Enums.BracketFormat | Prisma.EnumBracketFormatFieldRefInput<$PrismaModel>
+  in?: $Enums.BracketFormat[]
+  notIn?: $Enums.BracketFormat[]
+  not?: Prisma.NestedEnumBracketFormatWithAggregatesFilter<$PrismaModel> | $Enums.BracketFormat
+  _count?: Prisma.NestedIntFilter<$PrismaModel>
+  _min?: Prisma.NestedEnumBracketFormatFilter<$PrismaModel>
+  _max?: Prisma.NestedEnumBracketFormatFilter<$PrismaModel>
 }
 
 export type NestedEnumPhaseFilter<$PrismaModel = never> = {

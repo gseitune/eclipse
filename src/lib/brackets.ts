@@ -22,8 +22,10 @@ import type { StandingRow } from "./standings";
 
 export type StandingsByZone = Partial<Record<Zone, StandingRow[]>>;
 
+export type BracketFormat = "STANDARD" | "REPECHAJE";
+
 export interface BracketPairing {
-  stage: "SEMIFINAL_1" | "SEMIFINAL_2";
+  stage: string;
   teamAId: string;
   teamBId: string;
 }
@@ -31,6 +33,8 @@ export interface BracketPairing {
 export interface BuildBracketsOptions {
   /** Best-second already resolved (e.g. the DESEMPATE winner). */
   resolvedSecondId?: string;
+  /** Tournament bracket format. Defaults to STANDARD. */
+  format?: BracketFormat;
 }
 
 export type BestSecondSelection =
@@ -84,6 +88,9 @@ export function buildBrackets(
   standings: StandingsByZone,
   options: BuildBracketsOptions = {},
 ): { pairings: BracketPairing[]; missing: string[] } {
+  const fmt = options.format ?? "STANDARD";
+  if (fmt === "REPECHAJE") return buildRepechajeBrackets(standings, options);
+
   const champion = (zone: Zone): StandingRow | null => {
     const rows = standings[zone];
     if (!rows || rows.length === 0) return null;
@@ -164,7 +171,7 @@ export function buildBrackets(
       pairings:
         missing.length === 0 && second
           ? [
-              { stage: "SEMIFINAL_1", teamAId: a1!.teamId, teamBId: second.teamId },
+              { stage: "SEMIFINAL_1", teamAId: a1!.teamId, teamBId: second!.teamId },
               { stage: "SEMIFINAL_2", teamAId: b1!.teamId, teamBId: c1!.teamId },
             ]
           : [],
@@ -176,4 +183,89 @@ export function buildBrackets(
     pairings: [],
     missing: [`Need 2 or 3 completed zones, got ${zones.length}`],
   };
+}
+
+/** Build REPECHAJE bracket pairings for a 2-zone tournament. */
+function buildRepechajeBrackets(
+  standings: StandingsByZone,
+  __options: BuildBracketsOptions,
+): { pairings: BracketPairing[]; missing: string[] } {
+  const zones = (Object.keys(standings) as Zone[]).filter((z) =>
+    standings[z]?.some((r) => r.zone === z),
+  );
+  if (zones.length !== 2) {
+    return { pairings: [], missing: [`REPECHAJE needs 2 zones, got ${zones.length}`] };
+  }
+  const a2 = standings.A?.[1] ?? null;
+  const b2 = standings.B?.[1] ?? null;
+  const a3 = standings.A?.[2] ?? null;
+  const b3 = standings.B?.[2] ?? null;
+
+  const missing: string[] = [];
+  if (!a2) missing.push("A2");
+  if (!b2) missing.push("B2");
+  if (!a3) missing.push("A3");
+  if (!b3) missing.push("B3");
+  if (missing.length > 0) return { pairings: [], missing };
+
+  return {
+    pairings: [
+      { stage: "REPECHAJE_1", teamAId: a2!.teamId, teamBId: b3!.teamId },
+      { stage: "REPECHAJE_2", teamAId: b2!.teamId, teamBId: a3!.teamId },
+    ],
+    missing: [],
+  };
+}
+
+/**
+ * Returns pairings for the next fillable bracket round, given standings
+ * and the current results of feeder matches.
+ *
+ * After RE results → SEMIFINAL_1 (1°A winner of RE2) / SEMIFINAL_2 (1°B winner of RE1).
+ * After both semis → BRONZE (losers) and FINAL (winners).
+ *
+ * `completed` maps stage → winnerId (only for non-PENDING matches).
+ */
+export function nextRoundPairings(
+  standings: StandingsByZone,
+  completed: Record<string, string | null>,
+): Array<{ stage: string; teamAId: string; teamBId: string }> {
+  const a1 = standings.A?.[0]?.teamId ?? null;
+  const b1 = standings.B?.[0]?.teamId ?? null;
+
+  const re1Winner = completed["REPECHAJE_1"];
+  const re2Winner = completed["REPECHAJE_2"];
+  const semi1Winner = completed["SEMIFINAL_1"];
+  const semi2Winner = completed["SEMIFINAL_2"];
+
+  // REPECHAJE results → fill semis
+  if (re1Winner && re2Winner && !semi1Winner && !semi2Winner) {
+    return [
+      { stage: "SEMIFINAL_1", teamAId: a1!, teamBId: re2Winner! },
+      { stage: "SEMIFINAL_2", teamAId: b1!, teamBId: re1Winner! },
+    ];
+  }
+  if (re1Winner && !semi2Winner) {
+    return [{ stage: "SEMIFINAL_2", teamAId: b1!, teamBId: re1Winner! }];
+  }
+  if (re2Winner && !semi1Winner) {
+    return [{ stage: "SEMIFINAL_1", teamAId: a1!, teamBId: re2Winner! }];
+  }
+
+  // Both semis have winners → fill BRONZE and FINAL
+  if (semi1Winner && semi2Winner) {
+    const semi1Losers = getOtherTeam(semi1Winner, completed["SEMIFINAL_1"]);
+    const semi2Losers = getOtherTeam(semi2Winner, completed["SEMIFINAL_2"]);
+    return [
+      { stage: "BRONZE", teamAId: semi1Losers!, teamBId: semi2Losers! },
+      { stage: "FINAL", teamAId: semi1Winner, teamBId: semi2Winner },
+    ];
+  }
+
+  return [];
+}
+
+function getOtherTeam(winnerId: string | null, otherTeamId: string | null): string | null {
+  if (!winnerId || !otherTeamId) return null;
+  return winnerId === otherTeamId ? null : otherTeamId;
 }

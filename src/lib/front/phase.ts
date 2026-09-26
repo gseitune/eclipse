@@ -29,6 +29,14 @@ export function needsBrackets(p: string): boolean {
   return p !== "GROUPS";
 }
 
+export function isKnownStage(stage: string): boolean {
+  const known = [
+    "GROUPS", "DESEMPATE", "SEMIFINAL_1", "SEMIFINAL_2", "FINAL",
+    "REPECHAJE_1", "REPECHAJE_2", "BRONZE",
+  ];
+  return (known as readonly string[]).includes(stage);
+}
+
 export function stageLabel(stage: string): string {
   switch (stage) {
     case "GROUPS":
@@ -41,6 +49,12 @@ export function stageLabel(stage: string): string {
       return "Semifinal 2";
     case "FINAL":
       return "Final";
+    case "REPECHAJE_1":
+      return "Repechaje 1";
+    case "REPECHAJE_2":
+      return "Repechaje 2";
+    case "BRONZE":
+      return "3er y 4to puesto";
     default:
       return "Partido";
   }

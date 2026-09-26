@@ -844,6 +844,7 @@ export const EtapaScalarFieldEnum = {
   name: 'name',
   date: 'date',
   sortOrder: 'sortOrder',
+  bracketFormat: 'bracketFormat',
   closedAt: 'closedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -965,6 +966,13 @@ export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel
  * Reference to a field of type 'Int'
  */
 export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
+    
+
+
+/**
+ * Reference to a field of type 'BracketFormat'
+ */
+export type EnumBracketFormatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'BracketFormat'>
     
 
 

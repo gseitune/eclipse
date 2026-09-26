@@ -60,6 +60,9 @@ export class InvalidResultError extends Error {
 export const STAGE_FORMATS: Record<string, readonly SetFormatId[]> = {
   GROUPS: ["SINGLE_21"],
   DESEMPATE: ["SINGLE_21"],
+  REPECHAJE_1: ["SINGLE_21"],
+  REPECHAJE_2: ["SINGLE_21"],
+  BRONZE: ["SINGLE_21"],
   SEMIFINAL_1: ["SINGLE_21", "TWO_15_TIEBREAK"],
   SEMIFINAL_2: ["SINGLE_21", "TWO_15_TIEBREAK"],
   FINAL: ["BEST_OF_3_21"],

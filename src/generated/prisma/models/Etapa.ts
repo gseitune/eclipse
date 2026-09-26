@@ -39,6 +39,7 @@ export type EtapaMinAggregateOutputType = {
   name: string | null
   date: Date | null
   sortOrder: number | null
+  bracketFormat: $Enums.BracketFormat | null
   closedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -49,6 +50,7 @@ export type EtapaMaxAggregateOutputType = {
   name: string | null
   date: Date | null
   sortOrder: number | null
+  bracketFormat: $Enums.BracketFormat | null
   closedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -59,6 +61,7 @@ export type EtapaCountAggregateOutputType = {
   name: number
   date: number
   sortOrder: number
+  bracketFormat: number
   closedAt: number
   createdAt: number
   updatedAt: number
@@ -79,6 +82,7 @@ export type EtapaMinAggregateInputType = {
   name?: true
   date?: true
   sortOrder?: true
+  bracketFormat?: true
   closedAt?: true
   createdAt?: true
   updatedAt?: true
@@ -89,6 +93,7 @@ export type EtapaMaxAggregateInputType = {
   name?: true
   date?: true
   sortOrder?: true
+  bracketFormat?: true
   closedAt?: true
   createdAt?: true
   updatedAt?: true
@@ -99,6 +104,7 @@ export type EtapaCountAggregateInputType = {
   name?: true
   date?: true
   sortOrder?: true
+  bracketFormat?: true
   closedAt?: true
   createdAt?: true
   updatedAt?: true
@@ -196,6 +202,7 @@ export type EtapaGroupByOutputType = {
   name: string
   date: Date | null
   sortOrder: number
+  bracketFormat: $Enums.BracketFormat
   closedAt: Date | null
   createdAt: Date
   updatedAt: Date
@@ -229,6 +236,7 @@ export type EtapaWhereInput = {
   name?: Prisma.StringFilter<"Etapa"> | string
   date?: Prisma.DateTimeNullableFilter<"Etapa"> | Date | string | null
   sortOrder?: Prisma.IntFilter<"Etapa"> | number
+  bracketFormat?: Prisma.EnumBracketFormatFilter<"Etapa"> | $Enums.BracketFormat
   closedAt?: Prisma.DateTimeNullableFilter<"Etapa"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Etapa"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Etapa"> | Date | string
@@ -242,6 +250,7 @@ export type EtapaOrderByWithRelationInput = {
   name?: Prisma.SortOrder
   date?: Prisma.SortOrderInput | Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
+  bracketFormat?: Prisma.SortOrder
   closedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -258,6 +267,7 @@ export type EtapaWhereUniqueInput = Prisma.AtLeast<{
   name?: Prisma.StringFilter<"Etapa"> | string
   date?: Prisma.DateTimeNullableFilter<"Etapa"> | Date | string | null
   sortOrder?: Prisma.IntFilter<"Etapa"> | number
+  bracketFormat?: Prisma.EnumBracketFormatFilter<"Etapa"> | $Enums.BracketFormat
   closedAt?: Prisma.DateTimeNullableFilter<"Etapa"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Etapa"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Etapa"> | Date | string
@@ -271,6 +281,7 @@ export type EtapaOrderByWithAggregationInput = {
   name?: Prisma.SortOrder
   date?: Prisma.SortOrderInput | Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
+  bracketFormat?: Prisma.SortOrder
   closedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -289,6 +300,7 @@ export type EtapaScalarWhereWithAggregatesInput = {
   name?: Prisma.StringWithAggregatesFilter<"Etapa"> | string
   date?: Prisma.DateTimeNullableWithAggregatesFilter<"Etapa"> | Date | string | null
   sortOrder?: Prisma.IntWithAggregatesFilter<"Etapa"> | number
+  bracketFormat?: Prisma.EnumBracketFormatWithAggregatesFilter<"Etapa"> | $Enums.BracketFormat
   closedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Etapa"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Etapa"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Etapa"> | Date | string
@@ -299,6 +311,7 @@ export type EtapaCreateInput = {
   name: string
   date?: Date | string | null
   sortOrder?: number
+  bracketFormat?: $Enums.BracketFormat
   closedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -312,6 +325,7 @@ export type EtapaUncheckedCreateInput = {
   name: string
   date?: Date | string | null
   sortOrder?: number
+  bracketFormat?: $Enums.BracketFormat
   closedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -325,6 +339,7 @@ export type EtapaUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  bracketFormat?: Prisma.EnumBracketFormatFieldUpdateOperationsInput | $Enums.BracketFormat
   closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -338,6 +353,7 @@ export type EtapaUncheckedUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  bracketFormat?: Prisma.EnumBracketFormatFieldUpdateOperationsInput | $Enums.BracketFormat
   closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -351,6 +367,7 @@ export type EtapaCreateManyInput = {
   name: string
   date?: Date | string | null
   sortOrder?: number
+  bracketFormat?: $Enums.BracketFormat
   closedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -361,6 +378,7 @@ export type EtapaUpdateManyMutationInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  bracketFormat?: Prisma.EnumBracketFormatFieldUpdateOperationsInput | $Enums.BracketFormat
   closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -371,6 +389,7 @@ export type EtapaUncheckedUpdateManyInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  bracketFormat?: Prisma.EnumBracketFormatFieldUpdateOperationsInput | $Enums.BracketFormat
   closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -381,6 +400,7 @@ export type EtapaCountOrderByAggregateInput = {
   name?: Prisma.SortOrder
   date?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
+  bracketFormat?: Prisma.SortOrder
   closedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -395,6 +415,7 @@ export type EtapaMaxOrderByAggregateInput = {
   name?: Prisma.SortOrder
   date?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
+  bracketFormat?: Prisma.SortOrder
   closedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -405,6 +426,7 @@ export type EtapaMinOrderByAggregateInput = {
   name?: Prisma.SortOrder
   date?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
+  bracketFormat?: Prisma.SortOrder
   closedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -429,6 +451,10 @@ export type IntFieldUpdateOperationsInput = {
   decrement?: number
   multiply?: number
   divide?: number
+}
+
+export type EnumBracketFormatFieldUpdateOperationsInput = {
+  set?: $Enums.BracketFormat
 }
 
 export type EtapaCreateNestedOneWithoutStateInput = {
@@ -478,6 +504,7 @@ export type EtapaCreateWithoutStateInput = {
   name: string
   date?: Date | string | null
   sortOrder?: number
+  bracketFormat?: $Enums.BracketFormat
   closedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -490,6 +517,7 @@ export type EtapaUncheckedCreateWithoutStateInput = {
   name: string
   date?: Date | string | null
   sortOrder?: number
+  bracketFormat?: $Enums.BracketFormat
   closedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -518,6 +546,7 @@ export type EtapaUpdateWithoutStateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  bracketFormat?: Prisma.EnumBracketFormatFieldUpdateOperationsInput | $Enums.BracketFormat
   closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -530,6 +559,7 @@ export type EtapaUncheckedUpdateWithoutStateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  bracketFormat?: Prisma.EnumBracketFormatFieldUpdateOperationsInput | $Enums.BracketFormat
   closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -542,6 +572,7 @@ export type EtapaCreateWithoutTeamsInput = {
   name: string
   date?: Date | string | null
   sortOrder?: number
+  bracketFormat?: $Enums.BracketFormat
   closedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -554,6 +585,7 @@ export type EtapaUncheckedCreateWithoutTeamsInput = {
   name: string
   date?: Date | string | null
   sortOrder?: number
+  bracketFormat?: $Enums.BracketFormat
   closedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -582,6 +614,7 @@ export type EtapaUpdateWithoutTeamsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  bracketFormat?: Prisma.EnumBracketFormatFieldUpdateOperationsInput | $Enums.BracketFormat
   closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -594,6 +627,7 @@ export type EtapaUncheckedUpdateWithoutTeamsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  bracketFormat?: Prisma.EnumBracketFormatFieldUpdateOperationsInput | $Enums.BracketFormat
   closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -606,6 +640,7 @@ export type EtapaCreateWithoutMatchesInput = {
   name: string
   date?: Date | string | null
   sortOrder?: number
+  bracketFormat?: $Enums.BracketFormat
   closedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -618,6 +653,7 @@ export type EtapaUncheckedCreateWithoutMatchesInput = {
   name: string
   date?: Date | string | null
   sortOrder?: number
+  bracketFormat?: $Enums.BracketFormat
   closedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -646,6 +682,7 @@ export type EtapaUpdateWithoutMatchesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  bracketFormat?: Prisma.EnumBracketFormatFieldUpdateOperationsInput | $Enums.BracketFormat
   closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -658,6 +695,7 @@ export type EtapaUncheckedUpdateWithoutMatchesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  bracketFormat?: Prisma.EnumBracketFormatFieldUpdateOperationsInput | $Enums.BracketFormat
   closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -710,6 +748,7 @@ export type EtapaSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   name?: boolean
   date?: boolean
   sortOrder?: boolean
+  bracketFormat?: boolean
   closedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -724,6 +763,7 @@ export type EtapaSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   name?: boolean
   date?: boolean
   sortOrder?: boolean
+  bracketFormat?: boolean
   closedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -734,6 +774,7 @@ export type EtapaSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   name?: boolean
   date?: boolean
   sortOrder?: boolean
+  bracketFormat?: boolean
   closedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -744,12 +785,13 @@ export type EtapaSelectScalar = {
   name?: boolean
   date?: boolean
   sortOrder?: boolean
+  bracketFormat?: boolean
   closedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type EtapaOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "date" | "sortOrder" | "closedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["etapa"]>
+export type EtapaOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "date" | "sortOrder" | "bracketFormat" | "closedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["etapa"]>
 export type EtapaInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   teams?: boolean | Prisma.Etapa$teamsArgs<ExtArgs>
   matches?: boolean | Prisma.Etapa$matchesArgs<ExtArgs>
@@ -771,6 +813,7 @@ export type $EtapaPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     name: string
     date: Date | null
     sortOrder: number
+    bracketFormat: $Enums.BracketFormat
     /**
      * inmutable: no results/zones edits after close
      */
@@ -1207,6 +1250,7 @@ export interface EtapaFieldRefs {
   readonly name: Prisma.FieldRef<"Etapa", 'String'>
   readonly date: Prisma.FieldRef<"Etapa", 'DateTime'>
   readonly sortOrder: Prisma.FieldRef<"Etapa", 'Int'>
+  readonly bracketFormat: Prisma.FieldRef<"Etapa", 'BracketFormat'>
   readonly closedAt: Prisma.FieldRef<"Etapa", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Etapa", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Etapa", 'DateTime'>

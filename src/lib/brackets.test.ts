@@ -9,7 +9,7 @@ const A: Zone = "A";
 const B: Zone = "B";
 const C: Zone = "C";
 
-function row(teamId: string, zone: Zone, won: number, setDiff = 0, unresolvedTie = false): StandingRow {
+function row(teamId: string, zone: Zone, won: number, setDiff = 0, unresolvedTie = false, maleName: string | null = null, femaleName: string | null = null): StandingRow {
   return {
     teamId,
     teamName: teamId.toUpperCase(),
@@ -18,6 +18,8 @@ function row(teamId: string, zone: Zone, won: number, setDiff = 0, unresolvedTie
     won,
     lost: 0,
     setDiff,
+    maleName,
+    femaleName,
     unresolvedTie,
   };
 }
@@ -140,5 +142,30 @@ describe("buildBrackets - 3 zones", () => {
     const { pairings, missing } = buildBrackets(standings);
     assert.deepEqual(pairings, []);
     assert.deepEqual(missing, ["Best second (3+ tied)"]);
+  });
+});
+
+describe("buildBrackets - REPECHAJE format (2 zones)", () => {
+  it("yields REPECHAJE_1 = A2 vs B3 and REPECHAJE_2 = B2 vs A3", () => {
+    const standings = {
+      A: [row("a1", A, 4), row("a2", A, 3), row("a3", A, 2)],
+      B: [row("b1", B, 4), row("b2", B, 3), row("b3", B, 2)],
+    };
+    const { pairings, missing } = buildBrackets(standings, { format: "REPECHAJE" });
+    assert.deepEqual(missing, []);
+    assert.deepEqual(pairings, [
+      { stage: "REPECHAJE_1", teamAId: "a2", teamBId: "b3" },
+      { stage: "REPECHAJE_2", teamAId: "b2", teamBId: "a3" },
+    ]);
+  });
+
+  it("reports missing slots when a zone lacks a 2nd or 3rd place", () => {
+    const standings = {
+      A: [row("a1", A, 4), row("a2", A, 3)],
+      B: [row("b1", B, 4), row("b2", B, 3), row("b3", B, 2)],
+    };
+    const { pairings, missing } = buildBrackets(standings, { format: "REPECHAJE" });
+    assert.deepEqual(pairings, []);
+    assert.deepEqual(missing, ["A3"]);
   });
 });

@@ -155,8 +155,16 @@ Work-unit commits; no PRs/push.
       ranking dice finished && !closedAt, derivado de `/api/ranking` + closedAt de
       listEtapas); OrganizerPanel habilita "Circuitos y etapas" (case "circuitos").
       Checks: tsc + build.
+- [ ] (S5) Ranking per sex POR JUGADOR (work unit en curso): `ranking.ts`
+      devuelve dos rankings (`male` / `female`) agregando por `maleName` /
+      `femaleName` de Team ‚Äî cada jugador de la pareja suma los puntos de la
+      posici√≥n de su pareja; `EtapaPosition` gana los nombres de jugador;
+      `RankingPanel` muestra 2 columnas (Femenino / Masculino) en el ranking
+      anual; types.ts con `RankedPlayer`; ranking.test.ts con tests de
+      agregaci√≥n por jugador. Etapas hist√≥ricas sin jugadores backfilleados no
+      suman hasta que la organizadora dicte los sexos.
 - [ ] (S6) Past etapas (follow-up, no iniciado): la organizadora carga una etapa
-      ya cerrada con sus resultados; el ranking la acumula.
+  ya cerrada con sus resultados; el ranking la acumula.
 
 ## Progress log
 
@@ -197,10 +205,28 @@ Work-unit commits; no PRs/push.
   player names <= 60 chars. `/api/etapas` POST parses object teams.
   `CircuitosSection` carga con filas estructuradas (Equipo / Masculino /
   Femenino + Agregar equipos), reemplaza el textarea. Ranking per-sex queda
-  como S5 pendiente. Gotcha: `createEtapa` devolvÌa `matchCount`
-  teams*(teams-1)+3 ignorando la zonificaciÛn (ej 6 equipos decÌa 33, real 9)
-  ó corregido al tamaÒo real de fixture.
+  como S5 pendiente. Gotcha: `createEtapa` devolvÔøΩa `matchCount`
+  teams*(teams-1)+3 ignorando la zonificaciÔøΩn (ej 6 equipos decÔøΩa 33, real 9)
+  ÔøΩ corregido al tamaÔøΩo real de fixture.
   Checks: 140/140 tests, tsc, lint. Smoke seed OK + /api/state 200.
-- 2026-09-26 User: subiÛ 2 archivos m·s de etapas jugadas (las faltantes se
-  suspendieron) y va a dictar quiÈn es hombre/mujer de los nombres ó NO
-  inferir gÈnero; solicitar la lista cuando se procesen los briefs.
+- 2026-09-26 User: subiÔøΩ 2 archivos mÔøΩs de etapas jugadas (las faltantes se
+  suspendieron) y va a dictar quiÔøΩn es hombre/mujer de los nombres ÔøΩ NO
+  inferir gÔøΩnero; solicitar la lista cuando se procesen los briefs.
+## Work unit: repechaje bracket format (E1 fidelity)
+
+Decision (user, 2026-09-26): past Etapa 1 used repechaje (2∞A vs 3∞B / 2∞B vs
+3∞A; semis 1∞ vs ganador de repechaje; 3er/4to puesto). Extend the engine so
+E1 loads EXACT (rejected approximation that would flip 3∞/4∞ and cost 15 pts
+in the individual ranking).
+
+Tasks:
+- [ ] schema: Etapa.bracketFormat enum (STANDARD default | REPECHAJE) + migration ADD COLUMN
+- [ ] back createEtapa: bracket slots by format (REPECHAJE = REPECHAJE_1/2, SEMIFINAL_1/2, BRONZE, FINAL); optional rng for deterministic zones; validate REPECHAJE only for 2-zone etapas
+- [ ] brackets.ts: buildBrackets repechaje pairings (RE1=A2 vs B3, RE2=B2 vs A3) + missing-slot semantics
+- [ ] recordResult/follow-up fill: each semi waits for ITS repechaje winner; BRONZE from semi losers; edit guards for new stages
+- [ ] result-format: SINGLE_21 allowed in REPECHAJE_1/2 and BRONZE; semis stay TWO_15, final BEST_OF_3_21
+- [ ] ranking computeFinalPositions: BRONZE winner/loser = 3∞/4∞ when present (fallback stays)
+- [ ] front phase.ts labels (Repechaje 1/2, 3er y 4to puesto) + bracket tree UI renders repechaje nodes
+- [ ] route/api: createEtapa accepts bracketFormat
+- [ ] tests: brackets, ranking, result-format, phase labels, integration (6-slots + positions)
+- [ ] validate: npm test, tsc, lint

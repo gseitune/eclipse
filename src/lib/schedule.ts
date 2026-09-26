@@ -48,10 +48,13 @@ export interface ScheduleRow {
  * current match for editing: changing it would invalidate the bracket.
  */
 export const DESCENDANT_STAGES: Record<string, readonly string[]> = {
-  GROUPS: ["DESEMPATE", "SEMIFINAL_1", "SEMIFINAL_2", "FINAL"],
-  DESEMPATE: ["SEMIFINAL_1", "SEMIFINAL_2", "FINAL"],
-  SEMIFINAL_1: ["FINAL"],
-  SEMIFINAL_2: ["FINAL"],
+  GROUPS: ["DESEMPATE", "SEMIFINAL_1", "SEMIFINAL_2", "FINAL", "BRONZE", "REPECHAJE_1", "REPECHAJE_2"],
+  DESEMPATE: ["SEMIFINAL_1", "SEMIFINAL_2", "FINAL", "BRONZE", "REPECHAJE_1", "REPECHAJE_2"],
+  SEMIFINAL_1: ["FINAL", "BRONZE"],
+  SEMIFINAL_2: ["FINAL", "BRONZE"],
+  REPECHAJE_1: ["SEMIFINAL_2", "FINAL", "BRONZE"],
+  REPECHAJE_2: ["SEMIFINAL_1", "FINAL", "BRONZE"],
+  BRONZE: ["FINAL"],
   FINAL: [],
 };
 

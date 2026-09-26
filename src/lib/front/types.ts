@@ -14,7 +14,10 @@ export type Stage =
   | "DESEMPATE"
   | "SEMIFINAL_1"
   | "SEMIFINAL_2"
-  | "FINAL";
+  | "FINAL"
+  | "REPECHAJE_1"
+  | "REPECHAJE_2"
+  | "BRONZE";
 
 export interface StandingRow {
   teamId: string;
@@ -159,9 +162,6 @@ export interface RankedTeam {
   teamId: string;
   teamName: string;
   points: number;
-  appearances: number;
-  bestPosition: number | null;
-  etapas: EtapaPositionRow[];
 }
 
 export interface RankingResponse {
@@ -181,6 +181,7 @@ export interface CreateEtapaInput {
   name: string;
   date: string | null;
   teams: CreateTeamInput[];
+  bracketFormat?: "STANDARD" | "REPECHAJE";
 }
 
 export class ApiError extends Error {
