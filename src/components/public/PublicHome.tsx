@@ -13,6 +13,7 @@ import { MatchTicker } from "./MatchTicker";
 import { EliminatoriesView } from "./EliminatoriesView";
 import { TeamSheet } from "./TeamSheet";
 import { ChimeBanner } from "./ChimeBanner";
+import { RankingPanel } from "./RankingPanel";
 
 export function PublicHome({ initial }: { initial: StateSnapshot | null }) {
   const { state, loading, error } = useLiveState({ initial });
@@ -135,22 +136,8 @@ export function PublicHome({ initial }: { initial: StateSnapshot | null }) {
           </>
         )}
 
-        {/* Agenda / Final positions link */}
-        {isEliminatories || isDesempate ? (
-          <Link
-            href="/agenda"
-            className="flex items-center justify-center rounded-xl border border-sand-300 bg-white/40 py-3 text-sm font-semibold text-stone-700 backdrop-blur ring-1 ring-inset ring-sand-200 hover:bg-sand-100 transition-colors min-h-[44px]"
-          >
-            Ver posiciones finales
-          </Link>
-        ) : (
-          <Link
-            href="/agenda"
-            className="flex items-center justify-center rounded-xl border border-sand-300 bg-white/40 py-3 text-sm font-semibold text-stone-700 backdrop-blur ring-1 ring-inset ring-sand-200 hover:bg-sand-100 transition-colors min-h-[44px]"
-          >
-            Ver agenda completa
-          </Link>
-        )}
+        {/* Combined points panel (S3) */}
+        <RankingPanel />
 
         {/* Unknown phase fallback — keep standings/ticker working */}
         {!known && (

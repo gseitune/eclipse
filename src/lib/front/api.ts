@@ -3,6 +3,8 @@ import type {
   ZonificationResponse,
   ResultResponse,
   LoginResponse,
+  RankingResponse,
+  EtapaMeta,
 } from "./types";
 import { ApiError } from "./types";
 
@@ -115,4 +117,41 @@ export async function logout(): Promise<{ ok: true }> {
     cache: "no-store",
   });
   return handleResponse<{ ok: true }>(res);
+}
+
+export async function fetchRanking(): Promise<RankingResponse> {
+  const res = await fetch(`${BASE}/ranking`, { cache: "no-store" });
+  return handleResponse<RankingResponse>(res);
+}
+
+export async function fetchEtapas(): Promise<{ etapas: EtapaMeta[] }> {
+  const res = await fetch(`${BASE}/etapas`, { cache: "no-store" });
+  return handleResponse<{ etapas: EtapaMeta[] }>(res);
+}
+
+export async function closeEtapa(
+  etapaId: string,
+): Promise<{ etapa: { id: string; name: string; closedAt: string | null } }> {
+  const res = await fetch(`${BASE}/etapas/${etapaId}/close`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+  });
+  return handleResponse(res);
+}
+
+export async function createEtapa(input: {
+  name: string;
+  date: string | null;
+  teams: string[];
+}): Promise<{ etapa: { id: string; name: string } }> {
+  const res = await fetch(`${BASE}/etapas`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+    cache: "no-store",
+  });
+  return handleResponse(res);
 }

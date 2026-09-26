@@ -6,6 +6,7 @@ import { ResultadosSection } from "./ResultadosSection";
 import { ZonificacionSection } from "./ZonificacionSection";
 import { AvisoSection } from "./AvisoSection";
 import { PosicionesSection } from "./PosicionesSection";
+import { CircuitosSection } from "./CircuitosSection";
 
 /* ── Lock icon (inline SVG, no emoji, no external dependency) ── */
 function LockIcon() {
@@ -63,8 +64,8 @@ const SECTIONS: readonly SectionConfig[] = [
   },
   {
     label: "Circuitos y etapas",
-    hint: "Crear y editar circuitos y etapas — Próximamente",
-    kind: "disabled",
+    hint: "Crear y editar circuitos y etapas",
+    kind: "actionable",
   },
   {
     label: "Reagendar partidos",
@@ -142,7 +143,7 @@ export function OrganizerPanel({
 }: OrganizerPanelProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [activeSection, setActiveSection] = useState<
-    "resultados" | "zonificacion" | "posiciones" | "aviso" | null
+    "resultados" | "zonificacion" | "posiciones" | "aviso" | "circuitos" | null
   >(null);
   const [view, setView] = useState<"panel" | "public">("panel");
 
@@ -159,6 +160,9 @@ export function OrganizerPanel({
         break;
       case "Aviso sonoro":
         setActiveSection("aviso");
+        break;
+      case "Circuitos y etapas":
+        setActiveSection("circuitos");
         break;
       default:
         setActiveSection(null);
@@ -227,6 +231,8 @@ export function OrganizerPanel({
           <PosicionesSection onBack={() => setActiveSection(null)} />
         ) : activeSection === "aviso" ? (
           <AvisoSection onBack={() => setActiveSection(null)} />
+        ) : activeSection === "circuitos" ? (
+          <CircuitosSection onBack={() => setActiveSection(null)} />
         ) : (
           /* Sections list */
           <main className="mx-auto w-full max-w-3xl px-6 py-8">

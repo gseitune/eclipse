@@ -106,6 +106,18 @@ export interface StateSnapshot {
   zones: Record<ZoneId, TeamPublic[]>;
   desempate: DesempateInfo;
   bracketsBlocked: BracketsBlocked | null;
+  etapaId: string;
+  etapa: EtapaMeta | null;
+  etapas: EtapaMeta[];
+}
+
+export interface EtapaMeta {
+  id: string;
+  name: string;
+  date: string | null;
+  sortOrder: number;
+  teamCount: number;
+  closedAt: string | null;
 }
 
 export interface ZonesMapping {
@@ -125,6 +137,38 @@ export type ResultResponse = {
 export type LoginResponse = { ok: true; email: string; username: string };
 
 export type ApiErrorBody = { error: string };
+
+export interface EtapaPositionRow {
+  teamId: string;
+  teamName: string;
+  position: number;
+  points: number;
+  zone: ZoneId | null;
+}
+
+export interface EtapaPositions {
+  id: string;
+  name: string;
+  date: string | null;
+  sortOrder: number;
+  finished: boolean;
+  positions: EtapaPositionRow[];
+}
+
+export interface RankedTeam {
+  teamId: string;
+  teamName: string;
+  points: number;
+  appearances: number;
+  bestPosition: number | null;
+  etapas: EtapaPositionRow[];
+}
+
+export interface RankingResponse {
+  scale: number[];
+  ranking: RankedTeam[];
+  etapas: EtapaPositions[];
+}
 
 export class ApiError extends Error {
   constructor(
