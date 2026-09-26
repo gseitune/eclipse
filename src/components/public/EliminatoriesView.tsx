@@ -81,7 +81,7 @@ export function EliminatoriesView({
   // Unknown phase: render generic strip
   if (!isKnownPhase(phase)) {
     return (
-      <section aria-label="Cuadro" className="rounded-2xl border border-sand-300 bg-white/70 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
+      <section aria-label="Cuadro" className="rounded-2xl border border-sand-300 bg-white/40 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
         <h2 className="text-lg font-semibold text-stone-900">Cuadro</h2>
         <p className="mt-2 text-sm text-stone-500">
           Estado del torneo: {phaseLabel(phase)}
@@ -93,7 +93,7 @@ export function EliminatoriesView({
   // DESEMPATE waiting state
   if (isDesempate) {
     return (
-      <section aria-label="Cuadro" className="rounded-2xl border border-sand-300 bg-white/70 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
+      <section aria-label="Cuadro" className="rounded-2xl border border-sand-300 bg-white/40 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
         <h2 className="text-lg font-semibold text-stone-900">Cuadro</h2>
         <div className="mt-4 flex items-center justify-center rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-6 text-sm text-amber-700">
           <p>Cuadro disponible al finalizar el desempate</p>
@@ -105,7 +105,7 @@ export function EliminatoriesView({
   // Empty brackets edge case
   if (brackets.length === 0) {
     return (
-      <section aria-label="Cuadro" className="rounded-2xl border border-sand-300 bg-white/70 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
+      <section aria-label="Cuadro" className="rounded-2xl border border-sand-300 bg-white/40 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
         <h2 className="text-lg font-semibold text-stone-900">Cuadro</h2>
         <p className="mt-2 text-sm text-stone-500">Generando cuadro…</p>
       </section>
@@ -113,7 +113,7 @@ export function EliminatoriesView({
   }
 
   return (
-    <section aria-label="Cuadro" className="rounded-2xl border border-sand-300 bg-white/70 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
+    <section aria-label="Cuadro" className="rounded-2xl border border-sand-300 bg-white/40 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
       <h2 className="text-lg font-semibold text-stone-900">Cuadro</h2>
 
       {/* Semifinal cards — two side by side on sm+ */}
@@ -123,7 +123,7 @@ export function EliminatoriesView({
             return (
               <div
                 key="semi-slot"
-                className="rounded-xl border border-sand-200 bg-white/60 p-4"
+                className="rounded-xl border border-sand-200 bg-white/40 p-4"
               >
                 <p className="text-sm text-stone-400">—</p>
               </div>
@@ -148,7 +148,7 @@ export function EliminatoriesView({
               className={`rounded-xl border p-4 ${
                 live
                   ? "ring-2 ring-ember-500 ring-inset animate-pulse"
-                  : "border-sand-200 bg-white/60"
+                  : "border-sand-200 bg-white/40"
               } ${
                 winner ? "ring-2 ring-amber-500 ring-inset" : ""
               }`}
@@ -202,7 +202,7 @@ export function EliminatoriesView({
             className={`w-full max-w-xs rounded-xl border p-4 ${
               finalComplete
                 ? "ring-2 ring-amber-500 ring-inset bg-amber-50/40"
-                : "border-sand-200 bg-white/60"
+                : "border-sand-200 bg-white/40"
             }`}
           >
             <p className="text-center text-xs font-semibold uppercase tracking-wider text-stone-400">
@@ -249,7 +249,7 @@ export function EliminatoriesView({
             </p>
           </div>
         ) : (
-          <div className="w-full max-w-xs rounded-xl border border-sand-200 bg-white/60 p-6 text-center">
+          <div className="w-full max-w-xs rounded-xl border border-sand-200 bg-white/40 p-6 text-center">
             <p className="text-sm text-stone-400">
               {isEliminatories
                 ? "La final se juega ahora"
@@ -264,7 +264,7 @@ export function EliminatoriesView({
         <div className="mt-4 text-center">
           <Link
             href="/agenda"
-            className="inline-flex items-center justify-center rounded-xl border border-sand-300 bg-white/70 px-4 py-2 text-sm font-semibold text-stone-700 backdrop-blur ring-1 ring-inset ring-sand-200 hover:bg-sand-100 transition-colors min-h-[44px]"
+            className="inline-flex items-center justify-center rounded-xl border border-sand-300 bg-white/40 px-4 py-2 text-sm font-semibold text-stone-700 backdrop-blur ring-1 ring-inset ring-sand-200 hover:bg-sand-100 transition-colors min-h-[44px]"
           >
             Ver posiciones finales
           </Link>

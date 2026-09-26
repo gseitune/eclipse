@@ -214,7 +214,7 @@ function AgendaContent({
                     className={`flex items-center gap-4 rounded-xl border px-4 py-3 ${
                       isLive
                         ? "border-ember-400 bg-ember-50/40 ring-1 ring-inset ring-ember-200"
-                        : "border-sand-300 bg-white/70 ring-1 ring-inset ring-sand-200"
+                        : "border-sand-300 bg-white/40 ring-1 ring-inset ring-sand-200"
                     }`}
                   >
                     {/* Slot / order */}

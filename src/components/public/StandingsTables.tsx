@@ -42,7 +42,7 @@ export function StandingsTables({
   }
 
   return (
-    <section aria-label="Posiciones" className="rounded-2xl border border-sand-300 bg-white/70 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
+    <section aria-label="Posiciones" className="rounded-2xl border border-sand-300 bg-white/40 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-stone-900">Posiciones</h2>
         {liveIds.size > 0 && (
@@ -94,7 +94,7 @@ export function StandingsTables({
               key={z}
               className={isMobileActive ? "" : "hidden sm:block"}
             >
-              <div className="rounded-xl border border-sand-200 bg-white/60 p-3">
+              <div className="rounded-xl border border-sand-200 bg-white/40 p-3">
                 {/* Zone header */}
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-bold text-stone-800">

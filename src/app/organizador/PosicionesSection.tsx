@@ -28,7 +28,7 @@ function ZoneStandingsTable({
   readonly rows: StandingRow[];
 }) {
   return (
-    <div className="rounded-xl border border-sand-200 bg-white/60 p-3">
+    <div className="rounded-xl border border-sand-200 bg-white/40 p-3">
       {/* Zone header */}
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-bold text-stone-800">

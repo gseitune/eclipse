@@ -115,6 +115,14 @@ export function PublicHome({ initial }: { initial: StateSnapshot | null }) {
           />
         ) : (
           <>
+            <MatchTicker
+              schedule={state?.schedule ?? []}
+              brackets={state?.brackets ?? []}
+              nextMatch={state?.nextMatch ?? null}
+              desempate={state?.desempate ?? { needed: false, pending: false, match: null }}
+              matchMinutes={state?.matchMinutes ?? 20}
+            />
+
             <StandingsTables
               standings={state?.standings ?? {}}
               zones={state?.zones ?? { A: [], B: [], C: [] } as Record<ZoneId, TeamPublic[]>}
@@ -124,14 +132,6 @@ export function PublicHome({ initial }: { initial: StateSnapshot | null }) {
               phase={phase}
               onOpenTeam={handleOpenTeam}
             />
-
-            <MatchTicker
-              schedule={state?.schedule ?? []}
-              brackets={state?.brackets ?? []}
-              nextMatch={state?.nextMatch ?? null}
-              desempate={state?.desempate ?? { needed: false, pending: false, match: null }}
-              matchMinutes={state?.matchMinutes ?? 20}
-            />
           </>
         )}
 
@@ -139,14 +139,14 @@ export function PublicHome({ initial }: { initial: StateSnapshot | null }) {
         {isEliminatories || isDesempate ? (
           <Link
             href="/agenda"
-            className="flex items-center justify-center rounded-xl border border-sand-300 bg-white/70 py-3 text-sm font-semibold text-stone-700 backdrop-blur ring-1 ring-inset ring-sand-200 hover:bg-sand-100 transition-colors min-h-[44px]"
+            className="flex items-center justify-center rounded-xl border border-sand-300 bg-white/40 py-3 text-sm font-semibold text-stone-700 backdrop-blur ring-1 ring-inset ring-sand-200 hover:bg-sand-100 transition-colors min-h-[44px]"
           >
             Ver posiciones finales
           </Link>
         ) : (
           <Link
             href="/agenda"
-            className="flex items-center justify-center rounded-xl border border-sand-300 bg-white/70 py-3 text-sm font-semibold text-stone-700 backdrop-blur ring-1 ring-inset ring-sand-200 hover:bg-sand-100 transition-colors min-h-[44px]"
+            className="flex items-center justify-center rounded-xl border border-sand-300 bg-white/40 py-3 text-sm font-semibold text-stone-700 backdrop-blur ring-1 ring-inset ring-sand-200 hover:bg-sand-100 transition-colors min-h-[44px]"
           >
             Ver agenda completa
           </Link>
@@ -154,7 +154,7 @@ export function PublicHome({ initial }: { initial: StateSnapshot | null }) {
 
         {/* Unknown phase fallback — keep standings/ticker working */}
         {!known && (
-          <div className="rounded-2xl border border-sand-300 bg-white/70 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
+          <div className="rounded-2xl border border-sand-300 bg-white/40 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
             <h2 className="text-lg font-semibold text-stone-900">Estado del torneo</h2>
             <p className="mt-2 text-sm text-stone-500">
               {phaseLabel(phase)}

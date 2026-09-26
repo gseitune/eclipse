@@ -166,7 +166,7 @@ export function MatchTicker({
   }, [schedule, matchMap, despMatch, matchMinutes]);
 
   return (
-    <section aria-label="Marcador" className="rounded-2xl border border-sand-300 bg-white/70 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
+    <section aria-label="Marcador" className="rounded-2xl border border-sand-300 bg-white/40 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
       <h2 className="text-lg font-semibold text-stone-900">Marcador</h2>
 
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">

@@ -35,7 +35,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             className="h-full w-full object-cover opacity-70"
             draggable={false}
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-sand-50/50 via-sand-100/30 to-sand-200/50" />
+          <div className="absolute inset-0 bg-gradient-to-b from-sand-50/30 via-sand-100/10 to-sand-200/30" />
         </div>
         <div className="relative z-10 flex flex-1 flex-col">{children}</div>
       </body>
