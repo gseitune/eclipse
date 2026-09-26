@@ -162,11 +162,16 @@ Work-unit commits; no PRs/push.
       `getAnnualRanking` devuelve `{scale, female, male, etapas}`;
       `EtapaPosition`/`RankedPlayer`/`RankingResponse` en types.ts;
       `RankingPanel` muestra 3 columnas (Femenino / Masculino / Posiciones por
-      etapa) + PODIO de la etapa seleccionada (1° arriba al medio trofeo dorado
-      con estrella, 2° abajo-izq plata, 3° abajo-der bronce); ranking.test.ts
-      reescrito con tests unitarios puros de agregación. Checks: 150/150 tests
-      (5 nuevos), tsc 0, lint 0 errors. Smoke: API male Gus 200 / Mati 195 /
-      Santy 180; female Roxi 220.
+      etapa); ranking.test.ts reescrito con tests unitarios puros de
+      agregación. Checks: 150/150 tests (5 nuevos), tsc 0, lint 0 errors.
+      Smoke: API male Gus 200 / Mati 195 / Santy 180; female Roxi 220.
+      Corrección del usuario (commit `e858814`): el podio NO va en Puntos del
+      circuito — va en el Cuadro, ARRIBA de la llave, mostrando SOLO la última
+      etapa finalizada. `Podium.tsx` compartido (1° arriba al medio trofeo
+      dorado con estrella, 2° abajo-izq plata, 3° abajo-der bronce);
+      EliminatoriesView fetchea ranking y toma la última etapa finished;
+      se quitan la tarjeta CAMPEÓN y el botón "Ver posiciones finales".
+      Checks: 150/150, tsc 0, lint 0 errors.
 - [ ] (S6) Past etapas (follow-up, no iniciado): la organizadora carga una etapa
   ya cerrada con sus resultados; el ranking la acumula.
 
@@ -197,9 +202,12 @@ Work-unit commits; no PRs/push.
   extrajo `aggregateRankedPlayers()` pura para tests unitarios sin DB (150/150).
   El bug "lista masculino sin nombres" era runtime viejo del dev server — con
   el server reiniciado la API devuelve Gus/Mati/Santy y el panel renderiza
-  `player.name`. Podio pedido por el usuario ubicado en RankingPanel (etapa
-  seleccionada: 1° arriba centro trofeo dorado + estrella, 2° abajo-izq plata,
-  3° abajo-der bronce).
+`player.name`. El usuario corrigió la ubicación: el podio NO va en Puntos
+   del circuito — va en el Cuadro arriba de la llave con SOLO la última etapa
+   finalizada (commit `e858814`): Podium.tsx compartido, EliminatoriesView
+   fetchea ranking y toma la última etapa finished; se quitaron la tarjeta
+   CAMPEÓN y el botón "Ver posiciones finales". Checks 150/150, tsc 0,
+   lint 0 errors.
 
 ## Notes
 
