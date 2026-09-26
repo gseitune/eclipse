@@ -90,6 +90,7 @@ export const EtapaScalarFieldEnum = {
   sortOrder: 'sortOrder',
   bracketFormat: 'bracketFormat',
   closedAt: 'closedAt',
+  cancelledAt: 'cancelledAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const

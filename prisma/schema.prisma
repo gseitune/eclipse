@@ -66,6 +66,7 @@ model Etapa {
   matches      Match[]
   state        TournamentState?
   closedAt     DateTime?         /// inmutable: no results/zones edits after close
+  cancelledAt  DateTime?         /// organizer can cancel (weather suspension) with password
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
 }

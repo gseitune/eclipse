@@ -291,3 +291,23 @@ Tasks:
 - [x] route/api: createEtapa accepts bracketFormat
 - [x] tests: brackets, ranking, result-format, phase labels, integration (6-slots + positions)
 - [x] validate: npm test, tsc, lint — todo commit `70694e1` feat(back): repechaje bracket format for Etapa 1 (2A vs 3B, bronze match)
+
+## Work unit: cancelar etapa (suspensión por clima) con confirmación de contraseña
+
+Pedido del user (2026-09-26), slice chico:
+- `Etapa.cancelledAt DateTime?` + migración.
+- `POST /api/etapas/[id]/cancel` (patrón de `[id]/close`): sesión organizador;
+  body `{ password }` verificado con `verifyPassword` (ya exportado en auth.ts);
+  400 `password_required` / 401 si no coincide; 404 si no existe; 409
+  `etapa_cerrada` si closedAt; 409 `etapa_cancelled` si ya cancelada; setea
+  `cancelledAt = new Date()`; `publishSse("etapa-cancelled", { etapaId })`.
+- `requireEtapaOpen` (back.ts): etapa con `cancelledAt` también bloquea
+  modificaciones (409 `etapa_cancelled`, chequeado antes que closedAt);
+  post-cancelación solo lectura.
+
+Tasks:
+- [x] schema: `cancelledAt DateTime?` en Etapa + migración `20260926062504_add_etapa_cancelled_at` + prisma generate (client checkeado en repo)
+- [x] route: `src/app/api/etapas/[id]/cancel/route.ts` (patrón close route; verifyPassword ya exportado; SSE etapa-cancelled)
+- [x] back: `requireEtapaOpen` bloquea si `cancelledAt` presente (409 `etapa_cancelled`)
+- [x] tests: 7 tests integration (record/edit/reorder/generateZones bloqueados, listEtapas expone cancelledAt, doble-cancel persiste); 401 password incorrecto verificado por inspección del route (repo no tiene harness de tests de ruta)
+- [x] validate: npm test 162/162 + npm run build OK (spot check propio: los 2 fallos iniciales eran acoplamiento de estado en los tests reutilizando cm1 COMPLETE → cm3/cm4 independientes)

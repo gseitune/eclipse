@@ -64,28 +64,31 @@ export interface EtapaMeta {
   sortOrder: number;
   teamCount: number;
   closedAt: string | null;
+  cancelledAt: string | null;
 }
 
 export async function listEtapas(): Promise<EtapaMeta[]> {
   const etapas = await prisma.etapa.findMany({
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-    select: {
-      id: true,
-      name: true,
-      date: true,
-      sortOrder: true,
-      closedAt: true,
-      _count: { select: { teams: true } },
-    },
-  });
-  return etapas.map((e) => ({
-    id: e.id,
-    name: e.name,
-    date: e.date ? e.date.toISOString() : null,
-    sortOrder: e.sortOrder,
-    teamCount: e._count.teams,
-    closedAt: e.closedAt ? e.closedAt.toISOString() : null,
-  }));
+     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+     select: {
+       id: true,
+       name: true,
+       date: true,
+       sortOrder: true,
+       closedAt: true,
+       cancelledAt: true,
+       _count: { select: { teams: true } },
+     },
+   });
+   return etapas.map((e) => ({
+     id: e.id,
+     name: e.name,
+     date: e.date ? e.date.toISOString() : null,
+     sortOrder: e.sortOrder,
+     teamCount: e._count.teams,
+     closedAt: e.closedAt ? e.closedAt.toISOString() : null,
+     cancelledAt: e.cancelledAt ? e.cancelledAt.toISOString() : null,
+   }));
 }
 
 export interface CreateTeamInput {
@@ -303,12 +306,19 @@ async function requireUnconfirmed(message: string, etapaId?: string | null): Pro
   if (state.zoneConfirmed) throw new BackError(message, 409);
 }
 
-/** Reads the Etapa row and throws 409 when closedAt is set. */
+/** Reads the Etapa row and throws 409 when closedAt or cancelledAt is set. */
 async function requireEtapaOpen(etapaId: string): Promise<void> {
   const etapa = await prisma.etapa.findUnique({
     where: { id: etapaId },
-    select: { closedAt: true },
+    select: { closedAt: true, cancelledAt: true },
   });
+  if (etapa?.cancelledAt) {
+    throw new BackError(
+      "Etapa cancelada: la etapa ya no admite modificaciones.",
+      409,
+      "etapa_cancelled",
+    );
+  }
   if (etapa && etapa.closedAt) {
     throw new BackError(
       "Circuito cerrado: la etapa ya no admite modificaciones.",
@@ -513,6 +523,7 @@ export async function reorderMatch(matchId: string, direction: "up" | "down"): P
   }
 
   const id = match.etapaId;
+  await requireEtapaOpen(id);
 
   const allMatches = await prisma.match.findMany({
     where: { etapaId: id },

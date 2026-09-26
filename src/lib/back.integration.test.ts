@@ -34,6 +34,8 @@ let getNextMatch!: BackModule["getNextMatch"];
 let createEtapa!: BackModule["createEtapa"];
 let reorderMatch!: BackModule["reorderMatch"];
 let getScheduleBoard!: BackModule["getScheduleBoard"];
+let generateZones!: BackModule["generateZones"];
+let listEtapas!: BackModule["listEtapas"];
 let BackError!: BackModule["BackError"];
 let InvalidResultError!: ResultFormatModule["InvalidResultError"];
 let subscribeSse!: EventsModule["subscribeSse"];
@@ -542,15 +544,163 @@ it("reorderMatch down swaps slots of two PENDING matches", async () => {
     });
 
     it("getScheduleBoard returns rows ordered by slot with team names", async () => {
-      const etapaId = await seedReorderTournament();
-      const board = await getScheduleBoard(etapaId);
-      assert.equal(board.length, 3, "board has 3 rows");
-      assert.equal(board[0].slot, 1, "first row is slot 1");
-      assert.equal(board[0].teamA?.name, "Alpha", "team A name present");
-      assert.equal(board[0].teamB?.name, "Beta", "team B name present");
-      // Bracket slot has null teams
-      const bracketRow = board.find((r) => r.slot === 2);
-      assert.ok(bracketRow, "bracket row exists");
-      assert.equal(bracketRow?.resultStatus, "PENDING");
-    });
+       const etapaId = await seedReorderTournament();
+       const board = await getScheduleBoard(etapaId);
+       assert.equal(board.length, 3, "board has 3 rows");
+       assert.equal(board[0].slot, 1, "first row is slot 1");
+       assert.equal(board[0].teamA?.name, "Alpha", "team A name present");
+       assert.equal(board[0].teamB?.name, "Beta", "team B name present");
+       // Bracket slot has null teams
+       const bracketRow = board.find((r) => r.slot === 2);
+       assert.ok(bracketRow, "bracket row exists");
+       assert.equal(bracketRow?.resultStatus, "PENDING");
+     });
 });
+
+/**
+ * Cancel (weather suspension) integration tests.
+ * Verifies that once an etapa is cancelled via cancelledAt:
+ * - recordResult/editResult throw etapa_cancelled
+ * - requireEtapaOpen blocks all modifications (tested indirectly)
+ */
+describe("cancel etapa (integration) — weather suspension", () => {
+  before(async () => {
+    // The previous describe's after() deleted the throwaway db dir.
+    // Recreate it and push the schema again.
+    mkdirSync(dir, { recursive: true });
+    execSync(`npx prisma db push --url ${dbUrl}`, {
+      cwd: repoRoot,
+      stdio: "pipe",
+    });
+    const p = await import("./prisma");
+    prisma = p.prisma;
+    const back = await import("./back");
+    recordResult = back.recordResult;
+    editResult = back.editResult;
+    reorderMatch = back.reorderMatch;
+    generateZones = back.generateZones;
+    listEtapas = back.listEtapas;
+    BackError = back.BackError;
+    const events = await import("./events");
+    subscribeSse = events.subscribeSse;
+
+    // Create a fresh etapa with teams and a match so we can test cancellation.
+    const etapa = await prisma.etapa.create({
+      data: { name: "Cancel test etapa", sortOrder: 1 },
+    });
+    etapaId = etapa.id;
+    await prisma.team.createMany({
+      data: [
+        { id: "cA1", etapaId, name: "TeamA", zone: "A" },
+        { id: "cA2", etapaId, name: "TeamB", zone: "A" },
+        { id: "cB1", etapaId, name: "TeamC", zone: "B" },
+        { id: "cB2", etapaId, name: "TeamD", zone: "B" },
+      ],
+    });
+    await prisma.match.createMany({
+      data: [
+        { id: "cm1", etapaId, stage: "GROUPS", zone: "A", slot: 1, teamAId: "cA1", teamBId: "cA2", resultStatus: "PENDING" },
+        { id: "cm2", etapaId, stage: "SEMIFINAL_1", slot: 2, teamAId: null, teamBId: null, resultStatus: "PENDING" },
+        { id: "cm3", etapaId, stage: "GROUPS", zone: "B", slot: 3, teamAId: "cB1", teamBId: "cB2", resultStatus: "PENDING" },
+        { id: "cm4", etapaId, stage: "GROUPS", zone: "B", slot: 4, teamAId: "cB2", teamBId: "cB1", resultStatus: "PENDING" },
+      ],
+    });
+    await prisma.tournamentState.create({ data: { etapaId } });
+  });
+
+  after(async () => {
+    await prisma.$disconnect();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("rejects recordResult on a cancelled etapa (etapa_cancelled)", async () => {
+    // Cancel the etapa by setting cancelledAt directly
+    await prisma.etapa.update({
+      where: { id: etapaId },
+      data: { cancelledAt: new Date() },
+    });
+
+    await assert.rejects(
+      () => recordResult({ matchId: "cm1", winnerId: "cA1" }),
+      (err: unknown) =>
+        err instanceof BackError &&
+        err.status === 409 &&
+        err.reason === "etapa_cancelled",
+    );
+  });
+
+  it("rejects editResult on a cancelled etapa (etapa_cancelled)", async () => {
+    // Reset the match to have a result so editResult can reach requireEtapaOpen
+    await prisma.match.update({
+      where: { id: "cm1" },
+      data: { resultStatus: "COMPLETE", winnerId: "cA1", sets: [{ teamA: 21, teamB: 19 }] },
+    });
+
+    await assert.rejects(
+      () => editResult({ matchId: "cm1", setFormat: "SINGLE_21", sets: [{ teamA: 22, teamB: 20 }] }),
+      (err: unknown) =>
+        err instanceof BackError &&
+        err.status === 409 &&
+        err.reason === "etapa_cancelled",
+    );
+  });
+
+it("etapa cancelled shows cancelledAt set", async () => {
+     const e = await prisma.etapa.findUnique({ where: { id: etapaId } });
+     assert.ok(e?.cancelledAt, "cancelledAt should be set");
+   });
+
+it("rejects reorderMatch on a cancelled etapa (etapa_cancelled)", async () => {
+    // cm3 is a pending group match in the cancelled etapa
+    await prisma.etapa.update({
+      where: { id: etapaId },
+      data: { cancelledAt: new Date() },
+    });
+
+    await assert.rejects(
+      () => reorderMatch("cm3", "down"),
+       (err: unknown) =>
+         err instanceof BackError &&
+         err.status === 409 &&
+         err.reason === "etapa_cancelled",
+     );
+   });
+
+   it("rejects generateZones on a cancelled etapa (etapa_cancelled)", async () => {
+     await prisma.etapa.update({
+       where: { id: etapaId },
+       data: { cancelledAt: new Date() },
+     });
+
+     await assert.rejects(
+       () => generateZones(etapaId),
+       (err: unknown) =>
+         err instanceof BackError &&
+         err.status === 409 &&
+         err.reason === "etapa_cancelled",
+     );
+   });
+
+   it("listEtapas returns cancelledAt for each etapa", async () => {
+     const etapas = await listEtapas();
+     const target = etapas.find((e) => e.id === etapaId);
+     assert.ok(target, "etapa should be in list");
+     assert.ok(target!.cancelledAt !== null, "cancelledAt should be non-null for cancelled etapa");
+   });
+
+it("blocks recordResult after double-cancel (etapa_cancelled persists)", async () => {
+    // Already cancelled from a previous test; verify recordResult still blocked
+    await prisma.etapa.update({
+      where: { id: etapaId },
+      data: { cancelledAt: new Date() }, // already set, idempotent
+    });
+
+    await assert.rejects(
+      () => recordResult({ matchId: "cm3", winnerId: "cB1" }),
+       (err: unknown) =>
+         err instanceof BackError &&
+         err.status === 409 &&
+         err.reason === "etapa_cancelled",
+     );
+   });
+ });
