@@ -12,6 +12,7 @@ export function RankingPanel() {
   const [data, setData] = useState<RankingResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedEtapaId, setSelectedEtapaId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -36,6 +37,13 @@ export function RankingPanel() {
 
   // Top-ranked team for highlight
   const topTeamId = data?.ranking[0]?.teamId ?? null;
+
+  // Default selection: first etapa with registered positions, else first one
+  const selectedEtapa =
+    data?.etapas.find((e) => e.id === selectedEtapaId) ??
+    data?.etapas.find((e) => e.positions.length > 0) ??
+    data?.etapas[0] ??
+    null;
 
   return (
     <section
@@ -91,7 +99,7 @@ export function RankingPanel() {
             )}
           </div>
 
-          {/* RIGHT COLUMN: Positions per etapa */}
+          {/* RIGHT COLUMN: Positions per etapa (selectable) */}
           <div>
             <h3 className="text-sm font-semibold text-stone-700 mb-2">
               Posiciones por etapa
@@ -102,24 +110,38 @@ export function RankingPanel() {
               </p>
             ) : (
               <div className="space-y-3">
-                {data.etapas.map((etapa) => (
-                  <div
-                    key={etapa.id}
-                    className="rounded-lg border border-sand-200 bg-white/40 p-3"
+                <label className="block">
+                  <span className="sr-only">Elegir etapa</span>
+                  <select
+                    value={selectedEtapa?.id ?? ""}
+                    onChange={(e) => setSelectedEtapaId(e.target.value)}
+                    className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[44px]"
                   >
+                    {data.etapas.map((etapa) => (
+                      <option key={etapa.id} value={etapa.id}>
+                        {etapa.name}
+                        {!etapa.finished ? " (en curso)" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                {selectedEtapa ? (
+                  <div className="rounded-lg border border-sand-200 bg-white/40 p-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-semibold text-stone-800">
-                        {etapa.name}
+                        {selectedEtapa.name}
                       </span>
-                      {!etapa.finished && (
+                      {!selectedEtapa.finished && (
                         <span className="text-[10px] font-semibold text-stone-400">
                           Etapa en curso — aún no suma puntos
                         </span>
                       )}
                     </div>
-                    {etapa.finished && etapa.positions.length > 0 ? (
+                    {selectedEtapa.finished &&
+                    selectedEtapa.positions.length > 0 ? (
                       <ol className="mt-1.5 space-y-0.5">
-                        {etapa.positions.map((pos) => (
+                        {selectedEtapa.positions.map((pos) => (
                           <li
                             key={pos.teamId}
                             className="flex items-center gap-1.5 text-xs text-stone-600"
@@ -142,7 +164,7 @@ export function RankingPanel() {
                       </p>
                     )}
                   </div>
-                ))}
+                ) : null}
               </div>
             )}
           </div>
