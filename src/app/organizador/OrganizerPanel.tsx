@@ -3,7 +3,6 @@
 import { logout } from "@/lib/front/api";
 import { useState } from "react";
 import { ResultadosSection } from "./ResultadosSection";
-import { ZonificacionSection } from "./ZonificacionSection";
 import { PosicionesSection } from "./PosicionesSection";
 import { CircuitosSection } from "./CircuitosSection";
 
@@ -39,11 +38,6 @@ const SECTIONS: readonly SectionConfig[] = [
   {
     label: "Resultados",
     hint: "Cargar o corregir resultados",
-    kind: "actionable",
-  },
-  {
-    label: "Zonificación",
-    hint: "Ver y editar zonas y fixture",
     kind: "actionable",
   },
   {
@@ -137,15 +131,12 @@ export function OrganizerPanel({
 }: OrganizerPanelProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [activeSection, setActiveSection] = useState<
-    "resultados" | "zonificacion" | "posiciones" | "circuitos" | null
+    "resultados" | "posiciones" | "circuitos" | null
   >(null);
   const [view, setView] = useState<"panel" | "public">("panel");
 
   function handleSectionClick(label: string) {
     switch (label) {
-      case "Zonificación":
-        setActiveSection("zonificacion");
-        break;
       case "Resultados":
         setActiveSection("resultados");
         break;
@@ -216,8 +207,6 @@ export function OrganizerPanel({
       {view === "panel" ? (
         activeSection === "resultados" ? (
           <ResultadosSection onBack={() => setActiveSection(null)} />
-        ) : activeSection === "zonificacion" ? (
-          <ZonificacionSection onBack={() => setActiveSection(null)} />
         ) : activeSection === "posiciones" ? (
           <PosicionesSection onBack={() => setActiveSection(null)} />
         ) : activeSection === "circuitos" ? (
