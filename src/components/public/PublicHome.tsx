@@ -85,41 +85,43 @@ export function PublicHome({
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Beta ribbon — fixed top-left corner, decorative */}
-      <div className="pointer-events-none fixed left-0 top-0 z-50">
-        <div className="-ml-11 mt-8 w-44 rotate-[-45deg] bg-amber-600 py-1 text-center text-[11px] font-bold uppercase tracking-widest text-white shadow-md">
-          BETA TEST
+      {/* Top bar — static, scrolls with the page */}
+      <div className="flex items-start justify-between px-3 pt-3">
+        <div className="pointer-events-none">
+          <div className="-ml-8 w-40 rotate-[-45deg] bg-amber-600 py-1 text-center text-[11px] font-bold uppercase tracking-widest text-white shadow-md">
+            BETA TEST
+          </div>
         </div>
-      </div>
 
-      {/* Organizer link — floating top-right, hidden inside organizer preview */}
-      {!isPreview && (
-        <Link
-          href="/organizador"
-          className="fixed right-3 top-3 z-50 inline-flex min-h-[40px] items-center gap-1.5 rounded-full bg-amber-600/70 px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wide text-white shadow-lg shadow-amber-600/30 backdrop-blur transition-colors hover:bg-amber-700/80 hover:shadow-amber-700/40 sm:right-4 sm:top-4 sm:min-h-[44px] sm:gap-2 sm:px-5 sm:py-2.5 sm:text-xs"
-        >
-          <svg
-            className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-            aria-hidden="true"
+        {/* Organizer button — static top-right, hidden inside organizer preview */}
+        {!isPreview && (
+          <Link
+            href="/organizador"
+            className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full bg-amber-600/70 px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wide text-white shadow-lg shadow-amber-600/30 backdrop-blur transition-colors hover:bg-amber-700/80 hover:shadow-amber-700/40 sm:min-h-[44px] sm:gap-2 sm:px-5 sm:py-2.5 sm:text-xs"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-            />
-          </svg>
-          Organizador
-        </Link>
-      )}
+            <svg
+              className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+            </svg>
+            Organizador
+          </Link>
+        )}
+      </div>
 
       {/* Loading skeleton */}
       {loading && !initial && (
