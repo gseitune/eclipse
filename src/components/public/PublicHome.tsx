@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useLiveState } from "@/lib/front/use-live-state";
 import { phaseLabel, isKnownPhase } from "@/lib/front/phase";
 import { liveMatchIds } from "@/lib/front/live";
 import { useChime } from "@/lib/front/chime";
-import type { StateSnapshot, ZoneId, TeamPublic, StandingRow } from "@/lib/front/types";
+import { fetchRanking } from "@/lib/front/api";
+import type { StateSnapshot, ZoneId, TeamPublic, StandingRow, RankingResponse } from "@/lib/front/types";
 import { Hero } from "./Hero";
 import { StandingsTables } from "./StandingsTables";
 import { MatchTicker } from "./MatchTicker";
@@ -27,7 +28,23 @@ export function PublicHome({
   // Mount chime hook — triggers audio on new live matches
   useChime({ state, matchMinutes: state?.matchMinutes ?? 20 });
 
-  const live = state !== null;
+  // Active etapa finished state — from ranking (not state), so a finished
+  // etapa never shows EN VIVO
+  const [ranking, setRanking] = useState<RankingResponse | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetchRanking()
+      .then((resp) => {
+        if (!cancelled) setRanking(resp);
+      })
+      .catch(() => {
+        if (!cancelled) setRanking(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const phase = state?.phase ?? "GROUPS";
 
   const { liveIds, liveTeamIds, initialZone } = useMemo(() => {
@@ -89,7 +106,15 @@ export function PublicHome({
       )}
 
       {/* Hero */}
-      <Hero live={live} />
+      <Hero
+        etapaName={state?.etapa?.name?.toUpperCase() ?? "ETAPA 5"}
+        live={liveIds.size > 0}
+        finished={
+          ranking?.etapas.some(
+            (e) => e.id === state?.etapaId && e.finished,
+          ) ?? false
+        }
+      />
 
       {/* Connection-lost banner — only when live stream drops */}
       {error && (

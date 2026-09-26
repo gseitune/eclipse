@@ -1,4 +1,12 @@
-export function Hero({ live }: { live: boolean }) {
+export function Hero({
+  etapaName,
+  live,
+  finished,
+}: {
+  etapaName: string;
+  live: boolean;
+  finished: boolean;
+}) {
   return (
     <header className="mx-auto w-full max-w-3xl px-6 py-8 text-center">
       {/* Logo mark */}
@@ -32,15 +40,20 @@ export function Hero({ live }: { live: boolean }) {
       <p className="mt-2 text-sm font-semibold uppercase tracking-[0.2em] text-amber-700">
         Circuito Mixto Principiantes 2026
       </p>
-      <p className="mt-1 text-2xl font-bold text-stone-900">ETAPA 5</p>
+      <p className="mt-1 text-2xl font-bold text-stone-900">{etapaName}</p>
 
-      {/* Live pill */}
-      {live && (
+      {/* Status pill — finished, or live only on competition day */}
+      {finished ? (
+        <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-50/80 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-300">
+          <span className="h-2 w-2 rounded-full bg-emerald-500" />
+          Etapa finalizada
+        </div>
+      ) : live ? (
         <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-ember-50/80 px-3 py-1 text-xs font-semibold text-ember-600 ring-1 ring-inset ring-ember-300">
           <span className="h-2 w-2 animate-pulse rounded-full bg-ember-500" />
           EN VIVO
         </div>
-      )}
+      ) : null}
     </header>
   );
 }
