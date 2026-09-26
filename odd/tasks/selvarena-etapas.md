@@ -247,8 +247,10 @@ Tasks:
   the new column
 - [x] (done) run: seed executed — 23 teams, 50 matches, 50 resolved
 - [x] (done) smoke: /api/ranking → 3 etapas finished with official positions
-- [x] (done) validate: npm test, tsc, lint (pending commit for this unit)
-- [ ] commit: seed.ts + doc (work-unit commit)
+- [x] (done) validate: npm test (145/145), tsc (solo errores preexistentes S5 en
+  front RankingPanel/CircuitosSection), lint (0 errors, 3 warnings preexistentes)
+- [x] commit: `3c94c28` data(back): load Etapa 1 + Etapa 3 results with
+  per-sex players — seed.ts + doc
 
 ## Work unit: repechaje bracket format (E1 fidelity)
 
