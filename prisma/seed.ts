@@ -1,8 +1,16 @@
 /**
- * Etapa 5 seed — canonical data from the brief:
+ * Etapa 5 seed — CANONICAL LOADED DATA from the brief + official plantilla:
  * - 10 teams split into Zona A / Zona B (fixed by the brief).
  * - 23 matches: 20 group-phase (fixed pairs + times, single court),
- *   semifinals (A1 vs B2, B1 vs A2) and the final — all PENDING.
+ *   semifinals (A1 vs B2, B1 vs A2) and the final.
+ * - ALL results are loaded (COMPLETE with SINGLE_21 sets, except the matches
+ *   whose score the brief omits — those are WINNER_ONLY with the official
+ *   winner): group 16:20 "Sil y Lucas 21 — Mati y Cin ?" and the eliminatorias
+ *   (semifinals from the plantilla dropdown: Lu y Gus / Vivi y Santy; final
+ *   Lu y Gus). Zone pairs: A1 Lu y Gus, A2 Alex y Flor, B1 Vivi y Santy,
+ *   B2 Mati y Cin (consistent with the loaded results).
+ * - The stage ends ELIMINATORIES with zoneConfirmed, because the etapa is
+ *   finished and every result is in.
  */
 
 import { PrismaClient } from "../src/generated/prisma/client";
@@ -31,6 +39,10 @@ interface MatchRow {
   zone?: Zone;
   teamA?: string;
   teamB?: string;
+  /** Full SINGLE_21 score [teamA, teamB]; omitted for WINNER_ONLY. */
+  sets?: [number, number];
+  /** Official winner. For WINNER_ONLY entries the score is not in the brief. */
+  winner?: string;
 }
 
 const TEAMS: TeamRow[] = [
@@ -47,29 +59,31 @@ const TEAMS: TeamRow[] = [
 ];
 
 const MATCHES: MatchRow[] = [
-  { time: "10:00 - 10:20", stage: "GROUPS", zone: "A", teamA: "Lu y Gus", teamB: "Alex y Flor" },
-  { time: "10:20 - 10:40", stage: "GROUPS", zone: "B", teamA: "Vivi y Santy", teamB: "Mati y Cin" },
-  { time: "10:40 - 11:00", stage: "GROUPS", zone: "A", teamA: "Gon y Belén", teamB: "Gabi y Nabi" },
-  { time: "11:00 - 11:20", stage: "GROUPS", zone: "B", teamA: "Roxi y Dany", teamB: "Enzo y Kari" },
-  { time: "11:20 - 11:40", stage: "GROUPS", zone: "A", teamA: "Liz y Sebita", teamB: "Lu y Gus" },
-  { time: "11:40 - 12:00", stage: "GROUPS", zone: "B", teamA: "Sil y Lucas", teamB: "Vivi y Santy" },
-  { time: "12:00 - 12:20", stage: "GROUPS", zone: "A", teamA: "Alex y Flor", teamB: "Gon y Belén" },
-  { time: "12:20 - 12:40", stage: "GROUPS", zone: "B", teamA: "Mati y Cin", teamB: "Roxi y Dany" },
-  { time: "12:40 - 13:00", stage: "GROUPS", zone: "A", teamA: "Gabi y Nabi", teamB: "Liz y Sebita" },
-  { time: "13:00 - 13:20", stage: "GROUPS", zone: "B", teamA: "Enzo y Kari", teamB: "Sil y Lucas" },
-  { time: "13:20 - 13:40", stage: "GROUPS", zone: "A", teamA: "Lu y Gus", teamB: "Gon y Belén" },
-  { time: "13:40 - 14:00", stage: "GROUPS", zone: "B", teamA: "Vivi y Santy", teamB: "Roxi y Dany" },
-  { time: "14:00 - 14:20", stage: "GROUPS", zone: "A", teamA: "Alex y Flor", teamB: "Gabi y Nabi" },
-  { time: "14:20 - 14:40", stage: "GROUPS", zone: "B", teamA: "Mati y Cin", teamB: "Enzo y Kari" },
-  { time: "14:40 - 15:00", stage: "GROUPS", zone: "A", teamA: "Gon y Belén", teamB: "Liz y Sebita" },
-  { time: "15:00 - 15:20", stage: "GROUPS", zone: "B", teamA: "Roxi y Dany", teamB: "Sil y Lucas" },
-  { time: "15:20 - 15:40", stage: "GROUPS", zone: "A", teamA: "Gabi y Nabi", teamB: "Lu y Gus" },
-  { time: "15:40 - 16:00", stage: "GROUPS", zone: "B", teamA: "Enzo y Kari", teamB: "Vivi y Santy" },
-  { time: "16:00 - 16:20", stage: "GROUPS", zone: "A", teamA: "Liz y Sebita", teamB: "Alex y Flor" },
-  { time: "16:20 - 16:40", stage: "GROUPS", zone: "B", teamA: "Sil y Lucas", teamB: "Mati y Cin" },
-  { time: "16:40 - 17:00", stage: "SEMIFINAL_1" },
-  { time: "17:00 - 17:20", stage: "SEMIFINAL_2" },
-  { time: "17:20 - 17:40", stage: "FINAL" },
+  { time: "10:00 - 10:20", stage: "GROUPS", zone: "A", teamA: "Lu y Gus", teamB: "Alex y Flor", sets: [21, 17], winner: "Lu y Gus" },
+  { time: "10:20 - 10:40", stage: "GROUPS", zone: "B", teamA: "Vivi y Santy", teamB: "Mati y Cin", sets: [21, 10], winner: "Vivi y Santy" },
+  { time: "10:40 - 11:00", stage: "GROUPS", zone: "A", teamA: "Gon y Belén", teamB: "Gabi y Nabi", sets: [21, 19], winner: "Gon y Belén" },
+  { time: "11:00 - 11:20", stage: "GROUPS", zone: "B", teamA: "Roxi y Dany", teamB: "Enzo y Kari", sets: [21, 17], winner: "Roxi y Dany" },
+  { time: "11:20 - 11:40", stage: "GROUPS", zone: "A", teamA: "Liz y Sebita", teamB: "Lu y Gus", sets: [18, 21], winner: "Lu y Gus" },
+  { time: "11:40 - 12:00", stage: "GROUPS", zone: "B", teamA: "Sil y Lucas", teamB: "Vivi y Santy", sets: [5, 21], winner: "Vivi y Santy" },
+  { time: "12:00 - 12:20", stage: "GROUPS", zone: "A", teamA: "Alex y Flor", teamB: "Gon y Belén", sets: [21, 11], winner: "Alex y Flor" },
+  { time: "12:20 - 12:40", stage: "GROUPS", zone: "B", teamA: "Mati y Cin", teamB: "Roxi y Dany", sets: [21, 12], winner: "Mati y Cin" },
+  { time: "12:40 - 13:00", stage: "GROUPS", zone: "A", teamA: "Gabi y Nabi", teamB: "Liz y Sebita", sets: [15, 21], winner: "Liz y Sebita" },
+  { time: "13:00 - 13:20", stage: "GROUPS", zone: "B", teamA: "Enzo y Kari", teamB: "Sil y Lucas", sets: [21, 11], winner: "Enzo y Kari" },
+  { time: "13:20 - 13:40", stage: "GROUPS", zone: "A", teamA: "Lu y Gus", teamB: "Gon y Belén", sets: [21, 13], winner: "Lu y Gus" },
+  { time: "13:40 - 14:00", stage: "GROUPS", zone: "B", teamA: "Vivi y Santy", teamB: "Roxi y Dany", sets: [21, 12], winner: "Vivi y Santy" },
+  { time: "14:00 - 14:20", stage: "GROUPS", zone: "A", teamA: "Alex y Flor", teamB: "Gabi y Nabi", sets: [21, 4], winner: "Alex y Flor" },
+  { time: "14:20 - 14:40", stage: "GROUPS", zone: "B", teamA: "Mati y Cin", teamB: "Enzo y Kari", sets: [21, 17], winner: "Mati y Cin" },
+  { time: "14:40 - 15:00", stage: "GROUPS", zone: "A", teamA: "Gon y Belén", teamB: "Liz y Sebita", sets: [21, 9], winner: "Gon y Belén" },
+  { time: "15:00 - 15:20", stage: "GROUPS", zone: "B", teamA: "Roxi y Dany", teamB: "Sil y Lucas", sets: [21, 14], winner: "Roxi y Dany" },
+  { time: "15:20 - 15:40", stage: "GROUPS", zone: "A", teamA: "Gabi y Nabi", teamB: "Lu y Gus", sets: [5, 21], winner: "Lu y Gus" },
+  { time: "15:40 - 16:00", stage: "GROUPS", zone: "B", teamA: "Enzo y Kari", teamB: "Vivi y Santy", sets: [11, 21], winner: "Vivi y Santy" },
+  { time: "16:00 - 16:20", stage: "GROUPS", zone: "A", teamA: "Liz y Sebita", teamB: "Alex y Flor", sets: [12, 21], winner: "Alex y Flor" },
+  // 16:20 — the brief shows "21 v" with no second score: WINNER_ONLY Sil y Lucas.
+  { time: "16:20 - 16:40", stage: "GROUPS", zone: "B", teamA: "Sil y Lucas", teamB: "Mati y Cin", winner: "Sil y Lucas" },
+  // Eliminatorias — winners from the plantilla dropdown; scores not in the brief.
+  { time: "16:40 - 17:00", stage: "SEMIFINAL_1", teamA: "Lu y Gus", teamB: "Mati y Cin", winner: "Lu y Gus" },
+  { time: "17:00 - 17:20", stage: "SEMIFINAL_2", teamA: "Vivi y Santy", teamB: "Alex y Flor", winner: "Vivi y Santy" },
+  { time: "17:20 - 17:40", stage: "FINAL", teamA: "Lu y Gus", teamB: "Vivi y Santy", winner: "Lu y Gus" },
 ];
 
 async function main(): Promise<void> {
@@ -91,6 +105,7 @@ async function main(): Promise<void> {
   const teamIdByName = new Map(teams.map((team) => [team.name, team.id]));
 
   for (const [index, match] of MATCHES.entries()) {
+    const hasSets = match.sets !== undefined;
     await prisma.match.create({
       data: {
         etapaId: etapa.id,
@@ -103,13 +118,47 @@ async function main(): Promise<void> {
         setFormat: match.stage === "GROUPS" ? "SINGLE_21" : null,
         teamAId: match.teamA ? (teamIdByName.get(match.teamA) ?? null) : null,
         teamBId: match.teamB ? (teamIdByName.get(match.teamB) ?? null) : null,
-        resultStatus: "PENDING",
+        // Loaded results from the brief: COMPLETE carries the SINGLE_21 sets,
+        // WINNER_ONLY the official winner when the brief omits the score.
+        resultStatus: hasSets
+          ? "COMPLETE"
+          : match.winner
+            ? "WINNER_ONLY"
+            : "PENDING",
+        sets: hasSets
+          ? [{ teamA: match.sets![0], teamB: match.sets![1] }]
+          : undefined,
+        winnerId: match.winner ? (teamIdByName.get(match.winner) ?? null) : null,
       },
     });
   }
 
+  // Guard against typos in the canonical data: every loaded winner must belong
+  // to its own match pair.
+  const created = await prisma.match.findMany({
+    where: { etapaId: etapa.id },
+  });
+  for (const matchResult of created) {
+    if (!matchResult.winnerId) continue;
+    if (
+      matchResult.teamAId !== matchResult.winnerId &&
+      matchResult.teamBId !== matchResult.winnerId
+    ) {
+      throw new Error(
+        `Seed mismatch: winner of slot ${matchResult.slot} is not one of its pair ` +
+          `(${matchResult.teamAId} vs ${matchResult.teamBId}, winner ${matchResult.winnerId})`,
+      );
+    }
+  }
+
+  // The etapa is finished: every result is in, so the stage is closed at
+  // ELIMINATORIES with the zones confirmed.
   await prisma.tournamentState.create({
-    data: { etapaId: etapa.id },
+    data: {
+      etapaId: etapa.id,
+      zoneConfirmed: true,
+      phase: "ELIMINATORIES",
+    },
   });
 
   const teamCount = await prisma.team.count();
@@ -117,16 +166,25 @@ async function main(): Promise<void> {
   const withTeams = await prisma.match.count({
     where: { teamAId: { not: null } },
   });
+  const resolved = await prisma.match.count({
+    where: { resultStatus: { not: "PENDING" } },
+  });
 
-  if (teamCount !== TEAMS.length || matchCount !== MATCHES.length) {
+  if (
+    teamCount !== TEAMS.length ||
+    matchCount !== MATCHES.length ||
+    resolved !== MATCHES.length
+  ) {
     throw new Error(
-      `Seed mismatch: ${teamCount} teams / ${matchCount} matches expected ${TEAMS.length}/${MATCHES.length}`,
+      `Seed mismatch: ${teamCount} teams / ${matchCount} matches / ` +
+        `${resolved} resolved expected ${TEAMS.length}/${MATCHES.length}/${MATCHES.length}`,
     );
   }
 
   console.log(
     `Seed OK — etapa "${etapa.name}", ${teamCount} teams, ${matchCount} matches ` +
-      `(${withTeams} with fixed pairs, ${matchCount - withTeams} bracket slots).`,
+      `${withTeams} with fixed pairs, ${matchCount - withTeams} bracket slots, ` +
+      `${resolved} with loaded results.`,
   );
 }
 

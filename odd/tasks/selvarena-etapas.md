@@ -38,6 +38,24 @@ Decisions confirmed this session:
 
 ---
 
+## Scope update (Gabriel, 2026-09-26) — carga de equipos con sexo
+
+- La carga de equipos debe aclarar qué jugador es masculino y cuál femenino:
+  **el ranking es individual POR SEXO** (dos rankings: masculino / femenino).
+- Decisión confirmada: composición **MIXTA FIJA** — cada equipo es exactamente
+  1 masculino + 1 femenino. La UI muestra dos campos fijos ("Masculino" /
+  "Femenino"), sin selector de sexo: imposible cargarlo mal.
+- Implica (work unit próximo): `Team` gana `maleName`/`femaleName`; el form de
+  CircuitosSection pasa de "un nombre por línea" a filas estructuradas
+  (equipo + jugador M + jugadora F); el ranking (S5) pasa a dos rankings por
+  sexo donde cada jugador suma los puntos de la posición de su pareja.
+  Supera el "Pair-only ranking for now" del 2026-09-25.
+- Etapa 5 (data cargada): los nombres de Jugador 1/2 están en la plantilla;
+  el brief no dice quién es M y quién F → la organizadora los confirma al
+  backfillear los jugadores.
+
+---
+
 ## Objective
 
 Andi runs an ANNUAL circuit: each "etapa" is a one-day tournament (sat or
@@ -147,12 +165,26 @@ Work-unit commits; no PRs/push.
   Quedan SIN commitear (sesión de front paralela, no tocadas por mí):
   layout.tsx, PosicionesSection.tsx, AgendaView.tsx, EliminatoriesView.tsx,
   MatchTicker.tsx, PublicHome.tsx, StandingsTables.tsx.
+- 2026-09-26 (data cargada Etapa 5): commit del seed + migración correctiva —
+  `prisma/seed.ts` carga los RESULTADOS reales del brief/plantilla: 19 grupos
+  COMPLETE (SINGLE_21) + 4 WINNER_ONLY (16:20 Sil y Lucas > Mati y Cin;
+  S1 Lu y Gus > Mati y Cin; S2 Vivi y Santy > Alex y Flor; F Lu y Gus >
+  Vivi y Santy). Etapa termina ELIMINATORIES + zoneConfirmed pero **sin
+  closedAt** (debe sumar al ranking). Migración correctiva
+  `20260925120000_fix_etapa_flat_columns`: la de closedAt
+  (`20260925100000_etapa_closed_at`) había redefinido `Etapa` con columnas
+  planas `teams`/`matches`/`state` TEXT NOT NULL (bug) — se restaura el shape
+  relacional. Checks: 136/136, tsc, lint. Smoke: `/api/state` 200, 23/23
+  resueltos, brackets con ganadores.
+- 2026-09-26 gotcha DB: la DB real es `dev.db` en la RAÍZ del repo (`.env`
+  `file:./dev.db` resuelto contra prisma.config.ts / cwd del seed);
+  `prisma/dev.db` es un archivo huérfano — no tocar.
 
 ## Notes
 
 - dev.db slot-1 cleanup already done in the multi-set migration; current dev.db
-  holds Etapa 5 seed data (23 matches, all PENDING) — that becomes Etapa 1 in
-  the new model with a migration backfill.
+  holds Etapa 5 seed data with ALL 23 results loaded from the brief (see
+  progress log 2026-09-26).
 - Points scale sourced from `03-Planillas/Plantilla Circuito Mixto
   (mejorada).xlsx` → sheet "Puntos Etapa" + "Equipos" (D:E scale, H4/H5 match
   points, L:N player names). Exact fidelity target.
