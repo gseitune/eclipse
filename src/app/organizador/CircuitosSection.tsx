@@ -36,7 +36,6 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
   const [equipos, setEquipos] = useState<TeamRow[]>([]);
 
   interface TeamRow {
-    name: string;
     maleName: string;
     femaleName: string;
   }
@@ -65,11 +64,13 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
     );
   }
 
+  // Team name comes from the fixed mixed pair: "male / female"
+  const deriveTeamName = (row: TeamRow) =>
+    `${row.maleName.trim()} / ${row.femaleName.trim()}`;
+
   const allRowsFilled =
     equipos.length > 0 &&
-    equipos.every(
-      (row) => row.name.trim() && row.maleName.trim() && row.femaleName.trim(),
-    );
+    equipos.every((row) => row.maleName.trim() && row.femaleName.trim());
 
   // Load data
   useEffect(() => {
@@ -108,7 +109,7 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
         name: nombre,
         date: fecha || null,
         teams: equipos.map((row) => ({
-          name: row.name.trim(),
+          name: deriveTeamName(row),
           maleName: row.maleName.trim(),
           femaleName: row.femaleName.trim(),
         })),
@@ -260,16 +261,7 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
                     key={index}
                     className="rounded-lg border border-sand-200 bg-white p-3 space-y-2"
                   >
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      <input
-                        type="text"
-                        aria-label={`Equipo ${index + 1}`}
-                        value={row.name}
-                        onChange={(e) => updateEquipo(index, { name: e.target.value })}
-                        disabled={submitting}
-                        placeholder="Nombre del equipo"
-                        className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
-                      />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <input
                         type="text"
                         aria-label={`Jugador masculino ${index + 1}`}
@@ -308,7 +300,7 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
               onClick={() =>
                 setEquipos((rows) => [
                   ...rows,
-                  { name: "", maleName: "", femaleName: "" },
+                  { maleName: "", femaleName: "" },
                 ])
               }
               disabled={submitting}
