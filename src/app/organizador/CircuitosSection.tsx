@@ -41,6 +41,24 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
     femaleName: string;
   }
 
+  // Etapa numbers allowed: 1..8, starting after the last existing one
+  const ETAPA_MIN = 1;
+  const ETAPA_MAX = 8;
+  const existingNumbers = new Set(
+    etapas
+      .map((etapa) => {
+        const m = /^Etapa\s+(\d+)$/.exec(etapa.name.trim());
+        return m ? parseInt(m[1], 10) : null;
+      })
+      .filter((n): n is number => n !== null),
+  );
+  const lastNumber =
+    existingNumbers.size > 0 ? Math.max(...existingNumbers) : ETAPA_MIN - 1;
+  const availableNumbers = Array.from(
+    { length: ETAPA_MAX - lastNumber },
+    (_, i) => lastNumber + 1 + i,
+  ).filter((n) => n >= ETAPA_MIN && n <= ETAPA_MAX);
+
   function updateEquipo(index: number, patch: Partial<TeamRow>) {
     setEquipos((rows) =>
       rows.map((row, i) => (i === index ? { ...row, ...patch } : row)),
@@ -83,11 +101,11 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setSubmitMsg(null);
-    if (!nombre.trim() || !allRowsFilled) return;
+    if (!nombre || !allRowsFilled) return;
     setSubmitting(true);
     try {
       await createEtapa({
-        name: nombre.trim(),
+        name: nombre,
         date: fecha || null,
         teams: equipos.map((row) => ({
           name: row.name.trim(),
@@ -151,7 +169,7 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col mx-auto w-full max-w-xl">
       {/* Back + title */}
       <div className="flex items-center gap-3 mb-6">
         <button
@@ -187,18 +205,32 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
         <form onSubmit={handleCreate} className="rounded-xl border border-sand-200 bg-sand-50 p-5 space-y-4">
           <div>
             <label htmlFor="circuito-nombre" className="block text-xs font-medium text-stone-600 mb-1">
-              Nombre del circuito
+              Número del circuito (Etapa)
             </label>
-            <input
+            <select
               id="circuito-nombre"
-              type="text"
               required
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
-              disabled={submitting}
-              placeholder="Ej: Etapa 6"
+              disabled={submitting || availableNumbers.length === 0}
               className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
-            />
+            >
+              <option value="" disabled>
+                {availableNumbers.length === 0
+                  ? "No hay etapas disponibles"
+                  : "Elegí el número de etapa"}
+              </option>
+              {availableNumbers.map((n) => (
+                <option key={n} value={`Etapa ${n}`}>
+                  Etapa {n}
+                </option>
+              ))}
+            </select>
+            {availableNumbers.length === 0 && (
+              <p className="mt-1 text-xs text-stone-400">
+                Se alcanzó el máximo de 8 etapas.
+              </p>
+            )}
           </div>
           <div>
             <label htmlFor="circuito-fecha" className="block text-xs font-medium text-stone-600 mb-1">
@@ -287,7 +319,7 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
           </div>
           <button
             type="submit"
-            disabled={submitting || !nombre.trim() || !allRowsFilled}
+            disabled={submitting || !nombre || !allRowsFilled}
             className="w-full rounded-lg bg-amber-600 px-4 py-3 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50 transition-colors min-h-[44px]"
           >
             {submitting ? "Creando…" : "Crear etapa"}
