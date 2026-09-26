@@ -33,7 +33,31 @@ export function OrganizerLogin() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <h2 className="text-xl font-bold text-stone-900">Acceso al Organizador</h2>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => router.push("/")}
+          className="flex items-center justify-center w-10 h-10 rounded-lg border border-sand-300 bg-sand-50 text-stone-600 hover:bg-sand-100 transition-colors min-w-[44px] min-h-[44px]"
+          aria-label="Volver a la página principal"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              fillRule="evenodd"
+              d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </button>
+        <h2 className="text-xl font-bold text-stone-900">
+          Acceso al Organizador
+        </h2>
+      </div>
 
       <div>
         <label htmlFor="org-username" className="block text-sm font-medium text-stone-700 mb-1">
