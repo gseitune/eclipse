@@ -199,8 +199,8 @@ export function EliminatoriesView({
         </div>
       )}
 
-      {/* Semifinal cards — two side by side on sm+ */}
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      {/* Semifinal cards — two side by side on sm+, narrower than full width */}
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:mx-auto sm:max-w-[600px] sm:grid-cols-2">
         {[semifinal1, semifinal2].map((match) => {
           if (!match) {
             return (
