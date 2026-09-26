@@ -32,7 +32,6 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
 
   // Form state
   const [nombre, setNombre] = useState("");
-  const [fecha, setFecha] = useState("");
   const [equipos, setEquipos] = useState<TeamRow[]>([]);
 
   interface TeamRow {
@@ -107,7 +106,6 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
     try {
       await createEtapa({
         name: nombre,
-        date: fecha || null,
         teams: equipos.map((row) => ({
           name: deriveTeamName(row),
           maleName: row.maleName.trim(),
@@ -119,7 +117,6 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
       setEtapas(resp.etapas);
       // Clear form
       setNombre("");
-      setFecha("");
       setEquipos([]);
       setSubmitMsg("Etapa creada");
     } catch (err) {
@@ -232,19 +229,6 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
                 Se alcanzó el máximo de 8 etapas.
               </p>
             )}
-          </div>
-          <div>
-            <label htmlFor="circuito-fecha" className="block text-xs font-medium text-stone-600 mb-1">
-              Fecha (opcional)
-            </label>
-            <input
-              id="circuito-fecha"
-              type="date"
-              value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
-              disabled={submitting}
-              className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
-            />
           </div>
           <div>
             <span className="block text-xs font-medium text-stone-600 mb-1">

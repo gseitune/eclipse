@@ -184,7 +184,7 @@ export interface CreateTeamInput {
 
 export interface CreateEtapaInput {
   name: string;
-  date: string | null;
+  date?: string | null;
   teams: CreateTeamInput[];
   bracketFormat?: "STANDARD" | "REPECHAJE";
 }
