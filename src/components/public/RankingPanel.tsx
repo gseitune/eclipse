@@ -149,7 +149,7 @@ export function RankingPanel() {
               <select
                 value={selectedEtapa?.id ?? ""}
                 onChange={(e) => setSelectedEtapaId(e.target.value)}
-                className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[44px]"
+                className="w-48 rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[44px]"
               >
                 {data.etapas.map((etapa) => (
                   <option key={etapa.id} value={etapa.id}>
