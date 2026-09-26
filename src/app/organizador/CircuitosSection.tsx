@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { fetchEtapas, fetchRanking, closeEtapa, createEtapa } from "@/lib/front/api";
-import type { EtapaMeta, RankingResponse } from "@/lib/front/types";
+import { fetchEtapas, createEtapa } from "@/lib/front/api";
+import type { EtapaMeta } from "@/lib/front/types";
 import { ApiError } from "@/lib/front/types";
 
 function formatDateEs(dateStr: string | null): string {
@@ -26,7 +26,6 @@ export interface CircuitosSectionProps {
 
 export function CircuitosSection({ onBack }: CircuitosSectionProps) {
   const [etapas, setEtapas] = useState<EtapaMeta[]>([]);
-  const [ranking, setRanking] = useState<RankingResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitMsg, setSubmitMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -59,13 +58,9 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
     let cancelled = false;
     async function load() {
       try {
-        const [etapasResp, rankingResp] = await Promise.all([
-          fetchEtapas(),
-          fetchRanking(),
-        ]);
+        const etapasResp = await fetchEtapas();
         if (!cancelled) {
           setEtapas(etapasResp.etapas);
-          setRanking(rankingResp);
         }
       } catch (err) {
         if (!cancelled) {
@@ -83,18 +78,6 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
       cancelled = true;
     };
   }, []);
-
-  // Derive finished flags from ranking etapas
-  const finishedEtapaIds = new Set(
-    ranking?.etapas.filter((e) => e.finished).map((e) => e.id) ?? [],
-  );
-
-  // Check if an etapa should show "Cerrar circuito"
-  function canClose(etapa: EtapaMeta): boolean {
-    const isFinished = finishedEtapaIds.has(etapa.id);
-    const isClosed = !!etapa.closedAt;
-    return isFinished && !isClosed;
-  }
 
   // Create etapa
   async function handleCreate(e: React.FormEvent) {
@@ -128,23 +111,8 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
     }
   }
 
-  // Close etapa
-  async function handleClose(id: string) {
-    if (!window.confirm("¿Cerrar este circuito? No se podrán editar resultados.")) {
-      return;
-    }
-    setSubmitMsg(null);
-    try {
-      await closeEtapa(id);
-      // Reload list
-      const resp = await fetchEtapas();
-      setEtapas(resp.etapas);
-      setSubmitMsg("Circuito cerrado");
-    } catch (err) {
-      const msg = err instanceof ApiError ? err.message : String(err);
-      setSubmitMsg(msg);
-    }
-  }
+  // Closing an etapa is only done programmatically (no UI action).
+  // It cannot be undone once closed.
 
   if (loading) {
     return (
@@ -352,41 +320,23 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
           </p>
         ) : (
           <ul className="space-y-3">
-            {etapas.map((etapa) => {
-              const closeable = canClose(etapa);
-              return (
-                <li
-                  key={etapa.id}
-                  className="flex items-center justify-between rounded-xl border border-sand-200 bg-white/40 px-4 py-3"
-                >
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm font-semibold text-stone-900">
-                      {etapa.name}
-                    </span>
-                    <div className="mt-0.5 flex items-center gap-2 text-xs text-stone-500">
-                      <span>{formatDateEs(etapa.date)}</span>
-                      <span>·</span>
-                      <span>{etapa.teamCount} equipos</span>
-                      {closeable && (
-                        <span className="text-amber-600 font-semibold">
-                          Cerrable
-                        </span>
-                      )}
-                    </div>
+            {etapas.map((etapa) => (
+              <li
+                key={etapa.id}
+                className="flex items-center justify-between rounded-xl border border-sand-200 bg-white/40 px-4 py-3"
+              >
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-semibold text-stone-900">
+                    {etapa.name}
+                  </span>
+                  <div className="mt-0.5 flex items-center gap-2 text-xs text-stone-500">
+                    <span>{formatDateEs(etapa.date)}</span>
+                    <span>·</span>
+                    <span>{etapa.teamCount} equipos</span>
                   </div>
-                  {closeable && (
-                    <button
-                      type="button"
-                      onClick={() => handleClose(etapa.id)}
-                      disabled={submitting}
-                      className="flex-shrink-0 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-100 disabled:opacity-50 transition-colors min-h-[44px]"
-                    >
-                      Cerrar circuito
-                    </button>
-                  )}
-                </li>
-              );
-            })}
+                </div>
+              </li>
+            ))}
           </ul>
         )}
       </section>
