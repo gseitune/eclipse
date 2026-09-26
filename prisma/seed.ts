@@ -73,13 +73,19 @@ const MATCHES: MatchRow[] = [
 ];
 
 async function main(): Promise<void> {
-  // Idempotent seed: wipe and rebuild from canonical data.
-  await prisma.match.deleteMany();
-  await prisma.team.deleteMany();
+  // Idempotent seed: wipe and rebuild from canonical data (cascade removes
+  // teams, matches and the tournament state).
+  await prisma.etapa.deleteMany();
+
+  const etapa = await prisma.etapa.create({
+    data: { name: "Etapa 5", sortOrder: 1 },
+  });
 
   const teams = await Promise.all(
     TEAMS.map((team) =>
-      prisma.team.create({ data: { name: team.name, zone: team.zone } }),
+      prisma.team.create({
+        data: { etapaId: etapa.id, name: team.name, zone: team.zone },
+      }),
     ),
   );
   const teamIdByName = new Map(teams.map((team) => [team.name, team.id]));
@@ -87,6 +93,7 @@ async function main(): Promise<void> {
   for (const [index, match] of MATCHES.entries()) {
     await prisma.match.create({
       data: {
+        etapaId: etapa.id,
         slot: index + 1,
         timeLabel: match.time,
         stage: match.stage,
@@ -101,16 +108,14 @@ async function main(): Promise<void> {
     });
   }
 
+  await prisma.tournamentState.create({
+    data: { etapaId: etapa.id },
+  });
+
   const teamCount = await prisma.team.count();
   const matchCount = await prisma.match.count();
   const withTeams = await prisma.match.count({
     where: { teamAId: { not: null } },
-  });
-
-  await prisma.tournamentState.upsert({
-    where: { id: 1 },
-    update: {},
-    create: { id: 1 },
   });
 
   if (teamCount !== TEAMS.length || matchCount !== MATCHES.length) {
@@ -120,7 +125,7 @@ async function main(): Promise<void> {
   }
 
   console.log(
-    `Seed OK — ${teamCount} teams, ${matchCount} matches ` +
+    `Seed OK — etapa "${etapa.name}", ${teamCount} teams, ${matchCount} matches ` +
       `(${withTeams} with fixed pairs, ${matchCount - withTeams} bracket slots).`,
   );
 }

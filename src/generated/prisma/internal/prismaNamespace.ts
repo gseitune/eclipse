@@ -398,6 +398,7 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 export const ModelName = {
   User: 'User',
+  Etapa: 'Etapa',
   TournamentState: 'TournamentState',
   Team: 'Team',
   Match: 'Match'
@@ -416,7 +417,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "tournamentState" | "team" | "match"
+    modelProps: "user" | "etapa" | "tournamentState" | "team" | "match"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -491,6 +492,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.UserCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.UserCountAggregateOutputType> | number
+        }
+      }
+    }
+    Etapa: {
+      payload: Prisma.$EtapaPayload<ExtArgs>
+      fields: Prisma.EtapaFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.EtapaFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EtapaPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.EtapaFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EtapaPayload>
+        }
+        findFirst: {
+          args: Prisma.EtapaFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EtapaPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.EtapaFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EtapaPayload>
+        }
+        findMany: {
+          args: Prisma.EtapaFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EtapaPayload>[]
+        }
+        create: {
+          args: Prisma.EtapaCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EtapaPayload>
+        }
+        createMany: {
+          args: Prisma.EtapaCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.EtapaCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EtapaPayload>[]
+        }
+        delete: {
+          args: Prisma.EtapaDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EtapaPayload>
+        }
+        update: {
+          args: Prisma.EtapaUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EtapaPayload>
+        }
+        deleteMany: {
+          args: Prisma.EtapaDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.EtapaUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.EtapaUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EtapaPayload>[]
+        }
+        upsert: {
+          args: Prisma.EtapaUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EtapaPayload>
+        }
+        aggregate: {
+          args: Prisma.EtapaAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateEtapa>
+        }
+        groupBy: {
+          args: Prisma.EtapaGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EtapaGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.EtapaCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EtapaCountAggregateOutputType> | number
         }
       }
     }
@@ -764,8 +839,21 @@ export const UserScalarFieldEnum = {
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
 
 
+export const EtapaScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  date: 'date',
+  sortOrder: 'sortOrder',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type EtapaScalarFieldEnum = (typeof EtapaScalarFieldEnum)[keyof typeof EtapaScalarFieldEnum]
+
+
 export const TournamentStateScalarFieldEnum = {
   id: 'id',
+  etapaId: 'etapaId',
   phase: 'phase',
   zoneConfirmed: 'zoneConfirmed',
   prepMinutes: 'prepMinutes',
@@ -778,6 +866,7 @@ export type TournamentStateScalarFieldEnum = (typeof TournamentStateScalarFieldE
 
 export const TeamScalarFieldEnum = {
   id: 'id',
+  etapaId: 'etapaId',
   name: 'name',
   zone: 'zone',
   createdAt: 'createdAt',
@@ -789,6 +878,7 @@ export type TeamScalarFieldEnum = (typeof TeamScalarFieldEnum)[keyof typeof Team
 
 export const MatchScalarFieldEnum = {
   id: 'id',
+  etapaId: 'etapaId',
   stage: 'stage',
   zone: 'zone',
   slot: 'slot',
@@ -823,6 +913,14 @@ export const NullableJsonNullValueInput = {
 export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
 
 
+export const NullsOrder = {
+  first: 'first',
+  last: 'last'
+} as const
+
+export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
 export const JsonNullValueFilter = {
   DbNull: DbNull,
   JsonNull: JsonNull,
@@ -838,14 +936,6 @@ export const QueryMode = {
 } as const
 
 export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
-
-
-export const NullsOrder = {
-  first: 'first',
-  last: 'last'
-} as const
-
-export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
 
 
 
@@ -1089,6 +1179,7 @@ export interface PrismaClientOptionsWithAdapter extends PrismaClientBaseOptions 
 export type PrismaClientOptions = PrismaClientOptionsWithAccelerateUrl | PrismaClientOptionsWithAdapter
 export type GlobalOmitConfig = {
   user?: Prisma.UserOmit
+  etapa?: Prisma.EtapaOmit
   tournamentState?: Prisma.TournamentStateOmit
   team?: Prisma.TeamOmit
   match?: Prisma.MatchOmit

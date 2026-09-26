@@ -48,8 +48,22 @@ model User {
   updatedAt    DateTime @updatedAt
 }
 
+model Etapa {
+  id        String            @id @default(cuid())
+  name      String
+  date      DateTime?
+  sortOrder Int               @default(1)
+  teams     Team[]
+  matches   Match[]
+  state     TournamentState?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+}
+
 model TournamentState {
-  id            Int      @id @default(1)
+  id            String   @id @default(cuid())
+  etapaId       String   @unique
+  etapa         Etapa    @relation(fields: [etapaId], references: [id], onDelete: Cascade)
   phase         Phase    @default(GROUPS)
   zoneConfirmed Boolean  @default(false)
   prepMinutes   Int      @default(5)
@@ -58,18 +72,24 @@ model TournamentState {
 }
 
 model Team {
-  id          String   @id @default(cuid())
-  name        String
-  zone        Zone
-  matchesA    Match[]  @relation("TeamA")
-  matchesB    Match[]  @relation("TeamB")
-  wonMatches  Match[]  @relation("Winner")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  etapaId   String
+  etapa     Etapa    @relation(fields: [etapaId], references: [id], onDelete: Cascade)
+  name      String
+  zone      Zone
+  matchesA  Match[]  @relation("TeamA")
+  matchesB  Match[]  @relation("TeamB")
+  wonMatches Match[] @relation("Winner")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([etapaId])
 }
 
 model Match {
   id           String       @id @default(cuid())
+  etapaId      String
+  etapa        Etapa        @relation(fields: [etapaId], references: [id], onDelete: Cascade)
   stage        Stage        @default(GROUPS)
   zone         Zone?
   slot         Int
@@ -87,4 +107,6 @@ model Match {
   recordedAt   DateTime?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
+
+  @@index([etapaId])
 }

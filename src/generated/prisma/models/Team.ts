@@ -26,6 +26,7 @@ export type AggregateTeam = {
 
 export type TeamMinAggregateOutputType = {
   id: string | null
+  etapaId: string | null
   name: string | null
   zone: $Enums.Zone | null
   createdAt: Date | null
@@ -34,6 +35,7 @@ export type TeamMinAggregateOutputType = {
 
 export type TeamMaxAggregateOutputType = {
   id: string | null
+  etapaId: string | null
   name: string | null
   zone: $Enums.Zone | null
   createdAt: Date | null
@@ -42,6 +44,7 @@ export type TeamMaxAggregateOutputType = {
 
 export type TeamCountAggregateOutputType = {
   id: number
+  etapaId: number
   name: number
   zone: number
   createdAt: number
@@ -52,6 +55,7 @@ export type TeamCountAggregateOutputType = {
 
 export type TeamMinAggregateInputType = {
   id?: true
+  etapaId?: true
   name?: true
   zone?: true
   createdAt?: true
@@ -60,6 +64,7 @@ export type TeamMinAggregateInputType = {
 
 export type TeamMaxAggregateInputType = {
   id?: true
+  etapaId?: true
   name?: true
   zone?: true
   createdAt?: true
@@ -68,6 +73,7 @@ export type TeamMaxAggregateInputType = {
 
 export type TeamCountAggregateInputType = {
   id?: true
+  etapaId?: true
   name?: true
   zone?: true
   createdAt?: true
@@ -149,6 +155,7 @@ export type TeamGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalArg
 
 export type TeamGroupByOutputType = {
   id: string
+  etapaId: string
   name: string
   zone: $Enums.Zone
   createdAt: Date
@@ -178,10 +185,12 @@ export type TeamWhereInput = {
   OR?: Prisma.TeamWhereInput[]
   NOT?: Prisma.TeamWhereInput | Prisma.TeamWhereInput[]
   id?: Prisma.StringFilter<"Team"> | string
+  etapaId?: Prisma.StringFilter<"Team"> | string
   name?: Prisma.StringFilter<"Team"> | string
   zone?: Prisma.EnumZoneFilter<"Team"> | $Enums.Zone
   createdAt?: Prisma.DateTimeFilter<"Team"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Team"> | Date | string
+  etapa?: Prisma.XOR<Prisma.EtapaScalarRelationFilter, Prisma.EtapaWhereInput>
   matchesA?: Prisma.MatchListRelationFilter
   matchesB?: Prisma.MatchListRelationFilter
   wonMatches?: Prisma.MatchListRelationFilter
@@ -189,10 +198,12 @@ export type TeamWhereInput = {
 
 export type TeamOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  etapaId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   zone?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  etapa?: Prisma.EtapaOrderByWithRelationInput
   matchesA?: Prisma.MatchOrderByRelationAggregateInput
   matchesB?: Prisma.MatchOrderByRelationAggregateInput
   wonMatches?: Prisma.MatchOrderByRelationAggregateInput
@@ -203,10 +214,12 @@ export type TeamWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.TeamWhereInput | Prisma.TeamWhereInput[]
   OR?: Prisma.TeamWhereInput[]
   NOT?: Prisma.TeamWhereInput | Prisma.TeamWhereInput[]
+  etapaId?: Prisma.StringFilter<"Team"> | string
   name?: Prisma.StringFilter<"Team"> | string
   zone?: Prisma.EnumZoneFilter<"Team"> | $Enums.Zone
   createdAt?: Prisma.DateTimeFilter<"Team"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Team"> | Date | string
+  etapa?: Prisma.XOR<Prisma.EtapaScalarRelationFilter, Prisma.EtapaWhereInput>
   matchesA?: Prisma.MatchListRelationFilter
   matchesB?: Prisma.MatchListRelationFilter
   wonMatches?: Prisma.MatchListRelationFilter
@@ -214,6 +227,7 @@ export type TeamWhereUniqueInput = Prisma.AtLeast<{
 
 export type TeamOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  etapaId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   zone?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -228,6 +242,7 @@ export type TeamScalarWhereWithAggregatesInput = {
   OR?: Prisma.TeamScalarWhereWithAggregatesInput[]
   NOT?: Prisma.TeamScalarWhereWithAggregatesInput | Prisma.TeamScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"Team"> | string
+  etapaId?: Prisma.StringWithAggregatesFilter<"Team"> | string
   name?: Prisma.StringWithAggregatesFilter<"Team"> | string
   zone?: Prisma.EnumZoneWithAggregatesFilter<"Team"> | $Enums.Zone
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Team"> | Date | string
@@ -240,6 +255,7 @@ export type TeamCreateInput = {
   zone: $Enums.Zone
   createdAt?: Date | string
   updatedAt?: Date | string
+  etapa: Prisma.EtapaCreateNestedOneWithoutTeamsInput
   matchesA?: Prisma.MatchCreateNestedManyWithoutTeamAInput
   matchesB?: Prisma.MatchCreateNestedManyWithoutTeamBInput
   wonMatches?: Prisma.MatchCreateNestedManyWithoutWinnerInput
@@ -247,6 +263,7 @@ export type TeamCreateInput = {
 
 export type TeamUncheckedCreateInput = {
   id?: string
+  etapaId: string
   name: string
   zone: $Enums.Zone
   createdAt?: Date | string
@@ -262,6 +279,7 @@ export type TeamUpdateInput = {
   zone?: Prisma.EnumZoneFieldUpdateOperationsInput | $Enums.Zone
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  etapa?: Prisma.EtapaUpdateOneRequiredWithoutTeamsNestedInput
   matchesA?: Prisma.MatchUpdateManyWithoutTeamANestedInput
   matchesB?: Prisma.MatchUpdateManyWithoutTeamBNestedInput
   wonMatches?: Prisma.MatchUpdateManyWithoutWinnerNestedInput
@@ -269,6 +287,7 @@ export type TeamUpdateInput = {
 
 export type TeamUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  etapaId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   zone?: Prisma.EnumZoneFieldUpdateOperationsInput | $Enums.Zone
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -280,6 +299,7 @@ export type TeamUncheckedUpdateInput = {
 
 export type TeamCreateManyInput = {
   id?: string
+  etapaId: string
   name: string
   zone: $Enums.Zone
   createdAt?: Date | string
@@ -296,14 +316,26 @@ export type TeamUpdateManyMutationInput = {
 
 export type TeamUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  etapaId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   zone?: Prisma.EnumZoneFieldUpdateOperationsInput | $Enums.Zone
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
+export type TeamListRelationFilter = {
+  every?: Prisma.TeamWhereInput
+  some?: Prisma.TeamWhereInput
+  none?: Prisma.TeamWhereInput
+}
+
+export type TeamOrderByRelationAggregateInput = {
+  _count?: Prisma.SortOrder
+}
+
 export type TeamCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  etapaId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   zone?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -312,6 +344,7 @@ export type TeamCountOrderByAggregateInput = {
 
 export type TeamMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  etapaId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   zone?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -320,6 +353,7 @@ export type TeamMaxOrderByAggregateInput = {
 
 export type TeamMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  etapaId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   zone?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -329,6 +363,48 @@ export type TeamMinOrderByAggregateInput = {
 export type TeamNullableScalarRelationFilter = {
   is?: Prisma.TeamWhereInput | null
   isNot?: Prisma.TeamWhereInput | null
+}
+
+export type TeamCreateNestedManyWithoutEtapaInput = {
+  create?: Prisma.XOR<Prisma.TeamCreateWithoutEtapaInput, Prisma.TeamUncheckedCreateWithoutEtapaInput> | Prisma.TeamCreateWithoutEtapaInput[] | Prisma.TeamUncheckedCreateWithoutEtapaInput[]
+  connectOrCreate?: Prisma.TeamCreateOrConnectWithoutEtapaInput | Prisma.TeamCreateOrConnectWithoutEtapaInput[]
+  createMany?: Prisma.TeamCreateManyEtapaInputEnvelope
+  connect?: Prisma.TeamWhereUniqueInput | Prisma.TeamWhereUniqueInput[]
+}
+
+export type TeamUncheckedCreateNestedManyWithoutEtapaInput = {
+  create?: Prisma.XOR<Prisma.TeamCreateWithoutEtapaInput, Prisma.TeamUncheckedCreateWithoutEtapaInput> | Prisma.TeamCreateWithoutEtapaInput[] | Prisma.TeamUncheckedCreateWithoutEtapaInput[]
+  connectOrCreate?: Prisma.TeamCreateOrConnectWithoutEtapaInput | Prisma.TeamCreateOrConnectWithoutEtapaInput[]
+  createMany?: Prisma.TeamCreateManyEtapaInputEnvelope
+  connect?: Prisma.TeamWhereUniqueInput | Prisma.TeamWhereUniqueInput[]
+}
+
+export type TeamUpdateManyWithoutEtapaNestedInput = {
+  create?: Prisma.XOR<Prisma.TeamCreateWithoutEtapaInput, Prisma.TeamUncheckedCreateWithoutEtapaInput> | Prisma.TeamCreateWithoutEtapaInput[] | Prisma.TeamUncheckedCreateWithoutEtapaInput[]
+  connectOrCreate?: Prisma.TeamCreateOrConnectWithoutEtapaInput | Prisma.TeamCreateOrConnectWithoutEtapaInput[]
+  upsert?: Prisma.TeamUpsertWithWhereUniqueWithoutEtapaInput | Prisma.TeamUpsertWithWhereUniqueWithoutEtapaInput[]
+  createMany?: Prisma.TeamCreateManyEtapaInputEnvelope
+  set?: Prisma.TeamWhereUniqueInput | Prisma.TeamWhereUniqueInput[]
+  disconnect?: Prisma.TeamWhereUniqueInput | Prisma.TeamWhereUniqueInput[]
+  delete?: Prisma.TeamWhereUniqueInput | Prisma.TeamWhereUniqueInput[]
+  connect?: Prisma.TeamWhereUniqueInput | Prisma.TeamWhereUniqueInput[]
+  update?: Prisma.TeamUpdateWithWhereUniqueWithoutEtapaInput | Prisma.TeamUpdateWithWhereUniqueWithoutEtapaInput[]
+  updateMany?: Prisma.TeamUpdateManyWithWhereWithoutEtapaInput | Prisma.TeamUpdateManyWithWhereWithoutEtapaInput[]
+  deleteMany?: Prisma.TeamScalarWhereInput | Prisma.TeamScalarWhereInput[]
+}
+
+export type TeamUncheckedUpdateManyWithoutEtapaNestedInput = {
+  create?: Prisma.XOR<Prisma.TeamCreateWithoutEtapaInput, Prisma.TeamUncheckedCreateWithoutEtapaInput> | Prisma.TeamCreateWithoutEtapaInput[] | Prisma.TeamUncheckedCreateWithoutEtapaInput[]
+  connectOrCreate?: Prisma.TeamCreateOrConnectWithoutEtapaInput | Prisma.TeamCreateOrConnectWithoutEtapaInput[]
+  upsert?: Prisma.TeamUpsertWithWhereUniqueWithoutEtapaInput | Prisma.TeamUpsertWithWhereUniqueWithoutEtapaInput[]
+  createMany?: Prisma.TeamCreateManyEtapaInputEnvelope
+  set?: Prisma.TeamWhereUniqueInput | Prisma.TeamWhereUniqueInput[]
+  disconnect?: Prisma.TeamWhereUniqueInput | Prisma.TeamWhereUniqueInput[]
+  delete?: Prisma.TeamWhereUniqueInput | Prisma.TeamWhereUniqueInput[]
+  connect?: Prisma.TeamWhereUniqueInput | Prisma.TeamWhereUniqueInput[]
+  update?: Prisma.TeamUpdateWithWhereUniqueWithoutEtapaInput | Prisma.TeamUpdateWithWhereUniqueWithoutEtapaInput[]
+  updateMany?: Prisma.TeamUpdateManyWithWhereWithoutEtapaInput | Prisma.TeamUpdateManyWithWhereWithoutEtapaInput[]
+  deleteMany?: Prisma.TeamScalarWhereInput | Prisma.TeamScalarWhereInput[]
 }
 
 export type EnumZoneFieldUpdateOperationsInput = {
@@ -383,18 +459,79 @@ export type TeamUpdateOneWithoutWonMatchesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.TeamUpdateToOneWithWhereWithoutWonMatchesInput, Prisma.TeamUpdateWithoutWonMatchesInput>, Prisma.TeamUncheckedUpdateWithoutWonMatchesInput>
 }
 
+export type TeamCreateWithoutEtapaInput = {
+  id?: string
+  name: string
+  zone: $Enums.Zone
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  matchesA?: Prisma.MatchCreateNestedManyWithoutTeamAInput
+  matchesB?: Prisma.MatchCreateNestedManyWithoutTeamBInput
+  wonMatches?: Prisma.MatchCreateNestedManyWithoutWinnerInput
+}
+
+export type TeamUncheckedCreateWithoutEtapaInput = {
+  id?: string
+  name: string
+  zone: $Enums.Zone
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  matchesA?: Prisma.MatchUncheckedCreateNestedManyWithoutTeamAInput
+  matchesB?: Prisma.MatchUncheckedCreateNestedManyWithoutTeamBInput
+  wonMatches?: Prisma.MatchUncheckedCreateNestedManyWithoutWinnerInput
+}
+
+export type TeamCreateOrConnectWithoutEtapaInput = {
+  where: Prisma.TeamWhereUniqueInput
+  create: Prisma.XOR<Prisma.TeamCreateWithoutEtapaInput, Prisma.TeamUncheckedCreateWithoutEtapaInput>
+}
+
+export type TeamCreateManyEtapaInputEnvelope = {
+  data: Prisma.TeamCreateManyEtapaInput | Prisma.TeamCreateManyEtapaInput[]
+}
+
+export type TeamUpsertWithWhereUniqueWithoutEtapaInput = {
+  where: Prisma.TeamWhereUniqueInput
+  update: Prisma.XOR<Prisma.TeamUpdateWithoutEtapaInput, Prisma.TeamUncheckedUpdateWithoutEtapaInput>
+  create: Prisma.XOR<Prisma.TeamCreateWithoutEtapaInput, Prisma.TeamUncheckedCreateWithoutEtapaInput>
+}
+
+export type TeamUpdateWithWhereUniqueWithoutEtapaInput = {
+  where: Prisma.TeamWhereUniqueInput
+  data: Prisma.XOR<Prisma.TeamUpdateWithoutEtapaInput, Prisma.TeamUncheckedUpdateWithoutEtapaInput>
+}
+
+export type TeamUpdateManyWithWhereWithoutEtapaInput = {
+  where: Prisma.TeamScalarWhereInput
+  data: Prisma.XOR<Prisma.TeamUpdateManyMutationInput, Prisma.TeamUncheckedUpdateManyWithoutEtapaInput>
+}
+
+export type TeamScalarWhereInput = {
+  AND?: Prisma.TeamScalarWhereInput | Prisma.TeamScalarWhereInput[]
+  OR?: Prisma.TeamScalarWhereInput[]
+  NOT?: Prisma.TeamScalarWhereInput | Prisma.TeamScalarWhereInput[]
+  id?: Prisma.StringFilter<"Team"> | string
+  etapaId?: Prisma.StringFilter<"Team"> | string
+  name?: Prisma.StringFilter<"Team"> | string
+  zone?: Prisma.EnumZoneFilter<"Team"> | $Enums.Zone
+  createdAt?: Prisma.DateTimeFilter<"Team"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"Team"> | Date | string
+}
+
 export type TeamCreateWithoutMatchesAInput = {
   id?: string
   name: string
   zone: $Enums.Zone
   createdAt?: Date | string
   updatedAt?: Date | string
+  etapa: Prisma.EtapaCreateNestedOneWithoutTeamsInput
   matchesB?: Prisma.MatchCreateNestedManyWithoutTeamBInput
   wonMatches?: Prisma.MatchCreateNestedManyWithoutWinnerInput
 }
 
 export type TeamUncheckedCreateWithoutMatchesAInput = {
   id?: string
+  etapaId: string
   name: string
   zone: $Enums.Zone
   createdAt?: Date | string
@@ -414,12 +551,14 @@ export type TeamCreateWithoutMatchesBInput = {
   zone: $Enums.Zone
   createdAt?: Date | string
   updatedAt?: Date | string
+  etapa: Prisma.EtapaCreateNestedOneWithoutTeamsInput
   matchesA?: Prisma.MatchCreateNestedManyWithoutTeamAInput
   wonMatches?: Prisma.MatchCreateNestedManyWithoutWinnerInput
 }
 
 export type TeamUncheckedCreateWithoutMatchesBInput = {
   id?: string
+  etapaId: string
   name: string
   zone: $Enums.Zone
   createdAt?: Date | string
@@ -439,12 +578,14 @@ export type TeamCreateWithoutWonMatchesInput = {
   zone: $Enums.Zone
   createdAt?: Date | string
   updatedAt?: Date | string
+  etapa: Prisma.EtapaCreateNestedOneWithoutTeamsInput
   matchesA?: Prisma.MatchCreateNestedManyWithoutTeamAInput
   matchesB?: Prisma.MatchCreateNestedManyWithoutTeamBInput
 }
 
 export type TeamUncheckedCreateWithoutWonMatchesInput = {
   id?: string
+  etapaId: string
   name: string
   zone: $Enums.Zone
   createdAt?: Date | string
@@ -475,12 +616,14 @@ export type TeamUpdateWithoutMatchesAInput = {
   zone?: Prisma.EnumZoneFieldUpdateOperationsInput | $Enums.Zone
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  etapa?: Prisma.EtapaUpdateOneRequiredWithoutTeamsNestedInput
   matchesB?: Prisma.MatchUpdateManyWithoutTeamBNestedInput
   wonMatches?: Prisma.MatchUpdateManyWithoutWinnerNestedInput
 }
 
 export type TeamUncheckedUpdateWithoutMatchesAInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  etapaId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   zone?: Prisma.EnumZoneFieldUpdateOperationsInput | $Enums.Zone
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -506,12 +649,14 @@ export type TeamUpdateWithoutMatchesBInput = {
   zone?: Prisma.EnumZoneFieldUpdateOperationsInput | $Enums.Zone
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  etapa?: Prisma.EtapaUpdateOneRequiredWithoutTeamsNestedInput
   matchesA?: Prisma.MatchUpdateManyWithoutTeamANestedInput
   wonMatches?: Prisma.MatchUpdateManyWithoutWinnerNestedInput
 }
 
 export type TeamUncheckedUpdateWithoutMatchesBInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  etapaId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   zone?: Prisma.EnumZoneFieldUpdateOperationsInput | $Enums.Zone
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -537,11 +682,42 @@ export type TeamUpdateWithoutWonMatchesInput = {
   zone?: Prisma.EnumZoneFieldUpdateOperationsInput | $Enums.Zone
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  etapa?: Prisma.EtapaUpdateOneRequiredWithoutTeamsNestedInput
   matchesA?: Prisma.MatchUpdateManyWithoutTeamANestedInput
   matchesB?: Prisma.MatchUpdateManyWithoutTeamBNestedInput
 }
 
 export type TeamUncheckedUpdateWithoutWonMatchesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  etapaId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  zone?: Prisma.EnumZoneFieldUpdateOperationsInput | $Enums.Zone
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  matchesA?: Prisma.MatchUncheckedUpdateManyWithoutTeamANestedInput
+  matchesB?: Prisma.MatchUncheckedUpdateManyWithoutTeamBNestedInput
+}
+
+export type TeamCreateManyEtapaInput = {
+  id?: string
+  name: string
+  zone: $Enums.Zone
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type TeamUpdateWithoutEtapaInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  zone?: Prisma.EnumZoneFieldUpdateOperationsInput | $Enums.Zone
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  matchesA?: Prisma.MatchUpdateManyWithoutTeamANestedInput
+  matchesB?: Prisma.MatchUpdateManyWithoutTeamBNestedInput
+  wonMatches?: Prisma.MatchUpdateManyWithoutWinnerNestedInput
+}
+
+export type TeamUncheckedUpdateWithoutEtapaInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   zone?: Prisma.EnumZoneFieldUpdateOperationsInput | $Enums.Zone
@@ -549,6 +725,15 @@ export type TeamUncheckedUpdateWithoutWonMatchesInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   matchesA?: Prisma.MatchUncheckedUpdateManyWithoutTeamANestedInput
   matchesB?: Prisma.MatchUncheckedUpdateManyWithoutTeamBNestedInput
+  wonMatches?: Prisma.MatchUncheckedUpdateManyWithoutWinnerNestedInput
+}
+
+export type TeamUncheckedUpdateManyWithoutEtapaInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  zone?: Prisma.EnumZoneFieldUpdateOperationsInput | $Enums.Zone
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 
@@ -602,10 +787,12 @@ export type TeamCountOutputTypeCountWonMatchesArgs<ExtArgs extends runtime.Types
 
 export type TeamSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  etapaId?: boolean
   name?: boolean
   zone?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  etapa?: boolean | Prisma.EtapaDefaultArgs<ExtArgs>
   matchesA?: boolean | Prisma.Team$matchesAArgs<ExtArgs>
   matchesB?: boolean | Prisma.Team$matchesBArgs<ExtArgs>
   wonMatches?: boolean | Prisma.Team$wonMatchesArgs<ExtArgs>
@@ -614,47 +801,59 @@ export type TeamSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
 
 export type TeamSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  etapaId?: boolean
   name?: boolean
   zone?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  etapa?: boolean | Prisma.EtapaDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["team"]>
 
 export type TeamSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  etapaId?: boolean
   name?: boolean
   zone?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  etapa?: boolean | Prisma.EtapaDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["team"]>
 
 export type TeamSelectScalar = {
   id?: boolean
+  etapaId?: boolean
   name?: boolean
   zone?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type TeamOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "zone" | "createdAt" | "updatedAt", ExtArgs["result"]["team"]>
+export type TeamOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "etapaId" | "name" | "zone" | "createdAt" | "updatedAt", ExtArgs["result"]["team"]>
 export type TeamInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  etapa?: boolean | Prisma.EtapaDefaultArgs<ExtArgs>
   matchesA?: boolean | Prisma.Team$matchesAArgs<ExtArgs>
   matchesB?: boolean | Prisma.Team$matchesBArgs<ExtArgs>
   wonMatches?: boolean | Prisma.Team$wonMatchesArgs<ExtArgs>
   _count?: boolean | Prisma.TeamCountOutputTypeDefaultArgs<ExtArgs>
 }
-export type TeamIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
-export type TeamIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
+export type TeamIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  etapa?: boolean | Prisma.EtapaDefaultArgs<ExtArgs>
+}
+export type TeamIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  etapa?: boolean | Prisma.EtapaDefaultArgs<ExtArgs>
+}
 
 export type $TeamPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Team"
   objects: {
+    etapa: Prisma.$EtapaPayload<ExtArgs>
     matchesA: Prisma.$MatchPayload<ExtArgs>[]
     matchesB: Prisma.$MatchPayload<ExtArgs>[]
     wonMatches: Prisma.$MatchPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
+    etapaId: string
     name: string
     zone: $Enums.Zone
     createdAt: Date
@@ -1053,6 +1252,7 @@ readonly fields: TeamFieldRefs;
  */
 export interface Prisma__TeamClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  etapa<T extends Prisma.EtapaDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EtapaDefaultArgs<ExtArgs>>): Prisma.Prisma__EtapaClient<runtime.Types.Result.GetResult<Prisma.$EtapaPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   matchesA<T extends Prisma.Team$matchesAArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$matchesAArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MatchPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   matchesB<T extends Prisma.Team$matchesBArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$matchesBArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MatchPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   wonMatches<T extends Prisma.Team$wonMatchesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Team$wonMatchesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MatchPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -1086,6 +1286,7 @@ export interface Prisma__TeamClient<T, Null = never, ExtArgs extends runtime.Typ
  */
 export interface TeamFieldRefs {
   readonly id: Prisma.FieldRef<"Team", 'String'>
+  readonly etapaId: Prisma.FieldRef<"Team", 'String'>
   readonly name: Prisma.FieldRef<"Team", 'String'>
   readonly zone: Prisma.FieldRef<"Team", 'Zone'>
   readonly createdAt: Prisma.FieldRef<"Team", 'DateTime'>
@@ -1342,6 +1543,10 @@ export type TeamCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions
    * The data used to create many Teams.
    */
   data: Prisma.TeamCreateManyInput | Prisma.TeamCreateManyInput[]
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TeamIncludeCreateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1412,6 +1617,10 @@ export type TeamUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.Extensions
    * Limit how many Teams to update.
    */
   limit?: number
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TeamIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**

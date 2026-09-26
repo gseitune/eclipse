@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { distributeTeams, groupCountFor, MIN_TEAMS } from "./tournament";
+import { distributeTeams, groupCountFor, MIN_TEAMS, roundRobinPairs } from "./tournament";
 
 const alwaysZero = () => 0;
 
@@ -116,5 +116,58 @@ describe("distributeTeams", () => {
       allTeams(eleven),
       "team membership must not depend on the RNG",
     );
+  });
+});
+
+describe("roundRobinPairs", () => {
+  it("returns no pairs for fewer than two teams", () => {
+    assert.deepEqual(roundRobinPairs([]), []);
+    assert.deepEqual(roundRobinPairs(["a"]), []);
+  });
+
+  it("generates every unordered pair exactly once for a 5-team group", () => {
+    const ids = ["t1", "t2", "t3", "t4", "t5"];
+    const pairs = roundRobinPairs(ids);
+    assert.equal(pairs.length, 10, "5 teams play 4 rounds x 2 courts = 10 matches");
+    const seen = new Set<string>();
+    for (const [a, b] of pairs) {
+      const key = [a, b].sort().join("|");
+      assert.ok(!seen.has(key), `duplicate pair ${a}-${b}`);
+      seen.add(key);
+      assert.notEqual(a, b, "nobody plays themselves");
+    }
+    assert.equal(seen.size, 10);
+  });
+
+  it("gives every team exactly 4 opponents in a 5-team group", () => {
+    const ids = ["t1", "t2", "t3", "t4", "t5"];
+    const opponents = new Map<string, string[]>(ids.map((id) => [id, []]));
+    for (const [a, b] of roundRobinPairs(ids)) {
+      opponents.get(a)?.push(b);
+      opponents.get(b)?.push(a);
+    }
+    for (const id of ids) {
+      assert.equal(opponents.get(id)?.length, 4, `${id} plays everyone else once`);
+    }
+  });
+
+  it("handles an even 6-team group with the same properties", () => {
+    const ids = names(6);
+    const pairs = roundRobinPairs(ids);
+    assert.equal(pairs.length, 15, "6 teams play 15 matches");
+    const oppCount = new Map(ids.map((id) => [id, 0]));
+    for (const [a, b] of pairs) {
+      oppCount.set(a, (oppCount.get(a) ?? 0) + 1);
+      oppCount.set(b, (oppCount.get(b) ?? 0) + 1);
+    }
+    for (const [id, count] of oppCount) {
+      assert.equal(count, 5, `${id} plays 5 matches`);
+    }
+  });
+
+  it("is deterministic", () => {
+    const a = roundRobinPairs(names(6));
+    const b = roundRobinPairs(names(6));
+    assert.deepEqual(a, b);
   });
 });

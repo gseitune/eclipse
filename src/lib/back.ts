@@ -9,6 +9,7 @@ import {
 } from "./schedule";
 import { buildBrackets, selectBestSecond, type BestSecondSelection } from "./brackets";
 import { regenerateZones, swapZone, type ZoneId } from "./zonification";
+import { distributeTeams, MIN_TEAMS, roundRobinPairs } from "./tournament";
 import {
   countSetWins,
   resolveResultPayload,
@@ -21,6 +22,11 @@ import { Prisma } from "../generated/prisma/client";
 /**
  * SELVARENA backend operations (Prisma layer).
  * The API routes are thin: all product rules live here.
+ *
+ * Etapas: every entity belongs to an Etapa (circuit stage). Back operations
+ * that read/write tournament data accept an optional `etapaId` — when omitted
+ * they resolve to the LATEST etapa (the active one). Result record/edit derive
+ * the etapa from the match itself.
  */
 
 export class BackError extends Error {
@@ -33,24 +39,194 @@ export class BackError extends Error {
   }
 }
 
-export async function getState() {
+/** Resolves the requested etapa, defaulting to the latest when omitted. */
+export async function resolveEtapaId(etapaId?: string | null): Promise<string> {
+  if (etapaId) {
+    const etapa = await prisma.etapa.findUnique({
+      where: { id: etapaId },
+      select: { id: true },
+    });
+    if (!etapa) throw new BackError("Etapa not found.", 404, "unknown_etapa");
+    return etapa.id;
+  }
+  const latest = await prisma.etapa.findFirst({
+    orderBy: [{ sortOrder: "desc" }, { createdAt: "desc" }],
+    select: { id: true },
+  });
+  if (!latest) throw new BackError("No etapas yet.", 404, "no_etapas");
+  return latest.id;
+}
+
+export interface EtapaMeta {
+  id: string;
+  name: string;
+  date: string | null;
+  sortOrder: number;
+  teamCount: number;
+}
+
+export async function listEtapas(): Promise<EtapaMeta[]> {
+  const etapas = await prisma.etapa.findMany({
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      date: true,
+      sortOrder: true,
+      _count: { select: { teams: true } },
+    },
+  });
+  return etapas.map((e) => ({
+    id: e.id,
+    name: e.name,
+    date: e.date ? e.date.toISOString() : null,
+    sortOrder: e.sortOrder,
+    teamCount: e._count.teams,
+  }));
+}
+
+export interface CreateEtapaInput {
+  name: string;
+  date?: string | null;
+  teams: string[];
+}
+
+/** MAX teams per etapa: 12 keeps the one-day single-court fixture sane. */
+export const MAX_TEAMS_PER_ETAPA = 12;
+
+/**
+ * Creates a full etapa: the Etapa row, its teams (names split into zones),
+ * the group round-robin fixture and the bracket slots, plus its tournament
+ * state. The new etapa becomes the latest (active) one. Teams are capped at
+ * MAX_TEAMS_PER_ETAPA and zone sizes follow tournament.ts rules.
+ */
+export async function createEtapa(input: CreateEtapaInput) {
+  const name = input.name.trim();
+  if (!name) throw new BackError("Etapa name is required.", 400, "name_required");
+  if (name.length > 120) {
+    throw new BackError("Etapa name is too long.", 400, "name_too_long");
+  }
+
+  const teamNames = [...new Set(input.teams.map((t) => t.trim()).filter(Boolean))];
+  if (teamNames.length < MIN_TEAMS) {
+    throw new BackError(
+      `Etapa needs at least 6 teams, got ${teamNames.length}.`,
+      400,
+      "too_few_teams",
+    );
+  }
+  if (teamNames.length > MAX_TEAMS_PER_ETAPA) {
+    throw new BackError(
+      `Etapa supports at most ${MAX_TEAMS_PER_ETAPA} teams, got ${teamNames.length}.`,
+      400,
+      "too_many_teams",
+    );
+  }
+  if (teamNames.some((t) => t.length > 60)) {
+    throw new BackError("Team names must be 60 characters or fewer.", 400, "name_too_long");
+  }
+
+  let date: Date | null = null;
+  if (input.date) {
+    const parsed = new Date(input.date);
+    if (Number.isNaN(parsed.getTime())) {
+      throw new BackError("Invalid etapa date.", 400, "invalid_date");
+    }
+    date = parsed;
+  }
+
+  const groups = distributeTeams(teamNames);
+
+  const etapa = await prisma.$transaction(async (tx) => {
+    const created = await tx.etapa.create({
+      data: {
+        name,
+        date,
+        sortOrder: (await tx.etapa.count()) + 1,
+        state: { create: {} },
+        teams: {
+          create: groups.flatMap((group) =>
+            group.teams.map((teamName) => ({ name: teamName, zone: group.group })),
+          ),
+        },
+      },
+      include: { teams: true },
+    });
+
+    const idByName = new Map(created.teams.map((t) => [t.name, t.id]));
+    let slot = 1;
+    const groupMatches = groups.flatMap((group) => {
+      const ids = group.teams.map((t) => idByName.get(t) as string);
+      return roundRobinPairs(ids).map(([teamAId, teamBId]) => ({
+        etapaId: created.id,
+        stage: "GROUPS" as const,
+        zone: group.group,
+        slot: slot++,
+        timeLabel: null,
+        teamAId,
+        teamBId,
+        setFormat: "SINGLE_21" as const,
+        resultStatus: "PENDING" as const,
+      }));
+    });
+    const bracketSlots = [
+      { stage: "SEMIFINAL_1" as const, slot: slot++ },
+      { stage: "SEMIFINAL_2" as const, slot: slot++ },
+      { stage: "FINAL" as const, slot: slot++ },
+    ].map((m) => ({
+      etapaId: created.id,
+      stage: m.stage,
+      zone: null,
+      slot: m.slot,
+      timeLabel: null,
+      teamAId: null,
+      teamBId: null,
+      setFormat: null,
+      resultStatus: "PENDING" as const,
+    }));
+
+    await tx.match.createMany({ data: [...groupMatches, ...bracketSlots] });
+
+    return created;
+  });
+
+  publishSse("etapa-created", {
+    etapaId: etapa.id,
+    name: etapa.name,
+    teamCount: etapa.teams.length,
+  });
+
+  return {
+    id: etapa.id,
+    name: etapa.name,
+    date: etapa.date ? etapa.date.toISOString() : null,
+    sortOrder: etapa.sortOrder,
+    teamCount: etapa.teams.length,
+    matchCount: teamNames.length * (teamNames.length - 1) + 3,
+  };
+}
+
+export async function getState(etapaId?: string | null) {
+  const id = await resolveEtapaId(etapaId);
   return prisma.tournamentState.upsert({
-    where: { id: 1 },
+    where: { etapaId: id },
     update: {},
-    create: { id: 1 },
+    create: { etapaId: id },
   });
 }
 
-async function requireUnconfirmed(message: string): Promise<void> {
-  const state = await getState();
+async function requireUnconfirmed(message: string, etapaId?: string | null): Promise<void> {
+  const state = await getState(etapaId);
   if (state.zoneConfirmed) throw new BackError(message, 409);
 }
 
-export async function generateZones(): Promise<Record<string, string>> {
+export async function generateZones(etapaId?: string | null): Promise<Record<string, string>> {
   await requireUnconfirmed(
     "Zonification is confirmed: re-arming is forbidden after fixture generation.",
+    etapaId,
   );
-  const teams = await prisma.team.findMany({ select: { id: true } });
+  const id = await resolveEtapaId(etapaId);
+  const teams = await prisma.team.findMany({ where: { etapaId: id }, select: { id: true } });
   if (teams.length < 6) {
     throw new BackError("Need at least 6 teams to arm zones.", 400);
   }
@@ -71,12 +247,18 @@ export async function swapTeam(
   teamId: string,
   from: string,
   to: string,
+  etapaId?: string | null,
 ): Promise<Record<string, string>> {
   await requireUnconfirmed(
     "Zonification is confirmed: manual swaps are forbidden after fixture generation.",
+    etapaId,
   );
-  const state = await getState();
-  const teams = await prisma.team.findMany({ select: { id: true, zone: true } });
+  const id = await resolveEtapaId(etapaId);
+  const state = await getState(id);
+  const teams = await prisma.team.findMany({
+    where: { etapaId: id },
+    select: { id: true, zone: true },
+  });
   const mapping = Object.fromEntries(
     teams.map((t) => [t.id, t.zone]),
   ) as Record<string, ZoneId>;
@@ -90,26 +272,37 @@ export async function swapTeam(
   return next;
 }
 
-export async function confirmZonification(): Promise<{ zoneConfirmed: boolean }> {
-  const state = await prisma.tournamentState.update({
-    where: { id: 1 },
+export async function confirmZonification(etapaId?: string | null): Promise<{ zoneConfirmed: boolean }> {
+  const id = await resolveEtapaId(etapaId);
+  const state = await getState(id);
+  await prisma.tournamentState.update({
+    where: { id: state.id },
     data: { zoneConfirmed: true },
   });
   publishSse("zoning-confirmed", { zoneConfirmed: true });
-  return { zoneConfirmed: state.zoneConfirmed };
+  return { zoneConfirmed: true };
 }
 
-export async function getTeamsByZone() {
-  const teams = await prisma.team.findMany({ orderBy: { name: "asc" } });
+export async function getTeamsByZone(etapaId?: string | null) {
+  const id = await resolveEtapaId(etapaId);
+  const teams = await prisma.team.findMany({
+    where: { etapaId: id },
+    orderBy: { name: "asc" },
+  });
   const byZone: Record<string, typeof teams> = { A: [], B: [], C: [] };
   for (const t of teams) byZone[t.zone].push(t);
   return byZone;
 }
 
-export async function getStandings(): Promise<Partial<Record<string, StandingRow[]>>> {
+export async function getStandings(etapaId?: string | null): Promise<Partial<Record<string, StandingRow[]>>> {
+  const id = await resolveEtapaId(etapaId);
   const [teams, matches] = await Promise.all([
-    prisma.team.findMany({ select: { id: true, name: true, zone: true } }),
+    prisma.team.findMany({
+      where: { etapaId: id },
+      select: { id: true, name: true, zone: true },
+    }),
     prisma.match.findMany({
+      where: { etapaId: id },
       select: {
         stage: true,
         zone: true,
@@ -146,10 +339,12 @@ export async function getStandings(): Promise<Partial<Record<string, StandingRow
   return standings;
 }
 
-export async function getSchedule(): Promise<ScheduleRow[]> {
+export async function getSchedule(etapaId?: string | null): Promise<ScheduleRow[]> {
+  const id = await resolveEtapaId(etapaId);
   const [state, matches] = await Promise.all([
-    getState(),
+    getState(id),
     prisma.match.findMany({
+      where: { etapaId: id },
       select: {
         id: true,
         slot: true,
@@ -160,6 +355,7 @@ export async function getSchedule(): Promise<ScheduleRow[]> {
         resultStatus: true,
         recordedAt: true,
       },
+      orderBy: { slot: "asc" },
     }),
   ]);
   const input: ScheduleMatchInput[] = matches.map((m) => ({
@@ -175,9 +371,11 @@ export async function getSchedule(): Promise<ScheduleRow[]> {
   return computeSchedule(input, state.prepMinutes, state.matchMinutes);
 }
 
-export async function getNextMatch() {
+export async function getNextMatch(etapaId?: string | null) {
+  const id = await resolveEtapaId(etapaId);
   return prisma.match.findFirst({
     where: {
+      etapaId: id,
       resultStatus: "PENDING",
       teamAId: { not: null },
       teamBId: { not: null },
@@ -190,6 +388,7 @@ export async function getNextMatch() {
 /** Fills the semifinal slots and flips the phase; refuses while a tie keeps the second open. */
 async function finalizeBrackets(
   standings: Partial<Record<Zone, StandingRow[]>>,
+  etapaId: string,
   resolvedSecondId?: string,
 ): Promise<{ ok: boolean; missing: string[] }> {
   const { pairings, missing } = buildBrackets(standings, {
@@ -201,12 +400,13 @@ async function finalizeBrackets(
   }
   for (const pairing of pairings) {
     await prisma.match.updateMany({
-      where: { stage: pairing.stage },
+      where: { stage: pairing.stage, etapaId },
       data: { teamAId: pairing.teamAId, teamBId: pairing.teamBId },
     });
   }
+  const state = await getState(etapaId);
   await prisma.tournamentState.update({
-    where: { id: 1 },
+    where: { id: state.id },
     data: { phase: "ELIMINATORIES" },
   });
   publishSse("phase-changed", { phase: "ELIMINATORIES" });
@@ -222,29 +422,30 @@ async function finalizeBrackets(
 async function createDesempateMatch(selection: {
   teamAId: string;
   teamBId: string;
-}): Promise<boolean> {
+}, etapaId: string): Promise<boolean> {
   const existing = await prisma.match.findFirst({
-    where: { stage: "DESEMPATE", resultStatus: "PENDING" },
+    where: { etapaId, stage: "DESEMPATE", resultStatus: "PENDING" },
   });
   if (existing) return false;
 
-  const state = await getState();
+  const state = await getState(etapaId);
   if (state.phase !== "GROUPS") return false;
 
   const maxGroupSlot = await prisma.match.aggregate({
     _max: { slot: true },
-    where: { stage: "GROUPS" },
+    where: { etapaId, stage: "GROUPS" },
   });
   const anchor = maxGroupSlot._max.slot ?? 0;
 
   // Make room: push every slot after the groups one position later.
   await prisma.match.updateMany({
-    where: { slot: { gt: anchor } },
+    where: { etapaId, slot: { gt: anchor } },
     data: { slot: { increment: 1 } },
   });
 
   const desempate = await prisma.match.create({
     data: {
+      etapaId,
       stage: "DESEMPATE",
       slot: anchor + 1,
       timeLabel: null,
@@ -254,7 +455,7 @@ async function createDesempateMatch(selection: {
   });
 
   await prisma.tournamentState.update({
-    where: { id: 1 },
+    where: { id: state.id },
     data: { phase: "DESEMPATE" },
   });
 
@@ -268,9 +469,10 @@ async function createDesempateMatch(selection: {
   return true;
 }
 
-export async function getBracketsSnapshot() {
+export async function getBracketsSnapshot(etapaId?: string | null) {
+  const id = await resolveEtapaId(etapaId);
   return prisma.match.findMany({
-    where: { stage: { in: ["SEMIFINAL_1", "SEMIFINAL_2", "FINAL"] } },
+    where: { etapaId: id, stage: { in: ["SEMIFINAL_1", "SEMIFINAL_2", "FINAL"] } },
     orderBy: { slot: "asc" },
     include: { teamA: true, teamB: true, winner: true },
   });
@@ -281,22 +483,26 @@ export async function getBracketsSnapshot() {
  * Exposes phase (GROUPS | DESEMPATE | ELIMINATORIES), the standings already
  * ordered by the tiebreak criterion, and — when applicable — the DESEMPATE
  * flag + assigned match, plus the 3+ seconds blocked edge as a report.
+ * Also carries the etapa meta + the full etapa list for the public selector.
  */
-export async function getStateSnapshot() {
-  const [state, standings, schedule, brackets, nextMatch, zones, desempateMatches] =
+export async function getStateSnapshot(etapaId?: string | null) {
+  const id = await resolveEtapaId(etapaId);
+  const [state, standings, schedule, brackets, nextMatch, zones, desempateMatches, etapas] =
     await Promise.all([
-      getState(),
-      getStandings(),
-      getSchedule(),
-      getBracketsSnapshot(),
-      getNextMatch(),
-      getTeamsByZone(),
+      getState(id),
+      getStandings(id),
+      getSchedule(id),
+      getBracketsSnapshot(id),
+      getNextMatch(id),
+      getTeamsByZone(id),
       prisma.match.findMany({
-        where: { stage: "DESEMPATE" },
+        where: { etapaId: id, stage: "DESEMPATE" },
         include: { teamA: true, teamB: true },
         orderBy: { slot: "asc" },
       }),
+      listEtapas(),
     ]);
+  const etapa = etapas.find((e) => e.id === id) ?? null;
 
   const zonesPresent = Object.keys(standings) as Zone[];
   let selection: BestSecondSelection | null = null;
@@ -339,6 +545,9 @@ export async function getStateSnapshot() {
       : null;
 
   return {
+    etapaId: id,
+    etapa,
+    etapas,
     phase: state.phase,
     zoneConfirmed: state.zoneConfirmed,
     prepMinutes: state.prepMinutes,
@@ -385,6 +594,7 @@ async function reconcileAfterMatch(
   stage: string,
   winnerId: string | null,
   allowBracketRebuild: boolean,
+  etapaId: string,
 ): Promise<ReconcileOutcome> {
   let phaseChanged = false;
   let bracketsChanged = false;
@@ -392,25 +602,25 @@ async function reconcileAfterMatch(
 
   if (stage === "GROUPS") {
     const groupExpected = await prisma.match.count({
-      where: { stage: "GROUPS" },
+      where: { etapaId, stage: "GROUPS" },
     });
     const groupDecided = await prisma.match.count({
-      where: { stage: "GROUPS", resultStatus: { not: "PENDING" } },
+      where: { etapaId, stage: "GROUPS", resultStatus: { not: "PENDING" } },
     });
 
     if (groupDecided === groupExpected) {
-      const state = await getState();
+      const state = await getState(etapaId);
       const mayFinalize =
         state.phase === "GROUPS" ||
         (state.phase === "ELIMINATORIES" && allowBracketRebuild);
       if (mayFinalize) {
-        const standings = await getStandings();
+        const standings = await getStandings(etapaId);
         const zones = Object.keys(standings) as Zone[];
         if (zones.length === 3) {
           const selection = selectBestSecond(standings);
           if (selection?.kind === "playoff") {
             if (state.phase === "GROUPS") {
-              desempateCreated = await createDesempateMatch(selection);
+              desempateCreated = await createDesempateMatch(selection, etapaId);
             } else {
               // Rebuild after an edit would need a fresh desempate: report it.
               publishSse("brackets-blocked", {
@@ -425,22 +635,22 @@ async function reconcileAfterMatch(
               teamIds: selection.teamIds,
             });
           } else {
-            const res = await finalizeBrackets(standings);
+            const res = await finalizeBrackets(standings, etapaId);
             phaseChanged = res.ok;
             bracketsChanged = res.ok;
           }
         } else {
-          const res = await finalizeBrackets(standings);
+          const res = await finalizeBrackets(standings, etapaId);
           phaseChanged = res.ok;
           bracketsChanged = res.ok;
         }
       }
     }
   } else if (stage === "DESEMPATE" && winnerId) {
-    const state = await getState();
+    const state = await getState(etapaId);
     if (state.phase === "DESEMPATE") {
-      const standings = await getStandings();
-      const res = await finalizeBrackets(standings, winnerId);
+      const standings = await getStandings(etapaId);
+      const res = await finalizeBrackets(standings, etapaId, winnerId);
       phaseChanged = res.ok;
       bracketsChanged = res.ok;
     }
@@ -486,7 +696,7 @@ export async function recordResult(input: RecordResultInput) {
 
   publishSse("result-recorded", { matchId: match.id, phase: null });
 
-  const outcome = await reconcileAfterMatch(match.stage, payload.winnerId, false);
+  const outcome = await reconcileAfterMatch(match.stage, payload.winnerId, false, match.etapaId);
 
   publishSse("standings-changed", { matchId: match.id });
   publishSse("schedule-changed", { matchId: match.id });
@@ -494,7 +704,7 @@ export async function recordResult(input: RecordResultInput) {
   return {
     matchId: match.id,
     ...outcome,
-    nextMatch: await getNextMatch(),
+    nextMatch: await getNextMatch(match.etapaId),
   };
 }
 
@@ -529,6 +739,7 @@ export async function editResult(input: EditResultInput) {
   if (descendants.length > 0) {
     const played = await prisma.match.count({
       where: {
+        etapaId: match.etapaId,
         stage: { in: [...descendants] as Stage[] },
         resultStatus: { not: "PENDING" },
       },
@@ -568,7 +779,7 @@ export async function editResult(input: EditResultInput) {
 
   publishSse("result-recorded", { matchId: match.id, phase: null });
 
-  const outcome = await reconcileAfterMatch(match.stage, payload.winnerId, true);
+  const outcome = await reconcileAfterMatch(match.stage, payload.winnerId, true, match.etapaId);
 
   publishSse("standings-changed", { matchId: match.id });
   publishSse("schedule-changed", { matchId: match.id });
@@ -576,6 +787,6 @@ export async function editResult(input: EditResultInput) {
   return {
     matchId: match.id,
     ...outcome,
-    nextMatch: await getNextMatch(),
+    nextMatch: await getNextMatch(match.etapaId),
   };
 }

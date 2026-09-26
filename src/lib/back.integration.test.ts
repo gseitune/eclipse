@@ -33,30 +33,31 @@ let getNextMatch!: BackModule["getNextMatch"];
 let BackError!: BackModule["BackError"];
 let InvalidResultError!: ResultFormatModule["InvalidResultError"];
 let subscribeSse!: EventsModule["subscribeSse"];
+let etapaId = "";
 
 async function seedTournament() {
+  const etapa = await prisma.etapa.create({
+    data: { name: "Test etapa", sortOrder: 1 },
+  });
+  etapaId = etapa.id;
   await prisma.team.createMany({
     data: [
-      { id: "tA1", name: "Alpha", zone: "A" },
-      { id: "tA2", name: "Beta", zone: "A" },
-      { id: "tB1", name: "Gamma", zone: "B" },
-      { id: "tB2", name: "Delta", zone: "B" },
+      { id: "tA1", etapaId, name: "Alpha", zone: "A" },
+      { id: "tA2", etapaId, name: "Beta", zone: "A" },
+      { id: "tB1", etapaId, name: "Gamma", zone: "B" },
+      { id: "tB2", etapaId, name: "Delta", zone: "B" },
     ],
   });
   await prisma.match.createMany({
     data: [
-      { id: "m1", stage: "GROUPS", zone: "A", slot: 1, timeLabel: "10:00 - 10:20", teamAId: "tA1", teamBId: "tA2" },
-      { id: "m2", stage: "GROUPS", zone: "B", slot: 2, timeLabel: "10:20 - 10:40", teamAId: "tB1", teamBId: "tB2" },
-      { id: "m3", stage: "SEMIFINAL_1", slot: 3, timeLabel: "16:40 - 17:00" },
-      { id: "m4", stage: "SEMIFINAL_2", slot: 4, timeLabel: "17:00 - 17:20" },
-      { id: "m5", stage: "FINAL", slot: 5, timeLabel: "18:00 - 18:20" },
+      { id: "m1", etapaId, stage: "GROUPS", zone: "A", slot: 1, timeLabel: "10:00 - 10:20", teamAId: "tA1", teamBId: "tA2" },
+      { id: "m2", etapaId, stage: "GROUPS", zone: "B", slot: 2, timeLabel: "10:20 - 10:40", teamAId: "tB1", teamBId: "tB2" },
+      { id: "m3", etapaId, stage: "SEMIFINAL_1", slot: 3, timeLabel: "16:40 - 17:00" },
+      { id: "m4", etapaId, stage: "SEMIFINAL_2", slot: 4, timeLabel: "17:00 - 17:20" },
+      { id: "m5", etapaId, stage: "FINAL", slot: 5, timeLabel: "18:00 - 18:20" },
     ],
   });
-  await prisma.tournamentState.upsert({
-    where: { id: 1 },
-    update: {},
-    create: { id: 1 },
-  });
+  await prisma.tournamentState.create({ data: { etapaId } });
 }
 
 function bad400(fn: () => Promise<unknown>, reason?: string) {
@@ -146,7 +147,7 @@ describe("recordResult/editResult (integration)", () => {
     assert.equal(m2?.sets, null, "no invented sets");
     assert.equal(m2?.winnerId, "tB1");
 
-    const state = await prisma.tournamentState.findUnique({ where: { id: 1 } });
+    const state = await prisma.tournamentState.findUnique({ where: { etapaId } });
     assert.equal(state?.phase, "ELIMINATORIES", "both group results build the bracket");
     const m3 = await prisma.match.findUnique({ where: { id: "m3" } });
     assert.ok(m3?.teamAId && m3?.teamBId, "semi slot filled");

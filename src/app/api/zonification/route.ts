@@ -10,8 +10,9 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  return NextResponse.json({ zones: await getTeamsByZone() });
+export async function GET(request: NextRequest) {
+  const etapa = request.nextUrl.searchParams.get("etapa");
+  return NextResponse.json({ zones: await getTeamsByZone(etapa) });
 }
 
 export async function POST(request: NextRequest) {
@@ -24,10 +25,11 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json().catch(() => null);
   const action = typeof body?.action === "string" ? body.action : "";
+  const etapa = typeof body?.etapaId === "string" ? body.etapaId : null;
 
   try {
     if (action === "generate") {
-      const mapping = await generateZones();
+      const mapping = await generateZones(etapa);
       return NextResponse.json({ mapping });
     }
     if (action === "swap") {
@@ -35,11 +37,12 @@ export async function POST(request: NextRequest) {
         String(body.teamId ?? ""),
         String(body.from ?? ""),
         String(body.to ?? ""),
+        etapa,
       );
       return NextResponse.json({ mapping });
     }
     if (action === "confirm") {
-      return NextResponse.json(await confirmZonification());
+      return NextResponse.json(await confirmZonification(etapa));
     }
     return NextResponse.json(
       { error: "action must be generate | swap | confirm" },

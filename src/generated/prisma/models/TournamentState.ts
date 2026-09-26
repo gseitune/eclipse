@@ -27,19 +27,18 @@ export type AggregateTournamentState = {
 }
 
 export type TournamentStateAvgAggregateOutputType = {
-  id: number | null
   prepMinutes: number | null
   matchMinutes: number | null
 }
 
 export type TournamentStateSumAggregateOutputType = {
-  id: number | null
   prepMinutes: number | null
   matchMinutes: number | null
 }
 
 export type TournamentStateMinAggregateOutputType = {
-  id: number | null
+  id: string | null
+  etapaId: string | null
   phase: $Enums.Phase | null
   zoneConfirmed: boolean | null
   prepMinutes: number | null
@@ -48,7 +47,8 @@ export type TournamentStateMinAggregateOutputType = {
 }
 
 export type TournamentStateMaxAggregateOutputType = {
-  id: number | null
+  id: string | null
+  etapaId: string | null
   phase: $Enums.Phase | null
   zoneConfirmed: boolean | null
   prepMinutes: number | null
@@ -58,6 +58,7 @@ export type TournamentStateMaxAggregateOutputType = {
 
 export type TournamentStateCountAggregateOutputType = {
   id: number
+  etapaId: number
   phase: number
   zoneConfirmed: number
   prepMinutes: number
@@ -68,19 +69,18 @@ export type TournamentStateCountAggregateOutputType = {
 
 
 export type TournamentStateAvgAggregateInputType = {
-  id?: true
   prepMinutes?: true
   matchMinutes?: true
 }
 
 export type TournamentStateSumAggregateInputType = {
-  id?: true
   prepMinutes?: true
   matchMinutes?: true
 }
 
 export type TournamentStateMinAggregateInputType = {
   id?: true
+  etapaId?: true
   phase?: true
   zoneConfirmed?: true
   prepMinutes?: true
@@ -90,6 +90,7 @@ export type TournamentStateMinAggregateInputType = {
 
 export type TournamentStateMaxAggregateInputType = {
   id?: true
+  etapaId?: true
   phase?: true
   zoneConfirmed?: true
   prepMinutes?: true
@@ -99,6 +100,7 @@ export type TournamentStateMaxAggregateInputType = {
 
 export type TournamentStateCountAggregateInputType = {
   id?: true
+  etapaId?: true
   phase?: true
   zoneConfirmed?: true
   prepMinutes?: true
@@ -194,7 +196,8 @@ export type TournamentStateGroupByArgs<ExtArgs extends runtime.Types.Extensions.
 }
 
 export type TournamentStateGroupByOutputType = {
-  id: number
+  id: string
+  etapaId: string
   phase: $Enums.Phase
   zoneConfirmed: boolean
   prepMinutes: number
@@ -226,25 +229,30 @@ export type TournamentStateWhereInput = {
   AND?: Prisma.TournamentStateWhereInput | Prisma.TournamentStateWhereInput[]
   OR?: Prisma.TournamentStateWhereInput[]
   NOT?: Prisma.TournamentStateWhereInput | Prisma.TournamentStateWhereInput[]
-  id?: Prisma.IntFilter<"TournamentState"> | number
+  id?: Prisma.StringFilter<"TournamentState"> | string
+  etapaId?: Prisma.StringFilter<"TournamentState"> | string
   phase?: Prisma.EnumPhaseFilter<"TournamentState"> | $Enums.Phase
   zoneConfirmed?: Prisma.BoolFilter<"TournamentState"> | boolean
   prepMinutes?: Prisma.IntFilter<"TournamentState"> | number
   matchMinutes?: Prisma.IntFilter<"TournamentState"> | number
   updatedAt?: Prisma.DateTimeFilter<"TournamentState"> | Date | string
+  etapa?: Prisma.XOR<Prisma.EtapaScalarRelationFilter, Prisma.EtapaWhereInput>
 }
 
 export type TournamentStateOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  etapaId?: Prisma.SortOrder
   phase?: Prisma.SortOrder
   zoneConfirmed?: Prisma.SortOrder
   prepMinutes?: Prisma.SortOrder
   matchMinutes?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  etapa?: Prisma.EtapaOrderByWithRelationInput
 }
 
 export type TournamentStateWhereUniqueInput = Prisma.AtLeast<{
-  id?: number
+  id?: string
+  etapaId?: string
   AND?: Prisma.TournamentStateWhereInput | Prisma.TournamentStateWhereInput[]
   OR?: Prisma.TournamentStateWhereInput[]
   NOT?: Prisma.TournamentStateWhereInput | Prisma.TournamentStateWhereInput[]
@@ -253,10 +261,12 @@ export type TournamentStateWhereUniqueInput = Prisma.AtLeast<{
   prepMinutes?: Prisma.IntFilter<"TournamentState"> | number
   matchMinutes?: Prisma.IntFilter<"TournamentState"> | number
   updatedAt?: Prisma.DateTimeFilter<"TournamentState"> | Date | string
-}, "id">
+  etapa?: Prisma.XOR<Prisma.EtapaScalarRelationFilter, Prisma.EtapaWhereInput>
+}, "id" | "etapaId">
 
 export type TournamentStateOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  etapaId?: Prisma.SortOrder
   phase?: Prisma.SortOrder
   zoneConfirmed?: Prisma.SortOrder
   prepMinutes?: Prisma.SortOrder
@@ -273,7 +283,8 @@ export type TournamentStateScalarWhereWithAggregatesInput = {
   AND?: Prisma.TournamentStateScalarWhereWithAggregatesInput | Prisma.TournamentStateScalarWhereWithAggregatesInput[]
   OR?: Prisma.TournamentStateScalarWhereWithAggregatesInput[]
   NOT?: Prisma.TournamentStateScalarWhereWithAggregatesInput | Prisma.TournamentStateScalarWhereWithAggregatesInput[]
-  id?: Prisma.IntWithAggregatesFilter<"TournamentState"> | number
+  id?: Prisma.StringWithAggregatesFilter<"TournamentState"> | string
+  etapaId?: Prisma.StringWithAggregatesFilter<"TournamentState"> | string
   phase?: Prisma.EnumPhaseWithAggregatesFilter<"TournamentState"> | $Enums.Phase
   zoneConfirmed?: Prisma.BoolWithAggregatesFilter<"TournamentState"> | boolean
   prepMinutes?: Prisma.IntWithAggregatesFilter<"TournamentState"> | number
@@ -282,16 +293,18 @@ export type TournamentStateScalarWhereWithAggregatesInput = {
 }
 
 export type TournamentStateCreateInput = {
-  id?: number
+  id?: string
   phase?: $Enums.Phase
   zoneConfirmed?: boolean
   prepMinutes?: number
   matchMinutes?: number
   updatedAt?: Date | string
+  etapa: Prisma.EtapaCreateNestedOneWithoutStateInput
 }
 
 export type TournamentStateUncheckedCreateInput = {
-  id?: number
+  id?: string
+  etapaId: string
   phase?: $Enums.Phase
   zoneConfirmed?: boolean
   prepMinutes?: number
@@ -300,16 +313,18 @@ export type TournamentStateUncheckedCreateInput = {
 }
 
 export type TournamentStateUpdateInput = {
-  id?: Prisma.IntFieldUpdateOperationsInput | number
+  id?: Prisma.StringFieldUpdateOperationsInput | string
   phase?: Prisma.EnumPhaseFieldUpdateOperationsInput | $Enums.Phase
   zoneConfirmed?: Prisma.BoolFieldUpdateOperationsInput | boolean
   prepMinutes?: Prisma.IntFieldUpdateOperationsInput | number
   matchMinutes?: Prisma.IntFieldUpdateOperationsInput | number
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  etapa?: Prisma.EtapaUpdateOneRequiredWithoutStateNestedInput
 }
 
 export type TournamentStateUncheckedUpdateInput = {
-  id?: Prisma.IntFieldUpdateOperationsInput | number
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  etapaId?: Prisma.StringFieldUpdateOperationsInput | string
   phase?: Prisma.EnumPhaseFieldUpdateOperationsInput | $Enums.Phase
   zoneConfirmed?: Prisma.BoolFieldUpdateOperationsInput | boolean
   prepMinutes?: Prisma.IntFieldUpdateOperationsInput | number
@@ -318,7 +333,8 @@ export type TournamentStateUncheckedUpdateInput = {
 }
 
 export type TournamentStateCreateManyInput = {
-  id?: number
+  id?: string
+  etapaId: string
   phase?: $Enums.Phase
   zoneConfirmed?: boolean
   prepMinutes?: number
@@ -327,7 +343,7 @@ export type TournamentStateCreateManyInput = {
 }
 
 export type TournamentStateUpdateManyMutationInput = {
-  id?: Prisma.IntFieldUpdateOperationsInput | number
+  id?: Prisma.StringFieldUpdateOperationsInput | string
   phase?: Prisma.EnumPhaseFieldUpdateOperationsInput | $Enums.Phase
   zoneConfirmed?: Prisma.BoolFieldUpdateOperationsInput | boolean
   prepMinutes?: Prisma.IntFieldUpdateOperationsInput | number
@@ -336,7 +352,8 @@ export type TournamentStateUpdateManyMutationInput = {
 }
 
 export type TournamentStateUncheckedUpdateManyInput = {
-  id?: Prisma.IntFieldUpdateOperationsInput | number
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  etapaId?: Prisma.StringFieldUpdateOperationsInput | string
   phase?: Prisma.EnumPhaseFieldUpdateOperationsInput | $Enums.Phase
   zoneConfirmed?: Prisma.BoolFieldUpdateOperationsInput | boolean
   prepMinutes?: Prisma.IntFieldUpdateOperationsInput | number
@@ -344,8 +361,14 @@ export type TournamentStateUncheckedUpdateManyInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
+export type TournamentStateNullableScalarRelationFilter = {
+  is?: Prisma.TournamentStateWhereInput | null
+  isNot?: Prisma.TournamentStateWhereInput | null
+}
+
 export type TournamentStateCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  etapaId?: Prisma.SortOrder
   phase?: Prisma.SortOrder
   zoneConfirmed?: Prisma.SortOrder
   prepMinutes?: Prisma.SortOrder
@@ -354,13 +377,13 @@ export type TournamentStateCountOrderByAggregateInput = {
 }
 
 export type TournamentStateAvgOrderByAggregateInput = {
-  id?: Prisma.SortOrder
   prepMinutes?: Prisma.SortOrder
   matchMinutes?: Prisma.SortOrder
 }
 
 export type TournamentStateMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  etapaId?: Prisma.SortOrder
   phase?: Prisma.SortOrder
   zoneConfirmed?: Prisma.SortOrder
   prepMinutes?: Prisma.SortOrder
@@ -370,6 +393,7 @@ export type TournamentStateMaxOrderByAggregateInput = {
 
 export type TournamentStateMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  etapaId?: Prisma.SortOrder
   phase?: Prisma.SortOrder
   zoneConfirmed?: Prisma.SortOrder
   prepMinutes?: Prisma.SortOrder
@@ -378,17 +402,40 @@ export type TournamentStateMinOrderByAggregateInput = {
 }
 
 export type TournamentStateSumOrderByAggregateInput = {
-  id?: Prisma.SortOrder
   prepMinutes?: Prisma.SortOrder
   matchMinutes?: Prisma.SortOrder
 }
 
-export type IntFieldUpdateOperationsInput = {
-  set?: number
-  increment?: number
-  decrement?: number
-  multiply?: number
-  divide?: number
+export type TournamentStateCreateNestedOneWithoutEtapaInput = {
+  create?: Prisma.XOR<Prisma.TournamentStateCreateWithoutEtapaInput, Prisma.TournamentStateUncheckedCreateWithoutEtapaInput>
+  connectOrCreate?: Prisma.TournamentStateCreateOrConnectWithoutEtapaInput
+  connect?: Prisma.TournamentStateWhereUniqueInput
+}
+
+export type TournamentStateUncheckedCreateNestedOneWithoutEtapaInput = {
+  create?: Prisma.XOR<Prisma.TournamentStateCreateWithoutEtapaInput, Prisma.TournamentStateUncheckedCreateWithoutEtapaInput>
+  connectOrCreate?: Prisma.TournamentStateCreateOrConnectWithoutEtapaInput
+  connect?: Prisma.TournamentStateWhereUniqueInput
+}
+
+export type TournamentStateUpdateOneWithoutEtapaNestedInput = {
+  create?: Prisma.XOR<Prisma.TournamentStateCreateWithoutEtapaInput, Prisma.TournamentStateUncheckedCreateWithoutEtapaInput>
+  connectOrCreate?: Prisma.TournamentStateCreateOrConnectWithoutEtapaInput
+  upsert?: Prisma.TournamentStateUpsertWithoutEtapaInput
+  disconnect?: Prisma.TournamentStateWhereInput | boolean
+  delete?: Prisma.TournamentStateWhereInput | boolean
+  connect?: Prisma.TournamentStateWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TournamentStateUpdateToOneWithWhereWithoutEtapaInput, Prisma.TournamentStateUpdateWithoutEtapaInput>, Prisma.TournamentStateUncheckedUpdateWithoutEtapaInput>
+}
+
+export type TournamentStateUncheckedUpdateOneWithoutEtapaNestedInput = {
+  create?: Prisma.XOR<Prisma.TournamentStateCreateWithoutEtapaInput, Prisma.TournamentStateUncheckedCreateWithoutEtapaInput>
+  connectOrCreate?: Prisma.TournamentStateCreateOrConnectWithoutEtapaInput
+  upsert?: Prisma.TournamentStateUpsertWithoutEtapaInput
+  disconnect?: Prisma.TournamentStateWhereInput | boolean
+  delete?: Prisma.TournamentStateWhereInput | boolean
+  connect?: Prisma.TournamentStateWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TournamentStateUpdateToOneWithWhereWithoutEtapaInput, Prisma.TournamentStateUpdateWithoutEtapaInput>, Prisma.TournamentStateUncheckedUpdateWithoutEtapaInput>
 }
 
 export type EnumPhaseFieldUpdateOperationsInput = {
@@ -399,37 +446,96 @@ export type BoolFieldUpdateOperationsInput = {
   set?: boolean
 }
 
+export type TournamentStateCreateWithoutEtapaInput = {
+  id?: string
+  phase?: $Enums.Phase
+  zoneConfirmed?: boolean
+  prepMinutes?: number
+  matchMinutes?: number
+  updatedAt?: Date | string
+}
+
+export type TournamentStateUncheckedCreateWithoutEtapaInput = {
+  id?: string
+  phase?: $Enums.Phase
+  zoneConfirmed?: boolean
+  prepMinutes?: number
+  matchMinutes?: number
+  updatedAt?: Date | string
+}
+
+export type TournamentStateCreateOrConnectWithoutEtapaInput = {
+  where: Prisma.TournamentStateWhereUniqueInput
+  create: Prisma.XOR<Prisma.TournamentStateCreateWithoutEtapaInput, Prisma.TournamentStateUncheckedCreateWithoutEtapaInput>
+}
+
+export type TournamentStateUpsertWithoutEtapaInput = {
+  update: Prisma.XOR<Prisma.TournamentStateUpdateWithoutEtapaInput, Prisma.TournamentStateUncheckedUpdateWithoutEtapaInput>
+  create: Prisma.XOR<Prisma.TournamentStateCreateWithoutEtapaInput, Prisma.TournamentStateUncheckedCreateWithoutEtapaInput>
+  where?: Prisma.TournamentStateWhereInput
+}
+
+export type TournamentStateUpdateToOneWithWhereWithoutEtapaInput = {
+  where?: Prisma.TournamentStateWhereInput
+  data: Prisma.XOR<Prisma.TournamentStateUpdateWithoutEtapaInput, Prisma.TournamentStateUncheckedUpdateWithoutEtapaInput>
+}
+
+export type TournamentStateUpdateWithoutEtapaInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  phase?: Prisma.EnumPhaseFieldUpdateOperationsInput | $Enums.Phase
+  zoneConfirmed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  prepMinutes?: Prisma.IntFieldUpdateOperationsInput | number
+  matchMinutes?: Prisma.IntFieldUpdateOperationsInput | number
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type TournamentStateUncheckedUpdateWithoutEtapaInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  phase?: Prisma.EnumPhaseFieldUpdateOperationsInput | $Enums.Phase
+  zoneConfirmed?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  prepMinutes?: Prisma.IntFieldUpdateOperationsInput | number
+  matchMinutes?: Prisma.IntFieldUpdateOperationsInput | number
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
 
 
 export type TournamentStateSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  etapaId?: boolean
   phase?: boolean
   zoneConfirmed?: boolean
   prepMinutes?: boolean
   matchMinutes?: boolean
   updatedAt?: boolean
+  etapa?: boolean | Prisma.EtapaDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["tournamentState"]>
 
 export type TournamentStateSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  etapaId?: boolean
   phase?: boolean
   zoneConfirmed?: boolean
   prepMinutes?: boolean
   matchMinutes?: boolean
   updatedAt?: boolean
+  etapa?: boolean | Prisma.EtapaDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["tournamentState"]>
 
 export type TournamentStateSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  etapaId?: boolean
   phase?: boolean
   zoneConfirmed?: boolean
   prepMinutes?: boolean
   matchMinutes?: boolean
   updatedAt?: boolean
+  etapa?: boolean | Prisma.EtapaDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["tournamentState"]>
 
 export type TournamentStateSelectScalar = {
   id?: boolean
+  etapaId?: boolean
   phase?: boolean
   zoneConfirmed?: boolean
   prepMinutes?: boolean
@@ -437,13 +543,25 @@ export type TournamentStateSelectScalar = {
   updatedAt?: boolean
 }
 
-export type TournamentStateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "phase" | "zoneConfirmed" | "prepMinutes" | "matchMinutes" | "updatedAt", ExtArgs["result"]["tournamentState"]>
+export type TournamentStateOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "etapaId" | "phase" | "zoneConfirmed" | "prepMinutes" | "matchMinutes" | "updatedAt", ExtArgs["result"]["tournamentState"]>
+export type TournamentStateInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  etapa?: boolean | Prisma.EtapaDefaultArgs<ExtArgs>
+}
+export type TournamentStateIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  etapa?: boolean | Prisma.EtapaDefaultArgs<ExtArgs>
+}
+export type TournamentStateIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  etapa?: boolean | Prisma.EtapaDefaultArgs<ExtArgs>
+}
 
 export type $TournamentStatePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "TournamentState"
-  objects: {}
+  objects: {
+    etapa: Prisma.$EtapaPayload<ExtArgs>
+  }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
-    id: number
+    id: string
+    etapaId: string
     phase: $Enums.Phase
     zoneConfirmed: boolean
     prepMinutes: number
@@ -843,6 +961,7 @@ readonly fields: TournamentStateFieldRefs;
  */
 export interface Prisma__TournamentStateClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  etapa<T extends Prisma.EtapaDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EtapaDefaultArgs<ExtArgs>>): Prisma.Prisma__EtapaClient<runtime.Types.Result.GetResult<Prisma.$EtapaPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -872,7 +991,8 @@ export interface Prisma__TournamentStateClient<T, Null = never, ExtArgs extends 
  * Fields of the TournamentState model
  */
 export interface TournamentStateFieldRefs {
-  readonly id: Prisma.FieldRef<"TournamentState", 'Int'>
+  readonly id: Prisma.FieldRef<"TournamentState", 'String'>
+  readonly etapaId: Prisma.FieldRef<"TournamentState", 'String'>
   readonly phase: Prisma.FieldRef<"TournamentState", 'Phase'>
   readonly zoneConfirmed: Prisma.FieldRef<"TournamentState", 'Boolean'>
   readonly prepMinutes: Prisma.FieldRef<"TournamentState", 'Int'>
@@ -895,6 +1015,10 @@ export type TournamentStateFindUniqueArgs<ExtArgs extends runtime.Types.Extensio
    */
   omit?: Prisma.TournamentStateOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TournamentStateInclude<ExtArgs> | null
+  /**
    * Filter, which TournamentState to fetch.
    */
   where: Prisma.TournamentStateWhereUniqueInput
@@ -913,6 +1037,10 @@ export type TournamentStateFindUniqueOrThrowArgs<ExtArgs extends runtime.Types.E
    */
   omit?: Prisma.TournamentStateOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TournamentStateInclude<ExtArgs> | null
+  /**
    * Filter, which TournamentState to fetch.
    */
   where: Prisma.TournamentStateWhereUniqueInput
@@ -930,6 +1058,10 @@ export type TournamentStateFindFirstArgs<ExtArgs extends runtime.Types.Extension
    * Omit specific fields from the TournamentState
    */
   omit?: Prisma.TournamentStateOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TournamentStateInclude<ExtArgs> | null
   /**
    * Filter, which TournamentState to fetch.
    */
@@ -979,6 +1111,10 @@ export type TournamentStateFindFirstOrThrowArgs<ExtArgs extends runtime.Types.Ex
    */
   omit?: Prisma.TournamentStateOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TournamentStateInclude<ExtArgs> | null
+  /**
    * Filter, which TournamentState to fetch.
    */
   where?: Prisma.TournamentStateWhereInput
@@ -1026,6 +1162,10 @@ export type TournamentStateFindManyArgs<ExtArgs extends runtime.Types.Extensions
    * Omit specific fields from the TournamentState
    */
   omit?: Prisma.TournamentStateOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TournamentStateInclude<ExtArgs> | null
   /**
    * Filter, which TournamentStates to fetch.
    */
@@ -1075,6 +1215,10 @@ export type TournamentStateCreateArgs<ExtArgs extends runtime.Types.Extensions.I
    */
   omit?: Prisma.TournamentStateOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TournamentStateInclude<ExtArgs> | null
+  /**
    * The data needed to create a TournamentState.
    */
   data: Prisma.XOR<Prisma.TournamentStateCreateInput, Prisma.TournamentStateUncheckedCreateInput>
@@ -1106,6 +1250,10 @@ export type TournamentStateCreateManyAndReturnArgs<ExtArgs extends runtime.Types
    * The data used to create many TournamentStates.
    */
   data: Prisma.TournamentStateCreateManyInput | Prisma.TournamentStateCreateManyInput[]
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TournamentStateIncludeCreateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1120,6 +1268,10 @@ export type TournamentStateUpdateArgs<ExtArgs extends runtime.Types.Extensions.I
    * Omit specific fields from the TournamentState
    */
   omit?: Prisma.TournamentStateOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TournamentStateInclude<ExtArgs> | null
   /**
    * The data needed to update a TournamentState.
    */
@@ -1172,6 +1324,10 @@ export type TournamentStateUpdateManyAndReturnArgs<ExtArgs extends runtime.Types
    * Limit how many TournamentStates to update.
    */
   limit?: number
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TournamentStateIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1186,6 +1342,10 @@ export type TournamentStateUpsertArgs<ExtArgs extends runtime.Types.Extensions.I
    * Omit specific fields from the TournamentState
    */
   omit?: Prisma.TournamentStateOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TournamentStateInclude<ExtArgs> | null
   /**
    * The filter to search for the TournamentState to update in case it exists.
    */
@@ -1212,6 +1372,10 @@ export type TournamentStateDeleteArgs<ExtArgs extends runtime.Types.Extensions.I
    * Omit specific fields from the TournamentState
    */
   omit?: Prisma.TournamentStateOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TournamentStateInclude<ExtArgs> | null
   /**
    * Filter which TournamentState to delete.
    */
@@ -1244,4 +1408,8 @@ export type TournamentStateDefaultArgs<ExtArgs extends runtime.Types.Extensions.
    * Omit specific fields from the TournamentState
    */
   omit?: Prisma.TournamentStateOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TournamentStateInclude<ExtArgs> | null
 }

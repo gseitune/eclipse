@@ -52,6 +52,7 @@ export const AnyNull = runtime.AnyNull
 
 export const ModelName = {
   User: 'User',
+  Etapa: 'Etapa',
   TournamentState: 'TournamentState',
   Team: 'Team',
   Match: 'Match'
@@ -82,8 +83,21 @@ export const UserScalarFieldEnum = {
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
 
 
+export const EtapaScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  date: 'date',
+  sortOrder: 'sortOrder',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type EtapaScalarFieldEnum = (typeof EtapaScalarFieldEnum)[keyof typeof EtapaScalarFieldEnum]
+
+
 export const TournamentStateScalarFieldEnum = {
   id: 'id',
+  etapaId: 'etapaId',
   phase: 'phase',
   zoneConfirmed: 'zoneConfirmed',
   prepMinutes: 'prepMinutes',
@@ -96,6 +110,7 @@ export type TournamentStateScalarFieldEnum = (typeof TournamentStateScalarFieldE
 
 export const TeamScalarFieldEnum = {
   id: 'id',
+  etapaId: 'etapaId',
   name: 'name',
   zone: 'zone',
   createdAt: 'createdAt',
@@ -107,6 +122,7 @@ export type TeamScalarFieldEnum = (typeof TeamScalarFieldEnum)[keyof typeof Team
 
 export const MatchScalarFieldEnum = {
   id: 'id',
+  etapaId: 'etapaId',
   stage: 'stage',
   zone: 'zone',
   slot: 'slot',
@@ -141,6 +157,14 @@ export const NullableJsonNullValueInput = {
 export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
 
 
+export const NullsOrder = {
+  first: 'first',
+  last: 'last'
+} as const
+
+export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
 export const JsonNullValueFilter = {
   DbNull: DbNull,
   JsonNull: JsonNull,
@@ -156,12 +180,4 @@ export const QueryMode = {
 } as const
 
 export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
-
-
-export const NullsOrder = {
-  first: 'first',
-  last: 'last'
-} as const
-
-export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
 

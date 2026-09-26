@@ -67,3 +67,35 @@ export function distributeTeams(
 
   return groups;
 }
+
+/**
+ * Round-robin pairings for one group (circle method): every team plays every
+ * other team exactly once. Deterministic; returns n*(n-1)/2 pairs ordered in
+ * the canonical "fixed wheel" sequence. Used to generate the group fixture of
+ * a newly created etapa (single court, slots assigned later).
+ */
+export function roundRobinPairs(
+  teamIds: readonly string[],
+): Array<[string, string]> {
+  const n = teamIds.length;
+  if (n < 2) return [];
+  // Odd counts add a "bye" so the circle has an even number of seats: with
+  // n teams the rounds are n (odd) or n-1 (even), each team playing once
+  // per round except the bye. Total pairs stay n*(n-1)/2.
+  const arr = n % 2 === 1 ? [...teamIds, null] : [...teamIds];
+  const full = arr.length;
+  const [fixed, ...rest] = arr;
+  const pairs: Array<[string, string]> = [];
+  let rot = [...rest];
+  for (let round = 0; round < full - 1; round++) {
+    const lineup = [fixed, ...rot];
+    for (let i = 0; i < Math.floor(full / 2); i++) {
+      const a = lineup[i];
+      const b = lineup[full - 1 - i];
+      if (a === null || b === null) continue;
+      if (a !== b) pairs.push([a, b]);
+    }
+    rot = [rot[rot.length - 1], ...rot.slice(0, rot.length - 1)];
+  }
+  return pairs;
+}
