@@ -140,6 +140,7 @@ export interface EtapaMeta {
   sortOrder: number;
   teamCount: number;
   closedAt: string | null;
+  cancelledAt: string | null;
 }
 
 export interface ZonesMapping {

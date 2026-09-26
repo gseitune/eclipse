@@ -37,7 +37,7 @@ interface SectionConfig {
   readonly kind: SectionKind;
 }
 
-const SECTIONS: readonly SectionConfig[] = [
+const SECTIONS_DEFAULT: readonly SectionConfig[] = [
   {
     label: "Equipos",
     hint: "Crear y editar etapas con equipos",
@@ -47,6 +47,19 @@ const SECTIONS: readonly SectionConfig[] = [
     label: "Agenda de partidos",
     hint: "Ver y modificar el orden de los partidos del día",
     kind: "actionable",
+  },
+] as const;
+
+const SECTIONS_CANCELLED: readonly SectionConfig[] = [
+  {
+    label: "Equipos",
+    hint: "Crear y editar etapas con equipos",
+    kind: "actionable",
+  },
+  {
+    label: "Agenda de partidos",
+    hint: "Etapa cancelada: sin acceso de edición",
+    kind: "disabled",
   },
 ] as const;
 
@@ -118,12 +131,34 @@ function ResultsScoreboardCard({
   match,
   loading,
   onOpen,
+  disabled = false,
 }: {
   readonly match: MatchPublic | null;
   readonly loading: boolean;
   readonly onOpen: () => void;
+  readonly disabled?: boolean;
 }) {
   const wins = match ? setWins(match.sets) : { a: 0, b: 0 };
+
+  if (disabled) {
+    return (
+      <div
+        role="group"
+        aria-disabled="true"
+        className="flex w-full cursor-not-allowed items-start gap-4 rounded-xl border border-sand-200 bg-sand-50/50 px-5 py-4 opacity-50"
+      >
+        <LockIcon />
+        <span className="flex-1 min-w-0">
+          <span className="block text-base font-bold text-stone-400">
+            Resultados
+          </span>
+          <span className="mt-0.5 block text-xs text-stone-400">
+            Etapa cancelada — sin acceso
+          </span>
+        </span>
+      </div>
+    );
+  }
 
   return (
     <button
@@ -186,6 +221,9 @@ export function OrganizerPanel({
 
   const { state: liveState, loading } = useLiveState();
   const nextMatch = liveState?.nextMatch ?? null;
+  const isCancelled = !!liveState?.etapa?.cancelledAt;
+
+  const sections = isCancelled ? SECTIONS_CANCELLED : SECTIONS_DEFAULT;
 
   function handleSectionClick(label: string) {
     switch (label) {
@@ -267,7 +305,7 @@ export function OrganizerPanel({
           /* Sections list */
           <main className="mx-auto w-full max-w-3xl px-6 py-8">
             <nav aria-label="Secciones del panel" className="flex flex-col gap-3">
-              {SECTIONS.map((section) =>
+              {sections.map((section) =>
                 section.kind === "actionable" ? (
                   <SectionCard
                     key={section.label}
@@ -287,6 +325,7 @@ export function OrganizerPanel({
                 match={nextMatch}
                 loading={loading}
                 onOpen={() => setActiveSection("resultados")}
+                disabled={isCancelled}
               />
             </nav>
           </main>

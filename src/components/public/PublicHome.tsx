@@ -126,6 +126,17 @@ export function PublicHome({
         </div>
       )}
 
+        {/* Cancelled etapa banner — prominent, above all content */}
+        {state?.etapa?.cancelledAt && (
+          <div className="mx-auto w-full max-w-3xl px-6 py-3">
+            <div className="rounded-xl border border-red-200 bg-red-50/60 px-4 py-3 text-sm text-red-700">
+              ⚠️ Etapa CANCELADA — esta fecha ha sido suspendida. No se
+              pueden editar resultados ni modificar el orden de los
+              partidos.
+            </div>
+          </div>
+        )}
+
         {/* Result-pending banner */}
         <ChimeBanner liveCount={liveIds.size} />
 

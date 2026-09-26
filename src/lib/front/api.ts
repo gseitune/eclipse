@@ -143,6 +143,20 @@ export async function closeEtapa(
   return handleResponse(res);
 }
 
+export async function cancelEtapa(
+  etapaId: string,
+  password: string,
+): Promise<{ etapa: { id: string; name: string; cancelledAt: string | null } }> {
+  const res = await fetch(`${BASE}/etapas/${etapaId}/cancel`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+    body: JSON.stringify({ password }),
+  });
+  return handleResponse(res);
+}
+
 export async function createEtapa(input: CreateEtapaInput): Promise<{ etapa: { id: string; name: string } }> {
   const res = await fetch(`${BASE}/etapas`, {
     method: "POST",
