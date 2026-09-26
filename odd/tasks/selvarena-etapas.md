@@ -155,14 +155,18 @@ Work-unit commits; no PRs/push.
       ranking dice finished && !closedAt, derivado de `/api/ranking` + closedAt de
       listEtapas); OrganizerPanel habilita "Circuitos y etapas" (case "circuitos").
       Checks: tsc + build.
-- [ ] (S5) Ranking per sex POR JUGADOR (work unit en curso): `ranking.ts`
-      devuelve dos rankings (`male` / `female`) agregando por `maleName` /
-      `femaleName` de Team — cada jugador de la pareja suma los puntos de la
-      posición de su pareja; `EtapaPosition` gana los nombres de jugador;
-      `RankingPanel` muestra 2 columnas (Femenino / Masculino) en el ranking
-      anual; types.ts con `RankedPlayer`; ranking.test.ts con tests de
-      agregación por jugador. Etapas históricas sin jugadores backfilleados no
-      suman hasta que la organizadora dicte los sexos.
+- [x] (S5) Ranking per sex POR JUGADOR COMPLETO — commit `9a22159`
+      feat(back+front): `ranking.ts` extrae `aggregateRankedPlayers(etapas)`
+      pura (ranking individual por `maleName`/`femaleName`, acumula puntos de la
+      posición de la pareja en etapas finished, saltea names null);
+      `getAnnualRanking` devuelve `{scale, female, male, etapas}`;
+      `EtapaPosition`/`RankedPlayer`/`RankingResponse` en types.ts;
+      `RankingPanel` muestra 3 columnas (Femenino / Masculino / Posiciones por
+      etapa) + PODIO de la etapa seleccionada (1° arriba al medio trofeo dorado
+      con estrella, 2° abajo-izq plata, 3° abajo-der bronce); ranking.test.ts
+      reescrito con tests unitarios puros de agregación. Checks: 150/150 tests
+      (5 nuevos), tsc 0, lint 0 errors. Smoke: API male Gus 200 / Mati 195 /
+      Santy 180; female Roxi 220.
 - [ ] (S6) Past etapas (follow-up, no iniciado): la organizadora carga una etapa
   ya cerrada con sus resultados; el ranking la acumula.
 
@@ -187,6 +191,15 @@ Work-unit commits; no PRs/push.
 - 2026-09-26 gotcha DB: la DB real es `dev.db` en la RAÍZ del repo (`.env`
   `file:./dev.db` resuelto contra prisma.config.ts / cwd del seed);
   `prisma/dev.db` es un archivo huérfano — no tocar.
+- 2026-09-26 S5 COMPLETO — commit `9a22159`: el test del subagente cancelado
+  quedó roto (import estático de getAnnualRanking ligaba ranking.ts a la DB
+  real antes del before() que setea DATABASE_URL); se revirtió a HEAD y se
+  extrajo `aggregateRankedPlayers()` pura para tests unitarios sin DB (150/150).
+  El bug "lista masculino sin nombres" era runtime viejo del dev server — con
+  el server reiniciado la API devuelve Gus/Mati/Santy y el panel renderiza
+  `player.name`. Podio pedido por el usuario ubicado en RankingPanel (etapa
+  seleccionada: 1° arriba centro trofeo dorado + estrella, 2° abajo-izq plata,
+  3° abajo-der bronce).
 
 ## Notes
 
