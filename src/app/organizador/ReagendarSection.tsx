@@ -162,7 +162,7 @@ export function ReagendarSection({ onBack }: ReagendarSectionProps) {
               />
             </svg>
           </button>
-          <h2 className="text-lg font-semibold text-stone-900">Reagendar partidos</h2>
+          <h2 className="text-lg font-semibold text-stone-900">Agenda de partidos</h2>
         </div>
         <div className="flex items-center gap-2 text-sm text-stone-400">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-amber-700 border-t-transparent" />
@@ -196,7 +196,7 @@ export function ReagendarSection({ onBack }: ReagendarSectionProps) {
             />
           </svg>
         </button>
-        <h2 className="text-lg font-semibold text-stone-900">Reagendar partidos</h2>
+        <h2 className="text-lg font-semibold text-stone-900">Agenda de partidos</h2>
       </div>
 
       {/* Error state */}

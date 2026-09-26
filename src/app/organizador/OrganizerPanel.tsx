@@ -44,7 +44,7 @@ const SECTIONS: readonly SectionConfig[] = [
     kind: "actionable",
   },
   {
-    label: "Reagendar partidos",
+    label: "Agenda de partidos",
     hint: "Ver y modificar el orden de los partidos del día",
     kind: "actionable",
   },
@@ -195,7 +195,7 @@ export function OrganizerPanel({
       case "Equipos":
         setActiveSection("circuitos");
         break;
-      case "Reagendar partidos":
+      case "Agenda de partidos":
         setActiveSection("reagendar");
         break;
       default:
