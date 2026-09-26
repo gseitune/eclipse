@@ -43,8 +43,8 @@ const SECTIONS: readonly SectionConfig[] = [
     kind: "disabled",
   },
   {
-    label: "Circuitos y etapas",
-    hint: "Crear y editar circuitos y etapas",
+    label: "Creador de equipos",
+    hint: "Crear y editar etapas con equipos",
     kind: "actionable",
   },
   {
@@ -196,7 +196,7 @@ export function OrganizerPanel({
       case "Resultados":
         setActiveSection("resultados");
         break;
-      case "Circuitos y etapas":
+      case "Creador de equipos":
         setActiveSection("circuitos");
         break;
       default:
