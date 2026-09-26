@@ -97,29 +97,120 @@ export function RankingPanel() {
     data?.etapas[0] ??
     null;
 
-  return (
-    <section
-      aria-label="Puntos del circuito"
-      className="rounded-2xl border border-sand-300 bg-white/40 p-6 backdrop-blur ring-1 ring-inset ring-sand-200"
-    >
-      <h2 className="text-lg font-semibold text-stone-900">
-        Puntos del circuito
-      </h2>
-      <p className="text-xs text-stone-400 mt-1">
-        Ranking anual por jugador
-      </p>
-
-      {loading ? (
-        <div className="mt-4 flex items-center gap-2 text-sm text-stone-400">
+  if (loading) {
+    return (
+      <section
+        aria-label="Puntos del circuito"
+        className="rounded-2xl border border-sand-300 bg-white/40 p-6 backdrop-blur ring-1 ring-inset ring-sand-200"
+      >
+        <div className="flex items-center gap-2 text-sm text-stone-400">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-amber-700 border-t-transparent" />
           Cargando ranking…
         </div>
-      ) : error ? (
-        <p className="mt-4 text-sm text-red-500">{error}</p>
-      ) : data ? (
-        <div className="mt-4">
-          <div className="mt-5 grid grid-cols-2 gap-6 lg:grid-cols-3">
-          {/* LEFT COLUMN: Femenino */}
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section
+        aria-label="Puntos del circuito"
+        className="rounded-2xl border border-sand-300 bg-white/40 p-6 backdrop-blur ring-1 ring-inset ring-sand-200"
+      >
+        <p className="text-sm text-red-500">{error}</p>
+      </section>
+    );
+  }
+
+  if (!data) return null;
+
+  return (
+    <div className="space-y-6">
+      {/* POSITIONS PER ETAPA — above the circuit points */}
+      <section
+        aria-label="Posiciones por etapa"
+        className="rounded-2xl border border-sand-300 bg-white/40 p-6 backdrop-blur ring-1 ring-inset ring-sand-200"
+      >
+        <h2 className="text-lg font-semibold text-stone-900">
+          Posiciones por etapa
+        </h2>
+        <p className="text-xs text-stone-400 mt-1">
+          Posiciones finales de cada fecha
+        </p>
+
+        {data.etapas.length === 0 ? (
+          <p className="mt-4 text-sm text-stone-400">
+            Aún no hay etapas cargadas
+          </p>
+        ) : (
+          <div className="mt-4 space-y-3">
+            <label className="block">
+              <span className="sr-only">Elegir etapa</span>
+              <select
+                value={selectedEtapa?.id ?? ""}
+                onChange={(e) => setSelectedEtapaId(e.target.value)}
+                className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[44px]"
+              >
+                {data.etapas.map((etapa) => (
+                  <option key={etapa.id} value={etapa.id}>
+                    {etapa.name}
+                    {!etapa.finished ? " (en curso)" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            {selectedEtapa ? (
+              <div className="rounded-lg border border-sand-200 bg-white/40 p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-stone-800">
+                    {selectedEtapa.name}
+                  </span>
+                  {!selectedEtapa.finished && (
+                    <span className="text-[10px] font-semibold text-stone-400">
+                      Episodio en curso — aún no suma puntos
+                    </span>
+                  )}
+                </div>
+                {selectedEtapa.finished &&
+                selectedEtapa.positions.length > 0 ? (
+                  <ol className="mt-1.5 space-y-0.5">
+                    {selectedEtapa.positions.map((pos) => (
+                      <li
+                        key={pos.teamId}
+                        className="flex items-center gap-1.5 text-xs text-stone-600"
+                      >
+                        <RankBadge index={pos.position - 1} compact />
+                        <span className="flex-1 truncate">{pos.teamName}</span>
+                        <span className="text-stone-900">{pos.points}</span>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="mt-1 text-xs text-stone-400">
+                    Sin posiciones registradas
+                  </p>
+                )}
+              </div>
+            ) : null}
+          </div>
+        )}
+      </section>
+
+      {/* CIRCUIT POINTS — annual ranking below */}
+      <section
+        aria-label="Puntos del circuito"
+        className="rounded-2xl border border-sand-300 bg-white/40 p-6 backdrop-blur ring-1 ring-inset ring-sand-200"
+      >
+        <h2 className="text-lg font-semibold text-stone-900">
+          Puntos del circuito
+        </h2>
+        <p className="text-xs text-stone-400 mt-1">
+          Ranking anual por jugador
+        </p>
+
+        <div className="mt-4 grid grid-cols-2 gap-6">
+          {/* Femenino */}
           <div>
             <h3 className="text-sm font-semibold text-stone-700 mb-2">
               Femenino
@@ -146,7 +237,7 @@ export function RankingPanel() {
             )}
           </div>
 
-          {/* MIDDLE COLUMN: Masculino */}
+          {/* Masculino */}
           <div>
             <h3 className="text-sm font-semibold text-stone-700 mb-2">
               Masculino
@@ -172,77 +263,8 @@ export function RankingPanel() {
               </ol>
             )}
           </div>
-
-          {/* RIGHT COLUMN: Positions per etapa (selectable) — full width on mobile, below F/M */}
-          <div className="col-span-2 lg:col-span-1">
-            <h3 className="text-sm font-semibold text-stone-700 mb-2">
-              Posiciones por etapa
-            </h3>
-            {data.etapas.length === 0 ? (
-              <p className="text-sm text-stone-400">
-                Aún no hay etapas cargadas
-              </p>
-            ) : (
-              <div className="space-y-3">
-                <label className="block">
-                  <span className="sr-only">Elegir etapa</span>
-                  <select
-                    value={selectedEtapa?.id ?? ""}
-                    onChange={(e) => setSelectedEtapaId(e.target.value)}
-                    className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[44px]"
-                  >
-                    {data.etapas.map((etapa) => (
-                      <option key={etapa.id} value={etapa.id}>
-                        {etapa.name}
-                        {!etapa.finished ? " (en curso)" : ""}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                {selectedEtapa ? (
-                  <div className="rounded-lg border border-sand-200 bg-white/40 p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-stone-800">
-                        {selectedEtapa.name}
-                      </span>
-                      {!selectedEtapa.finished && (
-                        <span className="text-[10px] font-semibold text-stone-400">
-                          Episodio en curso — aún no suma puntos
-                        </span>
-                      )}
-                    </div>
-                    {selectedEtapa.finished &&
-                    selectedEtapa.positions.length > 0 ? (
-                      <ol className="mt-1.5 space-y-0.5">
-                        {selectedEtapa.positions.map((pos) => (
-                          <li
-                            key={pos.teamId}
-                            className="flex items-center gap-1.5 text-xs text-stone-600"
-                          >
-                            <RankBadge index={pos.position - 1} compact />
-                            <span className="flex-1 truncate">
-                              {pos.teamName}
-                            </span>
-                            <span className="text-stone-900">
-                              {pos.points}
-                            </span>
-                          </li>
-                        ))}
-                      </ol>
-                    ) : (
-                      <p className="mt-1 text-xs text-stone-400">
-                        Sin posiciones registradas
-                      </p>
-                    )}
-                  </div>
-                ) : null}
-              </div>
-            )}
-          </div>
-          </div>
         </div>
-      ) : null}
-    </section>
+      </section>
+    </div>
   );
 }
