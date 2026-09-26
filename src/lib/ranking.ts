@@ -30,18 +30,18 @@ export interface EtapaPositions {
   positions: EtapaPosition[];
 }
 
-export interface RankedTeam {
-  teamId: string;
-  teamName: string;
+export interface RankedPlayer {
+  name: string;
   points: number;
   appearances: number;
   bestPosition: number | null;
-  etapas: { etapaId: string; etapaName: string; position: number; points: number }[];
+  etapas: { etapaId: string; etapaName: string; position: number; points: number; teamName: string }[];
 }
 
 export interface RankingResponse {
   scale: number[];
-  ranking: RankedTeam[];
+  female: RankedPlayer[];
+  male: RankedPlayer[];
   etapas: EtapaPositions[];
 }
 
@@ -302,6 +302,91 @@ export async function getEtapaRanking(etapaId: string): Promise<EtapaPositions |
 }
 
 /**
+ * Aggregates per-player rankings from a list of finished etapas.
+ * Each player (femaleName / maleName) is ranked individually,
+ * accumulating points from every finished etapa they appeared in.
+ * Both players of a team earn the pair's position points per etapa.
+ * Entries with null name are skipped (historical etapas without players).
+ */
+export function aggregateRankedPlayers(etapas: EtapaPositions[]): {
+  female: RankedPlayer[];
+  male: RankedPlayer[];
+} {
+  const femaleMap = new Map<string, RankedPlayer>();
+  const maleMap = new Map<string, RankedPlayer>();
+
+  for (const etapa of etapas) {
+    if (!etapa.finished || etapa.positions.length === 0) continue;
+
+    for (const pos of etapa.positions) {
+      const etapaEntry = {
+        etapaId: etapa.id,
+        etapaName: etapa.name,
+        position: pos.position,
+        points: pos.points,
+        teamName: pos.teamName,
+      };
+
+      if (pos.femaleName !== null) {
+        const existing = femaleMap.get(pos.femaleName);
+        if (!existing) {
+          femaleMap.set(pos.femaleName, {
+            name: pos.femaleName,
+            points: pos.points,
+            appearances: 1,
+            bestPosition: pos.position,
+            etapas: [etapaEntry],
+          });
+        } else {
+          existing.points += pos.points;
+          existing.appearances += 1;
+          if (pos.position < (existing.bestPosition ?? Infinity)) {
+            existing.bestPosition = pos.position;
+          }
+          existing.etapas.push(etapaEntry);
+        }
+      }
+
+      if (pos.maleName !== null) {
+        const existing = maleMap.get(pos.maleName);
+        if (!existing) {
+          maleMap.set(pos.maleName, {
+            name: pos.maleName,
+            points: pos.points,
+            appearances: 1,
+            bestPosition: pos.position,
+            etapas: [etapaEntry],
+          });
+        } else {
+          existing.points += pos.points;
+          existing.appearances += 1;
+          if (pos.position < (existing.bestPosition ?? Infinity)) {
+            existing.bestPosition = pos.position;
+          }
+          existing.etapas.push(etapaEntry);
+        }
+      }
+    }
+  }
+
+  const sortRanked = (map: Map<string, RankedPlayer>): RankedPlayer[] => {
+    const arr = [...map.values()];
+    arr.sort(
+      (a, b) =>
+        b.points - a.points ||
+        (a.bestPosition ?? Infinity) - (b.bestPosition ?? Infinity) ||
+        a.name.localeCompare(b.name),
+    );
+    return arr;
+  };
+
+  return {
+    female: sortRanked(femaleMap),
+    male: sortRanked(maleMap),
+  };
+}
+
+/**
  * Computes the annual ranking across all etapas.
  */
 export async function getAnnualRanking(): Promise<RankingResponse> {
@@ -311,7 +396,6 @@ export async function getAnnualRanking(): Promise<RankingResponse> {
   });
 
   const scale = [...POSITION_POINTS];
-  const ranking = new Map<string, RankedTeam>();
   const etapasResult: EtapaPositions[] = [];
 
   for (const etapa of etapas) {
@@ -319,45 +403,11 @@ export async function getAnnualRanking(): Promise<RankingResponse> {
     if (etapaPositions) {
       etapasResult.push(etapaPositions);
     }
-
-    if (!etapaPositions || !etapaPositions.finished || etapaPositions.positions.length === 0) {
-      continue;
-    }
-
-    for (const pos of etapaPositions.positions) {
-      const existing = ranking.get(pos.teamId);
-      if (!existing) {
-        ranking.set(pos.teamId, {
-          teamId: pos.teamId,
-          teamName: pos.teamName,
-          points: pos.points,
-          appearances: 1,
-          bestPosition: pos.position,
-          etapas: [{ etapaId: etapa.id, etapaName: etapa.name, position: pos.position, points: pos.points }],
-        });
-      } else {
-        existing.points += pos.points;
-        existing.appearances += 1;
-        if (pos.position < (existing.bestPosition ?? Infinity)) {
-          existing.bestPosition = pos.position;
-        }
-        existing.etapas.push({ etapaId: etapa.id, etapaName: etapa.name, position: pos.position, points: pos.points });
-      }
-    }
   }
-
-  const rankingArray = [...ranking.values()];
-  rankingArray.sort(
-    (a, b) =>
-      b.points - a.points ||
-      (a.bestPosition ?? Infinity) - (b.bestPosition ?? Infinity) ||
-      a.teamName.localeCompare(b.teamName) ||
-      a.teamId.localeCompare(b.teamId),
-  );
 
   return {
     scale,
-    ranking: rankingArray,
+    ...aggregateRankedPlayers(etapasResult),
     etapas: etapasResult,
   };
 }

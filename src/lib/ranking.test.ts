@@ -5,11 +5,13 @@ import {
   POSITION_POINTS,
   positionPoints,
   computeFinalPositions,
+  aggregateRankedPlayers,
 } from "./ranking";
 
 import { nextRoundPairings } from "./brackets";
 import type { StandingRow } from "./standings";
 import type { Zone } from "../generated/prisma/client";
+import type { EtapaPositions } from "./ranking";
 
 const A: Zone = "A";
 const B: Zone = "B";
@@ -224,5 +226,101 @@ describe("computeFinalPositions", () => {
     const stages = finalPairings.map((p) => p.stage);
     assert.ok(stages.includes("BRONZE"), "BRONZE should be filled");
     assert.ok(stages.includes("FINAL"), "FINAL should be filled");
+  });
+});
+
+function etapaPositions(id: string, name: string, sortOrder: number, positions: Array<{
+  teamId: string;
+  position: number;
+  maleName: string | null;
+  femaleName: string | null;
+}>): EtapaPositions {
+  return {
+    id,
+    name,
+    date: null,
+    sortOrder,
+    finished: true,
+    positions: positions.map((p) => ({
+      ...p,
+      teamName: p.teamId.toUpperCase(),
+      points: positionPoints(p.position),
+      zone: null,
+    })),
+  };
+}
+
+describe("aggregateRankedPlayers", () => {
+  it("both players of a team earn the same position points", () => {
+    const etapas = [
+      etapaPositions("e1", "Etapa 1", 1, [
+        { teamId: "tA1", position: 1, maleName: "Sebita", femaleName: "Roxi" },
+        { teamId: "tA2", position: 2, maleName: "Santy", femaleName: "Vivi" },
+      ]),
+    ];
+    const { female, male } = aggregateRankedPlayers(etapas);
+    const roxi = female.find((p) => p.name === "Roxi");
+    const sebita = male.find((p) => p.name === "Sebita");
+    assert.ok(roxi, "Roxi in female ranking");
+    assert.ok(sebita, "Sebita in male ranking");
+    assert.equal(roxi!.points, 100, "1st = 100 pts for female");
+    assert.equal(sebita!.points, 100, "1st = 100 pts for male");
+    assert.equal(roxi!.bestPosition, 1);
+    assert.equal(roxi!.appearances, 1);
+    assert.equal(roxi!.etapas[0].etapaName, "Etapa 1");
+  });
+
+  it("same player across etapas accumulates points under one name", () => {
+    const etapas = [
+      etapaPositions("e1", "Etapa 1", 1, [
+        { teamId: "tA1", position: 1, maleName: "Sebita", femaleName: null },
+      ]),
+      etapaPositions("e2", "Etapa 2", 2, [
+        { teamId: "tB1", position: 2, maleName: "Sebita", femaleName: null },
+      ]),
+    ];
+    const { male } = aggregateRankedPlayers(etapas);
+    const sebita = male.find((p) => p.name === "Sebita");
+    assert.ok(sebita, "Sebita appears once");
+    assert.equal(sebita!.points, 180, "100 + 80 accumulated");
+    assert.equal(sebita!.appearances, 2);
+    assert.equal(sebita!.bestPosition, 1, "best position tracked");
+    assert.equal(sebita!.etapas.length, 2);
+  });
+
+  it("null-name positions are skipped", () => {
+    const etapas = [
+      etapaPositions("e1", "Etapa 1", 1, [
+        { teamId: "tA1", position: 1, maleName: null, femaleName: null },
+      ]),
+    ];
+    const { female, male } = aggregateRankedPlayers(etapas);
+    assert.equal(female.length, 0);
+    assert.equal(male.length, 0);
+  });
+
+  it("unfinished etapas are not aggregated", () => {
+    const etapas = [
+      { ...etapaPositions("e1", "Etapa 1", 1, [
+        { teamId: "tA1", position: 1, maleName: "Sebita", femaleName: null },
+      ]), finished: false },
+    ];
+    const { male } = aggregateRankedPlayers(etapas);
+    assert.equal(male.length, 0);
+  });
+
+  it("sorts by points desc, then bestPosition asc, then name asc", () => {
+    const etapas = [
+      etapaPositions("e1", "Etapa 1", 1, [
+        { teamId: "tA1", position: 1, maleName: "Zeta", femaleName: null },
+        { teamId: "tA2", position: 2, maleName: "Alpha", femaleName: null },
+      ]),
+      etapaPositions("e2", "Etapa 2", 2, [
+        { teamId: "tB1", position: 1, maleName: "Alpha", femaleName: null },
+      ]),
+    ];
+    const { male } = aggregateRankedPlayers(etapas);
+    // Alpha: 80 + 100 = 180; Zeta: 100
+    assert.deepEqual(male.map((p) => p.name), ["Alpha", "Zeta"]);
   });
 });

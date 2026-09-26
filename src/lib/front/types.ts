@@ -141,9 +141,11 @@ export type LoginResponse = { ok: true; email: string; username: string };
 
 export type ApiErrorBody = { error: string };
 
-export interface EtapaPositionRow {
+export interface EtapaPosition {
   teamId: string;
   teamName: string;
+  maleName: string | null;
+  femaleName: string | null;
   position: number;
   points: number;
   zone: ZoneId | null;
@@ -155,18 +157,21 @@ export interface EtapaPositions {
   date: string | null;
   sortOrder: number;
   finished: boolean;
-  positions: EtapaPositionRow[];
+  positions: EtapaPosition[];
 }
 
-export interface RankedTeam {
-  teamId: string;
-  teamName: string;
+export interface RankedPlayer {
+  name: string;
   points: number;
+  appearances: number;
+  bestPosition: number | null;
+  etapas: { etapaId: string; etapaName: string; position: number; points: number; teamName: string }[];
 }
 
 export interface RankingResponse {
   scale: number[];
-  ranking: RankedTeam[];
+  female: RankedPlayer[];
+  male: RankedPlayer[];
   etapas: EtapaPositions[];
 }
 
