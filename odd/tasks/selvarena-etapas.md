@@ -310,4 +310,4 @@ Tasks:
 - [x] route: `src/app/api/etapas/[id]/cancel/route.ts` (patrón close route; verifyPassword ya exportado; SSE etapa-cancelled)
 - [x] back: `requireEtapaOpen` bloquea si `cancelledAt` presente (409 `etapa_cancelled`)
 - [x] tests: 7 tests integration (record/edit/reorder/generateZones bloqueados, listEtapas expone cancelledAt, doble-cancel persiste); 401 password incorrecto verificado por inspección del route (repo no tiene harness de tests de ruta)
-- [x] validate: npm test 162/162 + npm run build OK (spot check propio: los 2 fallos iniciales eran acoplamiento de estado en los tests reutilizando cm1 COMPLETE → cm3/cm4 independientes)
+- [x] validate: npm test 162/162 + npm run build OK (spot check propio: los 2 fallos iniciales eran acoplamiento de estado en los tests reutilizando cm1 COMPLETE → cm3/cm4 independientes) — commit `0e1aa45` feat(etapas): cancel etapa with password confirmation
