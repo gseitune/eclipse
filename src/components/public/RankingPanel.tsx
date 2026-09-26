@@ -5,9 +5,6 @@ import { fetchRanking } from "@/lib/front/api";
 import type { RankingResponse } from "@/lib/front/types";
 import { ApiError } from "@/lib/front/types";
 
-const SCALE_LABEL =
-  "Puntos: 1° 100 · 2° 80 · 3° 65 · 4° 50 · 5°-6° 40 · 7° 30 · 8° 25 · 9°+ 10";
-
 /* ── Podium star (gold / silver / bronze) ── */
 function MedalStar({
   tier,
@@ -246,9 +243,6 @@ export function RankingPanel() {
           </div>
         </div>
       ) : null}
-
-      {/* Scale note */}
-      <p className="mt-4 text-[11px] text-stone-400">{SCALE_LABEL}</p>
     </section>
   );
 }
