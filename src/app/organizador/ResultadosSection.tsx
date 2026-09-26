@@ -26,6 +26,25 @@ function CheckIcon() {
   );
 }
 
+/* ── Lock icon (inline SVG — inactive match board) ── */
+function LockIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className="h-5 w-5 flex-shrink-0 text-stone-400"
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path
+        fillRule="evenodd"
+        d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+        clipRule="evenodd"
+      />
+    </svg>
+  );
+}
+
 /* ── Props ── */
 export interface ResultadosSectionProps {
   readonly onBack: () => void;
@@ -235,100 +254,131 @@ export function ResultadosSection({ onBack }: ResultadosSectionProps) {
         )}
       </section>
 
-      {/* ── Part 2: Quick entry ── */}
+      {/* ── Part 2: Match scoreboard ── */}
       <section aria-label="Cargar resultado" className="mb-6">
         <h3 className="text-sm font-semibold text-stone-700 mb-3">
           Cargar resultado
         </h3>
 
         {!nextMatch ? (
-          <p className="text-sm text-stone-400 py-4">No hay partido para cargar</p>
+          /* Inactive board — gray with lock */
+          <div className="flex items-center justify-center gap-2 rounded-xl border border-sand-200 bg-stone-100/70 px-6 py-10 text-stone-400">
+            <LockIcon />
+            <span className="text-sm font-medium">
+              Sin partido activo
+            </span>
+          </div>
         ) : (
-          <div className="rounded-xl border border-sand-200 bg-sand-50 p-5 space-y-4">
-            {/* Match info */}
+          <div className="rounded-xl border border-sand-300 bg-sand-50 p-5 space-y-4">
+            {/* Match label + window */}
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
                 <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">
                   {stageLabel(nextMatch.stage)}
                 </span>
-                <p className="text-base font-semibold text-stone-900 mt-0.5">
-                  {nextMatch.teamA?.name ?? "?"} vs {nextMatch.teamB?.name ?? "?"}
-                </p>
+                {windowText(schedule, nextMatch.id) && (
+                  <p className="text-xs text-stone-400 mt-0.5">
+                    {windowText(schedule, nextMatch.id)}
+                  </p>
+                )}
               </div>
-              {windowText(schedule, nextMatch.id) && (
-                <span className="text-xs text-stone-400 whitespace-nowrap">
-                  {windowText(schedule, nextMatch.id)}
-                </span>
-              )}
+
+              {/* Tab switch */}
+              <div
+                role="tablist"
+                className="inline-flex rounded-lg bg-stone-100 p-1 gap-0.5"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === "sets"}
+                  onClick={() => { setActiveTab("sets"); setSubmitMsg(null); }}
+                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors min-h-[44px] ${
+                    activeTab === "sets"
+                      ? "bg-white text-stone-900 shadow-sm"
+                      : "text-stone-500 hover:text-stone-700"
+                  }`}
+                >
+                  Sets
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === "winner"}
+                  onClick={() => { setActiveTab("winner"); setSubmitMsg(null); }}
+                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors min-h-[44px] ${
+                    activeTab === "winner"
+                      ? "bg-white text-stone-900 shadow-sm"
+                      : "text-stone-500 hover:text-stone-700"
+                  }`}
+                >
+                  1 ganador
+                </button>
+              </div>
             </div>
 
-            {/* Tab switch */}
-            <div
-              role="tablist"
-              className="inline-flex rounded-lg bg-stone-100 p-1 gap-0.5"
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeTab === "sets"}
-                onClick={() => { setActiveTab("sets"); setSubmitMsg(null); }}
-                className={`px-4 py-2.5 text-sm font-medium rounded-md transition-colors min-h-[44px] ${
-                  activeTab === "sets"
-                    ? "bg-white text-stone-900 shadow-sm"
-                    : "text-stone-500 hover:text-stone-700"
-                }`}
-              >
-                Sets
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeTab === "winner"}
-                onClick={() => { setActiveTab("winner"); setSubmitMsg(null); }}
-                className={`px-4 py-2.5 text-sm font-medium rounded-md transition-colors min-h-[44px] ${
-                  activeTab === "winner"
-                    ? "bg-white text-stone-900 shadow-sm"
-                    : "text-stone-500 hover:text-stone-700"
-                }`}
-              >
-                1 ganador
-              </button>
-            </div>
-
-            {/* Sets inputs */}
+            {/* Sets scoreboard — teams on each side, number in the middle */}
             {activeTab === "sets" && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <label htmlFor="set-a" className="sr-only">
-                    Sets del equipo A
-                  </label>
-                  <input
-                    id="set-a"
-                    type="number"
-                    inputMode="numeric"
-                    min="1"
-                    value={setAScore}
-                    onChange={(e) => setSetAScore(e.target.value)}
-                    disabled={submitting}
-                    placeholder="0"
-                    className="w-20 rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-center text-lg font-semibold text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
-                  />
-                  <span className="text-stone-400 font-medium">—</span>
-                  <label htmlFor="set-b" className="sr-only">
-                    Sets del equipo B
-                  </label>
-                  <input
-                    id="set-b"
-                    type="number"
-                    inputMode="numeric"
-                    min="1"
-                    value={setBScore}
-                    onChange={(e) => setSetBScore(e.target.value)}
-                    disabled={submitting}
-                    placeholder="0"
-                    className="w-20 rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-center text-lg font-semibold text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
-                  />
+              <div className="space-y-4">
+                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                  {/* Team A */}
+                  <div className="text-right">
+                    <span className="block text-base font-semibold text-stone-900">
+                      {nextMatch.teamA?.name ?? "Equipo A"}
+                    </span>
+                    {nextMatch.teamA && (
+                      <span className="block text-[11px] text-stone-400 mt-0.5">
+                        Equipo A
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Middle score */}
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="set-a" className="sr-only">
+                      Sets del equipo A
+                    </label>
+                    <input
+                      id="set-a"
+                      type="number"
+                      inputMode="numeric"
+                      min="1"
+                      value={setAScore}
+                      onChange={(e) => setSetAScore(e.target.value)}
+                      disabled={submitting}
+                      placeholder="0"
+                      className="w-16 rounded-lg border border-sand-300 bg-white px-2 py-2.5 text-center text-lg font-bold text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                    />
+                    <span className="text-stone-400 font-bold">:</span>
+                    <label htmlFor="set-b" className="sr-only">
+                      Sets del equipo B
+                    </label>
+                    <input
+                      id="set-b"
+                      type="number"
+                      inputMode="numeric"
+                      min="1"
+                      value={setBScore}
+                      onChange={(e) => setSetBScore(e.target.value)}
+                      disabled={submitting}
+                      placeholder="0"
+                      className="w-16 rounded-lg border border-sand-300 bg-white px-2 py-2.5 text-center text-lg font-bold text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                    />
+                  </div>
+
+                  {/* Team B */}
+                  <div className="text-left">
+                    <span className="block text-base font-semibold text-stone-900">
+                      {nextMatch.teamB?.name ?? "Equipo B"}
+                    </span>
+                    {nextMatch.teamB && (
+                      <span className="block text-[11px] text-stone-400 mt-0.5">
+                        Equipo B
+                      </span>
+                    )}
+                  </div>
                 </div>
+
                 <button
                   type="button"
                   onClick={handleSetsSubmit}
