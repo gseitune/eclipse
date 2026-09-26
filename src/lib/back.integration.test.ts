@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
+import { Prisma } from "@/generated/prisma/client";
 
 /**
  * Integration tests for recordResult/editResult against a throwaway SQLite
@@ -332,13 +333,35 @@ describe("recordResult/editResult (integration)", () => {
     assert.equal(m5?.winnerId, "tA1", "2-0 sweep decides the final");
   });
 
-  it("blocks editing a semifinal once the final played", async () => {
+it("blocks editing a semifinal once the final played", async () => {
     await assert.rejects(
       () => editResult({ matchId: "m3", setFormat: "TWO_15_TIEBREAK", sets: [{ teamA: 15, teamB: 13 }] }),
       (err: unknown) =>
         err instanceof BackError &&
         err.status === 409 &&
         err.reason === "editing_blocks_bracket",
+    );
+  });
+
+  it("rejects recordResult on a closed etapa (etapa_cerrada)", async () => {
+    // Reset m2 to PENDING (it may have been played by earlier tests)
+    await prisma.match.update({
+      where: { id: "m2" },
+      data: { resultStatus: "PENDING", winnerId: null, sets: Prisma.DbNull, recordedAt: null },
+    });
+
+    // Close the etapa by setting closedAt directly
+    await prisma.etapa.update({
+      where: { id: etapaId },
+      data: { closedAt: new Date() },
+    });
+
+    await assert.rejects(
+      () => recordResult({ matchId: "m2", winnerId: "tB1" }),
+      (err: unknown) =>
+        err instanceof BackError &&
+        err.status === 409 &&
+        err.reason === "etapa_cerrada",
     );
   });
 });

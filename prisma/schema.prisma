@@ -56,6 +56,7 @@ model Etapa {
   teams     Team[]
   matches   Match[]
   state     TournamentState?
+  closedAt  DateTime?         /// inmutable: no results/zones edits after close
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
 }

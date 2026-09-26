@@ -39,6 +39,7 @@ export type EtapaMinAggregateOutputType = {
   name: string | null
   date: Date | null
   sortOrder: number | null
+  closedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -48,6 +49,7 @@ export type EtapaMaxAggregateOutputType = {
   name: string | null
   date: Date | null
   sortOrder: number | null
+  closedAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -57,6 +59,7 @@ export type EtapaCountAggregateOutputType = {
   name: number
   date: number
   sortOrder: number
+  closedAt: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -76,6 +79,7 @@ export type EtapaMinAggregateInputType = {
   name?: true
   date?: true
   sortOrder?: true
+  closedAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -85,6 +89,7 @@ export type EtapaMaxAggregateInputType = {
   name?: true
   date?: true
   sortOrder?: true
+  closedAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -94,6 +99,7 @@ export type EtapaCountAggregateInputType = {
   name?: true
   date?: true
   sortOrder?: true
+  closedAt?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -190,6 +196,7 @@ export type EtapaGroupByOutputType = {
   name: string
   date: Date | null
   sortOrder: number
+  closedAt: Date | null
   createdAt: Date
   updatedAt: Date
   _count: EtapaCountAggregateOutputType | null
@@ -222,6 +229,7 @@ export type EtapaWhereInput = {
   name?: Prisma.StringFilter<"Etapa"> | string
   date?: Prisma.DateTimeNullableFilter<"Etapa"> | Date | string | null
   sortOrder?: Prisma.IntFilter<"Etapa"> | number
+  closedAt?: Prisma.DateTimeNullableFilter<"Etapa"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Etapa"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Etapa"> | Date | string
   teams?: Prisma.TeamListRelationFilter
@@ -234,6 +242,7 @@ export type EtapaOrderByWithRelationInput = {
   name?: Prisma.SortOrder
   date?: Prisma.SortOrderInput | Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
+  closedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   teams?: Prisma.TeamOrderByRelationAggregateInput
@@ -249,6 +258,7 @@ export type EtapaWhereUniqueInput = Prisma.AtLeast<{
   name?: Prisma.StringFilter<"Etapa"> | string
   date?: Prisma.DateTimeNullableFilter<"Etapa"> | Date | string | null
   sortOrder?: Prisma.IntFilter<"Etapa"> | number
+  closedAt?: Prisma.DateTimeNullableFilter<"Etapa"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Etapa"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Etapa"> | Date | string
   teams?: Prisma.TeamListRelationFilter
@@ -261,6 +271,7 @@ export type EtapaOrderByWithAggregationInput = {
   name?: Prisma.SortOrder
   date?: Prisma.SortOrderInput | Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
+  closedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.EtapaCountOrderByAggregateInput
@@ -278,6 +289,7 @@ export type EtapaScalarWhereWithAggregatesInput = {
   name?: Prisma.StringWithAggregatesFilter<"Etapa"> | string
   date?: Prisma.DateTimeNullableWithAggregatesFilter<"Etapa"> | Date | string | null
   sortOrder?: Prisma.IntWithAggregatesFilter<"Etapa"> | number
+  closedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Etapa"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Etapa"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Etapa"> | Date | string
 }
@@ -287,6 +299,7 @@ export type EtapaCreateInput = {
   name: string
   date?: Date | string | null
   sortOrder?: number
+  closedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   teams?: Prisma.TeamCreateNestedManyWithoutEtapaInput
@@ -299,6 +312,7 @@ export type EtapaUncheckedCreateInput = {
   name: string
   date?: Date | string | null
   sortOrder?: number
+  closedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   teams?: Prisma.TeamUncheckedCreateNestedManyWithoutEtapaInput
@@ -311,6 +325,7 @@ export type EtapaUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teams?: Prisma.TeamUpdateManyWithoutEtapaNestedInput
@@ -323,6 +338,7 @@ export type EtapaUncheckedUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teams?: Prisma.TeamUncheckedUpdateManyWithoutEtapaNestedInput
@@ -335,6 +351,7 @@ export type EtapaCreateManyInput = {
   name: string
   date?: Date | string | null
   sortOrder?: number
+  closedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -344,6 +361,7 @@ export type EtapaUpdateManyMutationInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -353,6 +371,7 @@ export type EtapaUncheckedUpdateManyInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -362,6 +381,7 @@ export type EtapaCountOrderByAggregateInput = {
   name?: Prisma.SortOrder
   date?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
+  closedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -375,6 +395,7 @@ export type EtapaMaxOrderByAggregateInput = {
   name?: Prisma.SortOrder
   date?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
+  closedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -384,6 +405,7 @@ export type EtapaMinOrderByAggregateInput = {
   name?: Prisma.SortOrder
   date?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
+  closedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -456,6 +478,7 @@ export type EtapaCreateWithoutStateInput = {
   name: string
   date?: Date | string | null
   sortOrder?: number
+  closedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   teams?: Prisma.TeamCreateNestedManyWithoutEtapaInput
@@ -467,6 +490,7 @@ export type EtapaUncheckedCreateWithoutStateInput = {
   name: string
   date?: Date | string | null
   sortOrder?: number
+  closedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   teams?: Prisma.TeamUncheckedCreateNestedManyWithoutEtapaInput
@@ -494,6 +518,7 @@ export type EtapaUpdateWithoutStateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teams?: Prisma.TeamUpdateManyWithoutEtapaNestedInput
@@ -505,6 +530,7 @@ export type EtapaUncheckedUpdateWithoutStateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teams?: Prisma.TeamUncheckedUpdateManyWithoutEtapaNestedInput
@@ -516,6 +542,7 @@ export type EtapaCreateWithoutTeamsInput = {
   name: string
   date?: Date | string | null
   sortOrder?: number
+  closedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   matches?: Prisma.MatchCreateNestedManyWithoutEtapaInput
@@ -527,6 +554,7 @@ export type EtapaUncheckedCreateWithoutTeamsInput = {
   name: string
   date?: Date | string | null
   sortOrder?: number
+  closedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   matches?: Prisma.MatchUncheckedCreateNestedManyWithoutEtapaInput
@@ -554,6 +582,7 @@ export type EtapaUpdateWithoutTeamsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   matches?: Prisma.MatchUpdateManyWithoutEtapaNestedInput
@@ -565,6 +594,7 @@ export type EtapaUncheckedUpdateWithoutTeamsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   matches?: Prisma.MatchUncheckedUpdateManyWithoutEtapaNestedInput
@@ -576,6 +606,7 @@ export type EtapaCreateWithoutMatchesInput = {
   name: string
   date?: Date | string | null
   sortOrder?: number
+  closedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   teams?: Prisma.TeamCreateNestedManyWithoutEtapaInput
@@ -587,6 +618,7 @@ export type EtapaUncheckedCreateWithoutMatchesInput = {
   name: string
   date?: Date | string | null
   sortOrder?: number
+  closedAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   teams?: Prisma.TeamUncheckedCreateNestedManyWithoutEtapaInput
@@ -614,6 +646,7 @@ export type EtapaUpdateWithoutMatchesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teams?: Prisma.TeamUpdateManyWithoutEtapaNestedInput
@@ -625,6 +658,7 @@ export type EtapaUncheckedUpdateWithoutMatchesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teams?: Prisma.TeamUncheckedUpdateManyWithoutEtapaNestedInput
@@ -676,6 +710,7 @@ export type EtapaSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   name?: boolean
   date?: boolean
   sortOrder?: boolean
+  closedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   teams?: boolean | Prisma.Etapa$teamsArgs<ExtArgs>
@@ -689,6 +724,7 @@ export type EtapaSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   name?: boolean
   date?: boolean
   sortOrder?: boolean
+  closedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["etapa"]>
@@ -698,6 +734,7 @@ export type EtapaSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   name?: boolean
   date?: boolean
   sortOrder?: boolean
+  closedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["etapa"]>
@@ -707,11 +744,12 @@ export type EtapaSelectScalar = {
   name?: boolean
   date?: boolean
   sortOrder?: boolean
+  closedAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type EtapaOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "date" | "sortOrder" | "createdAt" | "updatedAt", ExtArgs["result"]["etapa"]>
+export type EtapaOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "date" | "sortOrder" | "closedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["etapa"]>
 export type EtapaInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   teams?: boolean | Prisma.Etapa$teamsArgs<ExtArgs>
   matches?: boolean | Prisma.Etapa$matchesArgs<ExtArgs>
@@ -733,6 +771,10 @@ export type $EtapaPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     name: string
     date: Date | null
     sortOrder: number
+    /**
+     * inmutable: no results/zones edits after close
+     */
+    closedAt: Date | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["etapa"]>
@@ -1165,6 +1207,7 @@ export interface EtapaFieldRefs {
   readonly name: Prisma.FieldRef<"Etapa", 'String'>
   readonly date: Prisma.FieldRef<"Etapa", 'DateTime'>
   readonly sortOrder: Prisma.FieldRef<"Etapa", 'Int'>
+  readonly closedAt: Prisma.FieldRef<"Etapa", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Etapa", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Etapa", 'DateTime'>
 }

@@ -844,6 +844,7 @@ export const EtapaScalarFieldEnum = {
   name: 'name',
   date: 'date',
   sortOrder: 'sortOrder',
+  closedAt: 'closedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const

@@ -63,6 +63,7 @@ export interface EtapaMeta {
   date: string | null;
   sortOrder: number;
   teamCount: number;
+  closedAt: string | null;
 }
 
 export async function listEtapas(): Promise<EtapaMeta[]> {
@@ -73,6 +74,7 @@ export async function listEtapas(): Promise<EtapaMeta[]> {
       name: true,
       date: true,
       sortOrder: true,
+      closedAt: true,
       _count: { select: { teams: true } },
     },
   });
@@ -82,6 +84,7 @@ export async function listEtapas(): Promise<EtapaMeta[]> {
     date: e.date ? e.date.toISOString() : null,
     sortOrder: e.sortOrder,
     teamCount: e._count.teams,
+    closedAt: e.closedAt ? e.closedAt.toISOString() : null,
   }));
 }
 
@@ -220,12 +223,28 @@ async function requireUnconfirmed(message: string, etapaId?: string | null): Pro
   if (state.zoneConfirmed) throw new BackError(message, 409);
 }
 
+/** Reads the Etapa row and throws 409 when closedAt is set. */
+async function requireEtapaOpen(etapaId: string): Promise<void> {
+  const etapa = await prisma.etapa.findUnique({
+    where: { id: etapaId },
+    select: { closedAt: true },
+  });
+  if (etapa && etapa.closedAt) {
+    throw new BackError(
+      "Circuito cerrado: la etapa ya no admite modificaciones.",
+      409,
+      "etapa_cerrada",
+    );
+  }
+}
+
 export async function generateZones(etapaId?: string | null): Promise<Record<string, string>> {
+  const id = await resolveEtapaId(etapaId);
+  await requireEtapaOpen(id);
   await requireUnconfirmed(
     "Zonification is confirmed: re-arming is forbidden after fixture generation.",
     etapaId,
   );
-  const id = await resolveEtapaId(etapaId);
   const teams = await prisma.team.findMany({ where: { etapaId: id }, select: { id: true } });
   if (teams.length < 6) {
     throw new BackError("Need at least 6 teams to arm zones.", 400);
@@ -249,11 +268,12 @@ export async function swapTeam(
   to: string,
   etapaId?: string | null,
 ): Promise<Record<string, string>> {
+  const id = await resolveEtapaId(etapaId);
+  await requireEtapaOpen(id);
   await requireUnconfirmed(
     "Zonification is confirmed: manual swaps are forbidden after fixture generation.",
     etapaId,
   );
-  const id = await resolveEtapaId(etapaId);
   const state = await getState(id);
   const teams = await prisma.team.findMany({
     where: { etapaId: id },
@@ -274,6 +294,7 @@ export async function swapTeam(
 
 export async function confirmZonification(etapaId?: string | null): Promise<{ zoneConfirmed: boolean }> {
   const id = await resolveEtapaId(etapaId);
+  await requireEtapaOpen(id);
   const state = await getState(id);
   await prisma.tournamentState.update({
     where: { id: state.id },
@@ -672,6 +693,8 @@ export async function recordResult(input: RecordResultInput) {
     throw new BackError("Bracket slot has no teams yet.", 409);
   }
 
+  await requireEtapaOpen(match.etapaId);
+
   const payload = resolveResultPayload(
     match.teamAId,
     match.teamBId,
@@ -756,6 +779,8 @@ export async function editResult(input: EditResultInput) {
   if (!match.teamAId || !match.teamBId) {
     throw new BackError("Bracket slot has no teams yet.", 409);
   }
+
+  await requireEtapaOpen(match.etapaId);
 
   const payload = resolveResultPayload(
     match.teamAId,
