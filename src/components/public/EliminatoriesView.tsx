@@ -143,6 +143,48 @@ export function EliminatoriesView({
         <Podium positions={lastFinishedPositions} />
       )}
 
+      {/* FINAL card — centered below the podium, above the semifinals */}
+      {finalMatch && (
+        <div className="mt-4 flex justify-center">
+          <div
+            className={`w-full max-w-xs rounded-xl border p-4 ${
+              finalComplete
+                ? "ring-2 ring-amber-500 ring-inset bg-amber-50/40"
+                : "border-sand-200 bg-white/40"
+            }`}
+          >
+            <p className="text-center text-xs font-semibold uppercase tracking-wider text-stone-400">
+              {stageLabel(finalMatch.stage)}
+            </p>
+            <div className="mt-3 space-y-2">
+              <button
+                onClick={() => handleOpenTeam(finalMatch, "A")}
+                className={`min-h-[44px] w-full rounded-lg px-3 py-2 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 ${
+                  finalMatch.winnerId === finalMatch.teamAId && finalComplete
+                    ? "bg-amber-50 text-amber-800 font-bold ring-2 ring-amber-400"
+                    : "text-stone-800 hover:bg-sand-100"
+                }`}
+              >
+                {finalMatch.teamA?.name ?? "—"}
+              </button>
+              <button
+                onClick={() => handleOpenTeam(finalMatch, "B")}
+                className={`min-h-[44px] w-full rounded-lg px-3 py-2 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 ${
+                  finalMatch.winnerId === finalMatch.teamBId && finalComplete
+                    ? "bg-amber-50 text-amber-800 font-bold ring-2 ring-amber-400"
+                    : "text-stone-800 hover:bg-sand-100"
+                }`}
+              >
+                {finalMatch.teamB?.name ?? "—"}
+              </button>
+              <p className="text-center text-sm font-semibold text-stone-700">
+                {matchResultLabel(finalMatch)}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Semifinal cards — two side by side on sm+ */}
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {[semifinal1, semifinal2].map((match) => {
@@ -221,48 +263,6 @@ export function EliminatoriesView({
           );
         })}
       </div>
-
-      {/* FINAL card — centered below, winner ascends */}
-      {finalMatch && (
-        <div className="mt-4 flex justify-center">
-          <div
-            className={`w-full max-w-xs rounded-xl border p-4 ${
-              finalComplete
-                ? "ring-2 ring-amber-500 ring-inset bg-amber-50/40"
-                : "border-sand-200 bg-white/40"
-            }`}
-          >
-            <p className="text-center text-xs font-semibold uppercase tracking-wider text-stone-400">
-              {stageLabel(finalMatch.stage)}
-            </p>
-            <div className="mt-3 space-y-2">
-              <button
-                onClick={() => handleOpenTeam(finalMatch, "A")}
-                className={`min-h-[44px] w-full rounded-lg px-3 py-2 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 ${
-                  finalMatch.winnerId === finalMatch.teamAId && finalComplete
-                    ? "bg-amber-50 text-amber-800 font-bold ring-2 ring-amber-400"
-                    : "text-stone-800 hover:bg-sand-100"
-                }`}
-              >
-                {finalMatch.teamA?.name ?? "—"}
-              </button>
-              <button
-                onClick={() => handleOpenTeam(finalMatch, "B")}
-                className={`min-h-[44px] w-full rounded-lg px-3 py-2 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 ${
-                  finalMatch.winnerId === finalMatch.teamBId && finalComplete
-                    ? "bg-amber-50 text-amber-800 font-bold ring-2 ring-amber-400"
-                    : "text-stone-800 hover:bg-sand-100"
-                }`}
-              >
-                {finalMatch.teamB?.name ?? "—"}
-              </button>
-              <p className="text-center text-sm font-semibold text-stone-700">
-                {matchResultLabel(finalMatch)}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
       </section>
     );
   }
