@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { liveMatchIds } from "@/lib/front/live";
 import { stageLabel, phaseLabel, isKnownPhase } from "@/lib/front/phase";
-import type { MatchPublic, ScheduleRow } from "@/lib/front/types";
+import type { MatchPublic, ScheduleRow, EtapaPosition } from "@/lib/front/types";
 import { setWins } from "@/lib/front/types";
+import { fetchRanking } from "@/lib/front/api";
+import { Podium } from "@/components/public/Podium";
 
 interface EliminatoriesViewProps {
   brackets: MatchPublic[];
@@ -27,6 +28,29 @@ export function EliminatoriesView({
     [schedule, matchMinutes],
   );
 
+  // Podium data: only the last finished etapa
+  const [lastFinishedPositions, setLastFinishedPositions] = useState<
+    EtapaPosition[] | null
+  >(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchRanking()
+      .then((data) => {
+        if (cancelled) return;
+        const finished = [...data.etapas]
+          .reverse()
+          .find((e) => e.finished && e.positions.length > 0);
+        setLastFinishedPositions(finished ? finished.positions : null);
+      })
+      .catch(() => {
+        if (!cancelled) setLastFinishedPositions(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const semis = useMemo(
     () =>
       brackets.filter(
@@ -39,11 +63,9 @@ export function EliminatoriesView({
   const semifinal2 = semis.find((b) => b.stage === "SEMIFINAL_2") ?? null;
   const finalMatch = brackets.find((b) => b.stage === "FINAL") ?? null;
 
-  const isEliminatories = phase === "ELIMINATORIES";
   const isDesempate = phase === "DESEMPATE";
 
   // Champion from FINAL match
-  const champion = finalMatch?.winner;
   const finalComplete =
     finalMatch &&
     (finalMatch.resultStatus === "COMPLETE" ||
@@ -115,6 +137,11 @@ export function EliminatoriesView({
   return (
     <section aria-label="Cuadro" className="rounded-2xl border border-sand-300 bg-white/40 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
       <h2 className="text-lg font-semibold text-stone-900">Cuadro</h2>
+
+      {/* Podium — last finished etapa, above the bracket */}
+      {lastFinishedPositions && (
+        <Podium positions={lastFinishedPositions} />
+      )}
 
       {/* Semifinal cards — two side by side on sm+ */}
       <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -234,40 +261,6 @@ export function EliminatoriesView({
               </p>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Champion card */}
-      <div className="mt-4 flex justify-center">
-        {finalComplete && champion ? (
-          <div className="w-full max-w-xs rounded-xl border border-amber-400 bg-amber-50/60 p-6 text-center ring-2 ring-amber-300 ring-inset">
-            <p className="text-xs font-semibold uppercase tracking-wider text-amber-700">
-              CAMPEÓN
-            </p>
-            <p className="mt-2 text-2xl font-bold text-stone-900">
-              {champion.name}
-            </p>
-          </div>
-        ) : (
-          <div className="w-full max-w-xs rounded-xl border border-sand-200 bg-white/40 p-6 text-center">
-            <p className="text-sm text-stone-400">
-              {isEliminatories
-                ? "La final se juega ahora"
-                : "Próximamente"}
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* VER POSICIONES FINALES link */}
-      {(isEliminatories || isDesempate) && (
-        <div className="mt-4 text-center">
-          <Link
-            href="/agenda"
-            className="inline-flex items-center justify-center rounded-xl border border-sand-300 bg-white/40 px-4 py-2 text-sm font-semibold text-stone-700 backdrop-blur ring-1 ring-inset ring-sand-200 hover:bg-sand-100 transition-colors min-h-[44px]"
-          >
-            Ver posiciones finales
-          </Link>
         </div>
       )}
       </section>
