@@ -4,8 +4,15 @@ import Link from "next/link";
 import type { StateSnapshot } from "@/lib/front/types";
 import { PublicHome } from "@/components/public/PublicHome";
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ preview?: string }>;
+}) {
   await connection();
+
+  const params = await searchParams;
+  const isPreview = params.preview === "1";
 
   const headersList = await headers();
   const proto = headersList.get("x-forwarded-proto") ?? "http";
@@ -27,7 +34,7 @@ export default async function Home() {
 
   return (
     <>
-      <PublicHome initial={initial} />
+      <PublicHome initial={initial} isPreview={isPreview} />
       {fetchError && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
           <Link

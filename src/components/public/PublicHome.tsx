@@ -15,7 +15,13 @@ import { TeamSheet } from "./TeamSheet";
 import { ChimeBanner } from "./ChimeBanner";
 import { RankingPanel } from "./RankingPanel";
 
-export function PublicHome({ initial }: { initial: StateSnapshot | null }) {
+export function PublicHome({
+  initial,
+  isPreview = false,
+}: {
+  initial: StateSnapshot | null;
+  isPreview?: boolean;
+}) {
   const { state, loading, error } = useLiveState({ initial });
 
   // Mount chime hook — triggers audio on new live matches
@@ -62,13 +68,15 @@ export function PublicHome({ initial }: { initial: StateSnapshot | null }) {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Organizer link — fixed top-right corner */}
-      <Link
-        href="/organizador"
-        className="fixed right-0 top-0 z-50 rounded-bl-xl border-b border-l border-sand-300 bg-sand-50 px-4 py-2 text-xs font-semibold text-stone-600 ring-1 ring-inset ring-sand-300 transition-colors hover:bg-sand-100 min-h-[44px] inline-flex items-center"
-      >
-        Organizador
-      </Link>
+      {/* Organizer link — fixed top-right corner (hidden inside organizer preview) */}
+      {!isPreview && (
+        <Link
+          href="/organizador"
+          className="fixed right-0 top-0 z-50 rounded-bl-xl border-b border-l border-sand-300 bg-sand-50 px-4 py-2 text-xs font-semibold text-stone-600 ring-1 ring-inset ring-sand-300 transition-colors hover:bg-sand-100 min-h-[44px] inline-flex items-center"
+        >
+          Organizador
+        </Link>
+      )}
 
       {/* Loading skeleton */}
       {loading && !initial && (

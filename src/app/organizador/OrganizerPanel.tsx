@@ -265,7 +265,7 @@ export function OrganizerPanel({
             </span>
           </div>
           <iframe
-            src="/"
+            src="/?preview=1"
             className="flex-1 w-full border-0"
             title="Vista previa de la página pública"
             sandbox="allow-same-origin allow-scripts allow-forms"
