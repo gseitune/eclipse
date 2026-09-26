@@ -7,6 +7,7 @@ import { setWins } from "@/lib/front/types";
 import type { MatchPublic } from "@/lib/front/types";
 import { ResultadosSection } from "./ResultadosSection";
 import { CircuitosSection } from "./CircuitosSection";
+import { ReagendarSection } from "./ReagendarSection";
 
 /* ── Lock icon (inline SVG, no emoji, no external dependency) ── */
 function LockIcon() {
@@ -49,8 +50,8 @@ const SECTIONS: readonly SectionConfig[] = [
   },
   {
     label: "Reagendar partidos",
-    hint: "Reagendar partidos — Próximamente",
-    kind: "disabled",
+    hint: "Ver y modificar el orden de los partidos del día",
+    kind: "actionable",
   },
 ] as const;
 
@@ -184,7 +185,7 @@ export function OrganizerPanel({
 }: OrganizerPanelProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [activeSection, setActiveSection] = useState<
-    "resultados" | "circuitos" | null
+    "resultados" | "circuitos" | "reagendar" | null
   >(null);
   const [view, setView] = useState<"panel" | "public">("panel");
 
@@ -198,6 +199,9 @@ export function OrganizerPanel({
         break;
       case "Creador de equipos":
         setActiveSection("circuitos");
+        break;
+      case "Reagendar partidos":
+        setActiveSection("reagendar");
         break;
       default:
         setActiveSection(null);
@@ -262,6 +266,8 @@ export function OrganizerPanel({
           <ResultadosSection onBack={() => setActiveSection(null)} />
         ) : activeSection === "circuitos" ? (
           <CircuitosSection onBack={() => setActiveSection(null)} />
+        ) : activeSection === "reagendar" ? (
+          <ReagendarSection onBack={() => setActiveSection(null)} />
         ) : (
           /* Sections list */
           <main className="mx-auto w-full max-w-3xl px-6 py-8">

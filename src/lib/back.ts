@@ -440,6 +440,137 @@ export async function getStandings(etapaId?: string | null): Promise<Partial<Rec
   return standings;
 }
 
+export interface ScheduleBoardRow {
+  id: string;
+  slot: number;
+  stage: string;
+  zone: string | null;
+  scheduled: string | null;
+  estimated: string | null;
+  estimatedFromResult: boolean;
+  teamA: { id: string; name: string } | null;
+  teamB: { id: string; name: string } | null;
+  resultStatus: string;
+  editable: boolean;
+}
+
+export async function getScheduleBoard(etapaId?: string | null): Promise<ScheduleBoardRow[]> {
+  const id = await resolveEtapaId(etapaId);
+  const [state, matches] = await Promise.all([
+    getState(id),
+    prisma.match.findMany({
+      where: { etapaId: id },
+      include: { teamA: { select: { id: true, name: true } }, teamB: { select: { id: true, name: true } } },
+      orderBy: { slot: "asc" },
+    }),
+  ]);
+
+  const input: ScheduleMatchInput[] = matches.map((m) => ({
+    id: m.id,
+    slot: m.slot,
+    stage: m.stage,
+    timeLabel: m.timeLabel,
+    sets: (m.sets ?? null) as SetScore[] | null,
+    setFormat: m.setFormat,
+    resultStatus: m.resultStatus,
+    recordedAt: m.recordedAt,
+  }));
+
+  const rows = computeSchedule(input, state.prepMinutes, state.matchMinutes);
+
+  const matchMap = new Map(matches.map((m) => [m.id, m]));
+
+  return rows.map((row) => {
+    const match = matchMap.get(row.id)!;
+    return {
+      ...row,
+      zone: match.zone,
+      teamA: match.teamA ? { id: match.teamA.id, name: match.teamA.name } : null,
+      teamB: match.teamB ? { id: match.teamB.id, name: match.teamB.name } : null,
+      resultStatus: match.resultStatus,
+      editable: row.editable,
+    };
+  });
+}
+
+/**
+ * Reorder a match within an etapa by swapping its slot with the nearest
+ * PENDING neighbor in the given direction ("up" = lower slot, "down" = higher slot).
+ * Only PENDING matches can be moved. Uses a transaction to swap two slots.
+ */
+export async function reorderMatch(matchId: string, direction: "up" | "down"): Promise<void> {
+  const match = await prisma.match.findUnique({
+    where: { id: matchId },
+    select: { id: true, slot: true, stage: true, resultStatus: true, etapaId: true },
+  });
+
+  if (!match) {
+    throw new BackError("Match not found.", 404, "match_not_found");
+  }
+
+  if (match.resultStatus !== "PENDING") {
+    throw new BackError("Only PENDING matches can be reordered.", 409, "match_not_pending");
+  }
+
+  const id = match.etapaId;
+
+  const allMatches = await prisma.match.findMany({
+    where: { etapaId: id },
+    select: { id: true, slot: true, resultStatus: true },
+    orderBy: { slot: "asc" },
+  });
+
+  const currentIndex = allMatches.findIndex((m) => m.id === matchId);
+  if (currentIndex === -1) {
+    throw new BackError("Match not found in this etapa.", 404, "match_not_found");
+  }
+
+  let swapIndex = -1;
+
+  if (direction === "up") {
+    // Find nearest PENDING neighbor with lower slot
+    for (let i = currentIndex - 1; i >= 0; i--) {
+      if (allMatches[i].resultStatus === "PENDING") {
+        swapIndex = i;
+        break;
+      }
+    }
+  } else {
+    // Find nearest PENDING neighbor with higher slot
+    for (let i = currentIndex + 1; i < allMatches.length; i++) {
+      if (allMatches[i].resultStatus === "PENDING") {
+        swapIndex = i;
+        break;
+      }
+    }
+  }
+
+  if (swapIndex === -1) {
+    throw new BackError(
+      direction === "up"
+        ? "No pending match with a lower slot to swap with."
+        : "No pending match with a higher slot to swap with.",
+      409,
+      direction === "up" ? "no_pending_neighbor_up" : "no_pending_neighbor_down",
+    );
+  }
+
+  const matchToSwap = allMatches[swapIndex];
+
+  await prisma.$transaction(async (tx) => {
+    await tx.match.update({
+      where: { id: matchId },
+      data: { slot: matchToSwap.slot },
+    });
+    await tx.match.update({
+      where: { id: matchToSwap.id },
+      data: { slot: match.slot },
+    });
+  });
+
+  publishSse("schedule-changed", { matchId });
+}
+
 export async function getSchedule(etapaId?: string | null): Promise<ScheduleRow[]> {
   const id = await resolveEtapaId(etapaId);
   const [state, matches] = await Promise.all([

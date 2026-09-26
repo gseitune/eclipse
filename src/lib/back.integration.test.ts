@@ -32,6 +32,8 @@ let recordResult!: BackModule["recordResult"];
 let getStandings!: BackModule["getStandings"];
 let getNextMatch!: BackModule["getNextMatch"];
 let createEtapa!: BackModule["createEtapa"];
+let reorderMatch!: BackModule["reorderMatch"];
+let getScheduleBoard!: BackModule["getScheduleBoard"];
 let BackError!: BackModule["BackError"];
 let InvalidResultError!: ResultFormatModule["InvalidResultError"];
 let subscribeSse!: EventsModule["subscribeSse"];
@@ -445,10 +447,110 @@ describe("createEtapa (integration) — mixto fijo", () => {
     );
   });
 
-  it("enforces the minimum and maximum team counts", async () => {
-    await assert.rejects(
-      () => createEtapa({ name: "Pocos", teams: teams(MIN_TEAMS - 1) }),
-      (err: unknown) => err instanceof BackError && err.reason === "too_few_teams",
-    );
+it("enforces the minimum and maximum team counts", async () => {
+     await assert.rejects(
+       () => createEtapa({ name: "Pocos", teams: teams(MIN_TEAMS - 1) }),
+       (err: unknown) => err instanceof BackError && err.reason === "too_few_teams",
+     );
+   });
+ });
+
+describe("reorderMatch and getScheduleBoard (integration)", () => {
+  before(async () => {
+    execSync(`npx prisma db push --url ${dbUrl}`, {
+      cwd: repoRoot,
+      stdio: "pipe",
+    });
+    const p = await import("./prisma");
+    prisma = p.prisma;
+    const back = await import("./back");
+    reorderMatch = back.reorderMatch;
+    getScheduleBoard = back.getScheduleBoard;
+    BackError = back.BackError;
+    const events = await import("./events");
+    subscribeSse = events.subscribeSse;
   });
+
+  after(async () => {
+    await prisma.$disconnect();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  async function seedReorderTournament() {
+    await prisma.match.deleteMany({});
+    await prisma.team.deleteMany({});
+    await prisma.tournamentState.deleteMany({});
+    await prisma.etapa.deleteMany({});
+    const etapa = await prisma.etapa.create({ data: { name: "Reorder test", sortOrder: 1 } });
+    const etapaId = etapa.id;
+    await prisma.team.createMany({
+      data: [
+        { id: "re1", etapaId, name: "Alpha", zone: "A" },
+        { id: "re2", etapaId, name: "Beta", zone: "A" },
+        { id: "re3", etapaId, name: "Gamma", zone: "B" },
+      ],
+    });
+    await prisma.match.createMany({
+      data: [
+        { id: "rm1", etapaId, stage: "GROUPS", zone: "A", slot: 1, teamAId: "re1", teamBId: "re2", resultStatus: "PENDING" },
+        { id: "rm2", etapaId, stage: "GROUPS", zone: "B", slot: 2, teamAId: "re3", teamBId: null, resultStatus: "PENDING" },
+        { id: "rm3", etapaId, stage: "FINAL", slot: 3, teamAId: null, teamBId: null, resultStatus: "PENDING" },
+      ],
+    });
+    await prisma.tournamentState.create({ data: { etapaId } });
+    return etapaId;
+  }
+
+it("reorderMatch down swaps slots of two PENDING matches", async () => {
+      await seedReorderTournament();
+      // rm1 at slot 1, rm2 at slot 2 — move rm1 down
+      await reorderMatch("rm1", "down");
+      const m1 = await prisma.match.findUnique({ where: { id: "rm1" } });
+      const m2 = await prisma.match.findUnique({ where: { id: "rm2" } });
+      assert.equal(m1?.slot, 2, "rm1 should now be at slot 2");
+      assert.equal(m2?.slot, 1, "rm2 should now be at slot 1");
+    });
+
+    it("reorderMatch up swaps slots with nearest pending neighbor", async () => {
+      await seedReorderTournament();
+      // rm2 at slot 2, rm1 at slot 1 — move rm2 up
+      await reorderMatch("rm2", "up");
+      const m1 = await prisma.match.findUnique({ where: { id: "rm1" } });
+      const m2 = await prisma.match.findUnique({ where: { id: "rm2" } });
+      assert.equal(m2?.slot, 1, "rm2 should now be at slot 1");
+      assert.equal(m1?.slot, 2, "rm1 should now be at slot 2");
+    });
+
+    it("reorderMatch refuses a played match (409)", async () => {
+      await seedReorderTournament();
+      await prisma.match.update({ where: { id: "rm1" }, data: { resultStatus: "COMPLETE" } });
+      await assert.rejects(
+        () => reorderMatch("rm1", "down"),
+        (err: unknown) =>
+          err instanceof BackError && err.status === 409 && err.reason === "match_not_pending",
+      );
+    });
+
+    it("reorderMatch refuses when no pending neighbor in direction (409)", async () => {
+      await seedReorderTournament();
+      // Move rm3 (slot 3, no pending neighbor above it since it's last) down
+      await assert.rejects(
+        () => reorderMatch("rm3", "down"),
+        (err: unknown) =>
+          err instanceof BackError && err.status === 409,
+      );
+    });
+
+    it("getScheduleBoard returns rows ordered by slot with team names", async () => {
+      const etapaId = await seedReorderTournament();
+      const board = await getScheduleBoard(etapaId);
+      assert.equal(board.length, 3, "board has 3 rows");
+      assert.equal(board[0].slot, 1, "first row is slot 1");
+      assert.equal(board[0].teamA?.name, "Alpha", "team A name present");
+      assert.equal(board[0].teamB?.name, "Beta", "team B name present");
+      // Bracket slot has null teams
+      const bracketRow = board.find((r) => r.slot === 2);
+      assert.ok(bracketRow, "bracket row exists");
+      assert.equal(bracketRow?.resultStatus, "PENDING");
+    });
 });

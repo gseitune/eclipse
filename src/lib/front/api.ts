@@ -6,6 +6,7 @@ import type {
   RankingResponse,
   EtapaMeta,
   CreateEtapaInput,
+  ScheduleBoardRow,
 } from "./types";
 import { ApiError } from "./types";
 
@@ -148,6 +149,25 @@ export async function createEtapa(input: CreateEtapaInput): Promise<{ etapa: { i
     credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
+    cache: "no-store",
+  });
+  return handleResponse(res);
+}
+
+export async function fetchScheduleBoard(): Promise<{ schedule: ScheduleBoardRow[] }> {
+  const res = await fetch(`${BASE}/schedule`, { cache: "no-store" });
+  return handleResponse(res);
+}
+
+export async function rescheduleMatch(
+  matchId: string,
+  direction: "up" | "down",
+): Promise<{ ok: true }> {
+  const res = await fetch(`${BASE}/schedule/reorder`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ matchId, direction }),
     cache: "no-store",
   });
   return handleResponse(res);

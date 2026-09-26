@@ -39,6 +39,25 @@ export interface ScheduleRow {
   estimatedFromResult: boolean;
 }
 
+export interface TeamNamePair {
+  id: string;
+  name: string;
+}
+
+export interface ScheduleBoardRow {
+  id: string;
+  slot: number;
+  stage: string;
+  zone: string | null;
+  scheduled: string | null;
+  estimated: string | null;
+  estimatedFromResult: boolean;
+  teamA: TeamNamePair | null;
+  teamB: TeamNamePair | null;
+  resultStatus: string;
+  editable: boolean;
+}
+
 export interface TeamPublic {
   id: string;
   name: string;
