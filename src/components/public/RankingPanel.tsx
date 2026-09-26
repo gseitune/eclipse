@@ -9,7 +9,13 @@ const SCALE_LABEL =
   "Puntos: 1° 100 · 2° 80 · 3° 65 · 4° 50 · 5°-6° 40 · 7° 30 · 8° 25 · 9°+ 10";
 
 /* ── Podium star (gold / silver / bronze) ── */
-function MedalStar({ tier }: { tier: "gold" | "silver" | "bronze" }) {
+function MedalStar({
+  tier,
+  compact = false,
+}: {
+  tier: "gold" | "silver" | "bronze";
+  compact?: boolean;
+}) {
   const colorClass =
     tier === "gold"
       ? "text-yellow-400"
@@ -19,7 +25,7 @@ function MedalStar({ tier }: { tier: "gold" | "silver" | "bronze" }) {
   const label = tier === "gold" ? "Oro" : tier === "silver" ? "Plata" : "Bronce";
   return (
     <span
-      className="w-5 inline-flex justify-center"
+      className={`${compact ? "w-4" : "w-5"} inline-flex justify-center`}
       role="img"
       aria-label={`${label} — puesto`}
       title={`${label} — puesto`}
@@ -41,12 +47,20 @@ function MedalStar({ tier }: { tier: "gold" | "silver" | "bronze" }) {
   );
 }
 
-function RankBadge({ index }: { index: number }) {
-  if (index === 0) return <MedalStar tier="gold" />;
-  if (index === 1) return <MedalStar tier="silver" />;
-  if (index === 2) return <MedalStar tier="bronze" />;
+function RankBadge({
+  index,
+  compact = false,
+}: {
+  index: number;
+  compact?: boolean;
+}) {
+  if (index === 0) return <MedalStar tier="gold" compact={compact} />;
+  if (index === 1) return <MedalStar tier="silver" compact={compact} />;
+  if (index === 2) return <MedalStar tier="bronze" compact={compact} />;
   return (
-    <span className="w-5 text-center font-bold text-stone-400">
+    <span
+      className={`${compact ? "w-4" : "w-5"} text-center font-bold text-stone-400`}
+    >
       {index + 1}
     </span>
   );
@@ -188,9 +202,7 @@ export function RankingPanel() {
                             key={pos.teamId}
                             className="flex items-center gap-1.5 text-xs text-stone-600"
                           >
-                            <span className="w-4 text-center font-bold text-stone-400">
-                              {pos.position}
-                            </span>
+                            <RankBadge index={pos.position - 1} compact />
                             <span className="flex-1 truncate">
                               {pos.teamName}
                             </span>
