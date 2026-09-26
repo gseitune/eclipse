@@ -87,7 +87,7 @@ export function PublicHome({
     <div className="min-h-screen flex flex-col">
       {/* Beta ribbon — fixed top-left corner, decorative */}
       <div className="pointer-events-none fixed left-0 top-0 z-50">
-        <div className="-ml-11 mt-4 w-44 rotate-[-45deg] bg-amber-600 py-1 text-center text-[11px] font-bold uppercase tracking-widest text-white shadow-md">
+        <div className="-ml-11 mt-8 w-44 rotate-[-45deg] bg-amber-600 py-1 text-center text-[11px] font-bold uppercase tracking-widest text-white shadow-md">
           BETA TEST
         </div>
       </div>
