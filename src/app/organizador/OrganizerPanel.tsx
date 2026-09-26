@@ -4,7 +4,6 @@ import { logout } from "@/lib/front/api";
 import { useState } from "react";
 import { ResultadosSection } from "./ResultadosSection";
 import { ZonificacionSection } from "./ZonificacionSection";
-import { AvisoSection } from "./AvisoSection";
 import { PosicionesSection } from "./PosicionesSection";
 import { CircuitosSection } from "./CircuitosSection";
 
@@ -50,11 +49,6 @@ const SECTIONS: readonly SectionConfig[] = [
   {
     label: "Posiciones en vivo",
     hint: "Ver la tabla de posiciones en tiempo real",
-    kind: "actionable",
-  },
-  {
-    label: "Aviso sonoro",
-    hint: "Configurar alertas y avisos por sonido",
     kind: "actionable",
   },
   {
@@ -143,7 +137,7 @@ export function OrganizerPanel({
 }: OrganizerPanelProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [activeSection, setActiveSection] = useState<
-    "resultados" | "zonificacion" | "posiciones" | "aviso" | "circuitos" | null
+    "resultados" | "zonificacion" | "posiciones" | "circuitos" | null
   >(null);
   const [view, setView] = useState<"panel" | "public">("panel");
 
@@ -157,9 +151,6 @@ export function OrganizerPanel({
         break;
       case "Posiciones en vivo":
         setActiveSection("posiciones");
-        break;
-      case "Aviso sonoro":
-        setActiveSection("aviso");
         break;
       case "Circuitos y etapas":
         setActiveSection("circuitos");
@@ -229,8 +220,6 @@ export function OrganizerPanel({
           <ZonificacionSection onBack={() => setActiveSection(null)} />
         ) : activeSection === "posiciones" ? (
           <PosicionesSection onBack={() => setActiveSection(null)} />
-        ) : activeSection === "aviso" ? (
-          <AvisoSection onBack={() => setActiveSection(null)} />
         ) : activeSection === "circuitos" ? (
           <CircuitosSection onBack={() => setActiveSection(null)} />
         ) : (
