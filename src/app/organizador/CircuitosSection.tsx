@@ -155,7 +155,7 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
             </svg>
           </button>
           <h2 className="text-lg font-semibold text-stone-900">
-            Creador de equipos
+            Equipos
           </h2>
         </div>
         <div className="flex items-center gap-2 text-sm text-stone-400">
@@ -191,7 +191,7 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
           </svg>
         </button>
         <h2 className="text-lg font-semibold text-stone-900">
-          Creador de equipos
+          Equipos
         </h2>
       </div>
 

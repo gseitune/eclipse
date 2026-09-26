@@ -40,11 +40,6 @@ interface SectionConfig {
 const SECTIONS: readonly SectionConfig[] = [
   {
     label: "Equipos",
-    hint: "Alta, baja y estado de equipos — Próximamente",
-    kind: "disabled",
-  },
-  {
-    label: "Creador de equipos",
     hint: "Crear y editar etapas con equipos",
     kind: "actionable",
   },
@@ -197,7 +192,7 @@ export function OrganizerPanel({
       case "Resultados":
         setActiveSection("resultados");
         break;
-      case "Creador de equipos":
+      case "Equipos":
         setActiveSection("circuitos");
         break;
       case "Reagendar partidos":
