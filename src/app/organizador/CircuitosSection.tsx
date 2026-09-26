@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { fetchEtapas, createEtapa } from "@/lib/front/api";
+import { fetchEtapas, createEtapa, cancelEtapa } from "@/lib/front/api";
 import type { EtapaMeta } from "@/lib/front/types";
 import { ApiError } from "@/lib/front/types";
 
@@ -29,6 +29,12 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
   const [loading, setLoading] = useState(true);
   const [submitMsg, setSubmitMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Cancel modal state
+  const [cancelTarget, setCancelTarget] = useState<EtapaMeta | null>(null);
+  const [cancelPassword, setCancelPassword] = useState("");
+  const [cancelMsg, setCancelMsg] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
 
   // Form state
   const [nombre, setNombre] = useState("");
@@ -129,6 +135,45 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
 
   // Closing an etapa is only done programmatically (no UI action).
   // It cannot be undone once closed.
+
+  // Reload the etapa list (used after create and cancel)
+  async function reloadEtapas() {
+    const resp = await fetchEtapas();
+    setEtapas(resp.etapas);
+  }
+
+  // Cancel an etapa (weather suspension) after password confirmation
+  function openCancelModal(etapa: EtapaMeta) {
+    setCancelTarget(etapa);
+    setCancelPassword("");
+    setCancelMsg(null);
+  }
+
+  function closeCancelModal() {
+    if (cancelling) return;
+    setCancelTarget(null);
+    setCancelPassword("");
+    setCancelMsg(null);
+  }
+
+  async function handleCancelConfirm(e: React.FormEvent) {
+    e.preventDefault();
+    if (!cancelTarget || !cancelPassword) return;
+    setCancelling(true);
+    setCancelMsg(null);
+    try {
+      await cancelEtapa(cancelTarget.id, cancelPassword);
+      await reloadEtapas();
+      setCancelTarget(null);
+      setCancelPassword("");
+      setSubmitMsg("Etapa cancelada");
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : String(err);
+      setCancelMsg(msg);
+    } finally {
+      setCancelling(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -334,20 +379,100 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
                 className="flex items-center justify-between rounded-xl border border-sand-200 bg-white/40 px-4 py-3"
               >
                 <div className="flex-1 min-w-0">
-                  <span className="text-sm font-semibold text-stone-900">
-                    {etapa.name}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-stone-900">
+                      {etapa.name}
+                    </span>
+                    {etapa.cancelledAt && (
+                      <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-700 ring-1 ring-inset ring-red-200">
+                        Cancelada
+                      </span>
+                    )}
+                  </div>
                   <div className="mt-0.5 flex items-center gap-2 text-xs text-stone-500">
                     <span>{formatDateEs(etapa.date)}</span>
                     <span>·</span>
                     <span>{etapa.teamCount} equipos</span>
                   </div>
                 </div>
+                {!etapa.cancelledAt && (
+                  <button
+                    type="button"
+                    onClick={() => openCancelModal(etapa)}
+                    className="ml-3 shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors min-h-[44px]"
+                  >
+                    🚫 Cancelar fecha
+                  </button>
+                )}
               </li>
             ))}
           </ul>
         )}
       </section>
+
+      {/* Cancel-etapa modal */}
+      {cancelTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Cancelar etapa"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-sand-300 bg-white p-6 shadow-xl">
+            <h3 className="text-base font-semibold text-stone-900">
+              Cancelar {cancelTarget.name}
+            </h3>
+            <p className="mt-2 text-sm text-stone-600">
+              Se cancela la fecha de la etapa. No se borran datos.
+            </p>
+            <form onSubmit={handleCancelConfirm} className="mt-4 space-y-4">
+              <div>
+                <label
+                  htmlFor="cancel-password"
+                  className="block text-xs font-medium text-stone-600 mb-1"
+                >
+                  Contraseña del organizador
+                </label>
+                <input
+                  id="cancel-password"
+                  type="password"
+                  required
+                  autoComplete="current-password"
+                  value={cancelPassword}
+                  onChange={(e) => setCancelPassword(e.target.value)}
+                  disabled={cancelling}
+                  className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                />
+              </div>
+              {cancelMsg && (
+                <p
+                  className="rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700 border border-red-200"
+                  role="alert"
+                >
+                  {cancelMsg}
+                </p>
+              )}
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={closeCancelModal}
+                  disabled={cancelling}
+                  className="rounded-lg border border-sand-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 hover:bg-sand-50 transition-colors min-h-[44px]"
+                >
+                  Volver
+                </button>
+                <button
+                  type="submit"
+                  disabled={cancelling || !cancelPassword}
+                  className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50 transition-colors min-h-[44px]"
+                >
+                  {cancelling ? "Cancelando…" : "Confirmar cancelación"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
