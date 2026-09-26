@@ -96,7 +96,7 @@ export function PublicHome({
       {!isPreview && (
         <Link
           href="/organizador"
-          className="fixed right-3 top-3 z-50 inline-flex min-h-[40px] items-center gap-1.5 rounded-full bg-amber-600/70 px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wide text-white shadow-lg shadow-amber-600/30 backdrop-blur transition-all hover:-translate-y-0.5 hover:bg-amber-700/80 hover:shadow-amber-700/40 sm:right-4 sm:top-4 sm:min-h-[44px] sm:gap-2 sm:px-5 sm:py-2.5 sm:text-xs"
+          className="fixed right-3 top-3 z-50 inline-flex min-h-[40px] items-center gap-1.5 rounded-full bg-amber-600/70 px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wide text-white shadow-lg shadow-amber-600/30 backdrop-blur transition-colors hover:bg-amber-700/80 hover:shadow-amber-700/40 sm:right-4 sm:top-4 sm:min-h-[44px] sm:gap-2 sm:px-5 sm:py-2.5 sm:text-xs"
         >
           <svg
             className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4"
