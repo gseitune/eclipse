@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { liveMatchIds } from "@/lib/front/live";
 import { stageLabel, phaseLabel, isKnownPhase } from "@/lib/front/phase";
 import type { MatchPublic, ScheduleRow, EtapaPosition } from "@/lib/front/types";
-import { setWins } from "@/lib/front/types";
 import { fetchRanking } from "@/lib/front/api";
 import { Podium } from "@/components/public/Podium";
 
@@ -14,6 +13,47 @@ interface EliminatoriesViewProps {
   schedule: ScheduleRow[];
   matchMinutes: number;
   onOpenTeam: (team: { id: string; name: string; zone: string }) => void;
+}
+
+function TeamButton({
+  match,
+  side,
+  onOpenTeam,
+  showWinner,
+}: {
+  match: MatchPublic;
+  side: "A" | "B";
+  onOpenTeam: (team: { id: string; name: string; zone: string }) => void;
+  showWinner: boolean;
+}) {
+  const player = side === "A" ? match.teamA : match.teamB;
+  const teamId = side === "A" ? match.teamAId : match.teamBId;
+  const isWinner =
+    showWinner &&
+    (match.resultStatus === "COMPLETE" ||
+      match.resultStatus === "WINNER_ONLY") &&
+    match.winnerId === teamId;
+
+  return (
+    <button
+      onClick={() => {
+        if (!player) return;
+        onOpenTeam({ id: player.id, name: player.name, zone: "—" });
+      }}
+      className={`flex min-h-[36px] w-full items-center justify-between gap-2 rounded-lg px-3 py-1.5 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 ${
+        isWinner
+          ? "bg-green-200/60 text-black font-bold ring-1 ring-inset ring-green-800/30"
+          : "text-black hover:bg-sand-100"
+      }`}
+    >
+      <span className="truncate">{player?.name ?? "—"}</span>
+      {isWinner && (
+        <span className="shrink-0 rounded bg-green-700/80 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+          Ganador
+        </span>
+      )}
+    </button>
+  );
 }
 
 export function EliminatoriesView({
@@ -80,21 +120,6 @@ export function EliminatoriesView({
     onOpenTeam({ id: player.id, name: player.name, zone: "—" });
   }
 
-  function matchResultLabel(m: MatchPublic) {
-    switch (m.resultStatus) {
-      case "COMPLETE": {
-        const sw = setWins(m.sets);
-        return `${sw.a} - ${sw.b}`;
-      }
-      case "WINNER_ONLY":
-        return m.winner ? `Ganó ${m.winner.name}` : "Ganó";
-      case "PENDING":
-        return m.timeLabel ? `vs ${m.timeLabel}` : "vs";
-      default:
-        return "";
-    }
-  }
-
   function isLiveMatch(m: MatchPublic | null) {
     if (!m) return false;
     return liveIds.has(m.id);
@@ -147,39 +172,28 @@ export function EliminatoriesView({
       {finalMatch && (
         <div className="mt-4 flex justify-center">
           <div
-            className={`w-full max-w-xs rounded-xl border p-4 ${
+            className={`w-full max-w-[220px] rounded-xl border p-3 ${
               finalComplete
                 ? "ring-2 ring-amber-soft-500 ring-inset bg-amber-50/40"
                 : "border-sand-200 bg-white/40"
             }`}
           >
-            <p className="text-center text-xs font-semibold uppercase tracking-wider text-stone-400">
+            <p className="text-center text-xs font-semibold uppercase tracking-wider text-black">
               {stageLabel(finalMatch.stage)}
             </p>
-            <div className="mt-3 space-y-2">
-              <button
-                onClick={() => handleOpenTeam(finalMatch, "A")}
-                className={`min-h-[44px] w-full rounded-lg px-3 py-2 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 ${
-                  finalMatch.winnerId === finalMatch.teamAId && finalComplete
-                    ? "bg-amber-50 text-amber-800 font-bold ring-2 ring-amber-soft-400"
-                    : "text-stone-800 hover:bg-sand-100"
-                }`}
-              >
-                {finalMatch.teamA?.name ?? "—"}
-              </button>
-              <button
-                onClick={() => handleOpenTeam(finalMatch, "B")}
-                className={`min-h-[44px] w-full rounded-lg px-3 py-2 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 ${
-                  finalMatch.winnerId === finalMatch.teamBId && finalComplete
-                    ? "bg-amber-50 text-amber-800 font-bold ring-2 ring-amber-soft-400"
-                    : "text-stone-800 hover:bg-sand-100"
-                }`}
-              >
-                {finalMatch.teamB?.name ?? "—"}
-              </button>
-              <p className="text-center text-sm font-semibold text-stone-700">
-                {matchResultLabel(finalMatch)}
-              </p>
+            <div className="mt-2 space-y-1.5">
+              <TeamButton
+                match={finalMatch}
+                side="A"
+                onOpenTeam={() => handleOpenTeam(finalMatch, "A")}
+                showWinner={finalComplete === true}
+              />
+              <TeamButton
+                match={finalMatch}
+                side="B"
+                onOpenTeam={() => handleOpenTeam(finalMatch, "B")}
+                showWinner={finalComplete === true}
+              />
             </div>
           </div>
         </div>
@@ -194,27 +208,17 @@ export function EliminatoriesView({
                 key="semi-slot"
                 className="rounded-xl border border-sand-200 bg-white/40 p-4"
               >
-                <p className="text-sm text-stone-400">—</p>
+                <p className="text-sm text-black">—</p>
               </div>
             );
           }
           const live = isLiveMatch(match);
           const winner = match.winner;
-          const isWinnerA =
-            match.resultStatus === "COMPLETE" ||
-            match.resultStatus === "WINNER_ONLY"
-              ? match.winnerId === match.teamAId
-              : false;
-          const isWinnerB =
-            match.resultStatus === "COMPLETE" ||
-            match.resultStatus === "WINNER_ONLY"
-              ? match.winnerId === match.teamBId
-              : false;
 
           return (
             <div
               key={match.id}
-              className={`rounded-xl border p-4 ${
+              className={`rounded-xl border p-3 ${
                 live
                   ? "ring-2 ring-ember-500 ring-inset animate-pulse"
                   : "border-sand-200 bg-white/40"
@@ -222,7 +226,7 @@ export function EliminatoriesView({
                 winner ? "ring-2 ring-amber-soft-500 ring-inset" : ""
               }`}
             >
-              <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
+              <p className="text-xs font-semibold uppercase tracking-wider text-black">
                 {stageLabel(match.stage)}
               </p>
               {live && (
@@ -231,33 +235,19 @@ export function EliminatoriesView({
                   EN VIVO
                 </span>
               )}
-              <div className="mt-3 space-y-2">
-                {/* Team A */}
-                <button
-                  onClick={() => handleOpenTeam(match, "A")}
-                  className={`min-h-[44px] w-full rounded-lg px-3 py-2 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 ${
-                    isWinnerA
-                      ? "bg-amber-50 text-amber-800 font-bold ring-2 ring-amber-soft-400"
-                      : "text-stone-800 hover:bg-sand-100"
-                  }`}
-                >
-                  {match.teamA?.name ?? "—"}
-                </button>
-                {/* Team B */}
-                <button
-                  onClick={() => handleOpenTeam(match, "B")}
-                  className={`min-h-[44px] w-full rounded-lg px-3 py-2 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 ${
-                    isWinnerB
-                      ? "bg-amber-50 text-amber-800 font-bold ring-2 ring-amber-soft-400"
-                      : "text-stone-800 hover:bg-sand-100"
-                  }`}
-                >
-                  {match.teamB?.name ?? "—"}
-                </button>
-                {/* Result */}
-                <p className="text-center text-sm font-semibold text-stone-700">
-                  {matchResultLabel(match)}
-                </p>
+              <div className="mt-2 space-y-1.5">
+                <TeamButton
+                  match={match}
+                  side="A"
+                  onOpenTeam={() => handleOpenTeam(match, "A")}
+                  showWinner={!!winner}
+                />
+                <TeamButton
+                  match={match}
+                  side="B"
+                  onOpenTeam={() => handleOpenTeam(match, "B")}
+                  showWinner={!!winner}
+                />
               </div>
             </div>
           );
