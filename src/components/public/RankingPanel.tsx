@@ -118,7 +118,7 @@ export function RankingPanel() {
         <p className="mt-4 text-sm text-red-500">{error}</p>
       ) : data ? (
         <div className="mt-4">
-          <div className="mt-5 grid grid-cols-1 gap-6 sm:grid-cols-3">
+          <div className="mt-5 grid grid-cols-2 gap-6 lg:grid-cols-3">
           {/* LEFT COLUMN: Femenino */}
           <div>
             <h3 className="text-sm font-semibold text-stone-700 mb-2">
@@ -173,8 +173,8 @@ export function RankingPanel() {
             )}
           </div>
 
-          {/* RIGHT COLUMN: Positions per etapa (selectable) */}
-          <div>
+          {/* RIGHT COLUMN: Positions per etapa (selectable) — full width on mobile, below F/M */}
+          <div className="col-span-2 lg:col-span-1">
             <h3 className="text-sm font-semibold text-stone-700 mb-2">
               Posiciones por etapa
             </h3>
