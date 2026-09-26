@@ -212,21 +212,59 @@ Work-unit commits; no PRs/push.
 - 2026-09-26 User: subiÔøΩ 2 archivos mÔøΩs de etapas jugadas (las faltantes se
   suspendieron) y va a dictar quiÔøΩn es hombre/mujer de los nombres ÔøΩ NO
   inferir gÔøΩnero; solicitar la lista cuando se procesen los briefs.
+## Work unit: load Etapa 1 + Etapa 3 (data + per-sex players)
+
+Decision (user, 2026-09-26): the remaining played etapas are 1 and 3 (etapas
+2, 4, 6 were suspended). Loaded from the briefs in `01-Briefs/` with the
+user's per-player sex dictation and alias normalization:
+
+- Female dictation: Roxi, √Ångela, Sil, Vivi, Kari, Cin, Cami, More, Clary,
+  Cami C are women; the other half of each fixed pair is the man.
+- Aliases (user-confirmed): Sebita = Seba (same player); Santy = Santi (same
+  player); Gus != Gast√≥n; Gabi sz (E3, with Cami) != Gabi (E5, with Nabi);
+  Cami (E3, with Gabi sz) != Cami C (E3, with Deivid/David).
+- `prisma/seed.ts` now loads THREE etapas idempotently:
+  - Etapa 1 (REPECHAJE): 6 teams (A: Roxi y Gast√≥n, √Ångela y Migue, Seba y
+    Sil; B: Mati y Cin, Kari y Santi, Vivi y Andr√©s). 6 group matches with
+    SINGLE_21 results + repechaje eliminatorias (RE1, RE2, semis, bronze,
+    final), all WINNER_ONLY. Official: 1 Roxi, 2 Mati, 3 Vivi, 4 Kari,
+    5-6 √Ångela/Seba.
+  - Etapa 3 (REPECHAJE): 7 teams (A: Mati y Cin, Seba y Sil, Cami y Deivid,
+    Roxi y Jony; B: More y Gus, Clary y Santi, Gabi y Cami). 9 group matches
+    with SINGLE_21 results + repechaje eliminatorias, WINNER_ONLY. Official:
+    1 More, 2 Roxi, 3 Mati, 4 Clary, 5 Seba, 6 Gabi, 7 Cami.
+  - Etapa 5 (STANDARD): unchanged, plus its players backfilled.
+- `Team` rows now include `maleName`/`femaleName` so the S5 per-sex ranking
+  can aggregate; stage ordering via `sortOrder` 1/2/3.
+
+Tasks:
+- [x] (done) data: read briefs Etapa 1 and Etapa 3 (XLSX as ZIP+XML via
+  PowerShell, no parser in node_modules)
+- [x] (done) data: user dictation per-sex + alias normalization (Sebita/Seba,
+  Santy/Santi, Gus/Gast√≥n, Gabi sz/Gabi, Cami C/Cami)
+- [x] (done) seed: rewrite seed.ts to load Etapa 1 + Etapa 3 + Etapa 5 with
+  bracketFormat, maleName/femaleName, sortOrder; `npx prisma generate` for
+  the new column
+- [x] (done) run: seed executed ‚Äî 23 teams, 50 matches, 50 resolved
+- [x] (done) smoke: /api/ranking ‚Üí 3 etapas finished with official positions
+- [x] (done) validate: npm test, tsc, lint (pending commit for this unit)
+- [ ] commit: seed.ts + doc (work-unit commit)
+
 ## Work unit: repechaje bracket format (E1 fidelity)
 
-Decision (user, 2026-09-26): past Etapa 1 used repechaje (2∞A vs 3∞B / 2∞B vs
-3∞A; semis 1∞ vs ganador de repechaje; 3er/4to puesto). Extend the engine so
-E1 loads EXACT (rejected approximation that would flip 3∞/4∞ and cost 15 pts
+Decision (user, 2026-09-26): past Etapa 1 used repechaje (2ÔøΩA vs 3ÔøΩB / 2ÔøΩB vs
+3ÔøΩA; semis 1ÔøΩ vs ganador de repechaje; 3er/4to puesto). Extend the engine so
+E1 loads EXACT (rejected approximation that would flip 3ÔøΩ/4ÔøΩ and cost 15 pts
 in the individual ranking).
 
 Tasks:
-- [ ] schema: Etapa.bracketFormat enum (STANDARD default | REPECHAJE) + migration ADD COLUMN
-- [ ] back createEtapa: bracket slots by format (REPECHAJE = REPECHAJE_1/2, SEMIFINAL_1/2, BRONZE, FINAL); optional rng for deterministic zones; validate REPECHAJE only for 2-zone etapas
-- [ ] brackets.ts: buildBrackets repechaje pairings (RE1=A2 vs B3, RE2=B2 vs A3) + missing-slot semantics
-- [ ] recordResult/follow-up fill: each semi waits for ITS repechaje winner; BRONZE from semi losers; edit guards for new stages
-- [ ] result-format: SINGLE_21 allowed in REPECHAJE_1/2 and BRONZE; semis stay TWO_15, final BEST_OF_3_21
-- [ ] ranking computeFinalPositions: BRONZE winner/loser = 3∞/4∞ when present (fallback stays)
-- [ ] front phase.ts labels (Repechaje 1/2, 3er y 4to puesto) + bracket tree UI renders repechaje nodes
-- [ ] route/api: createEtapa accepts bracketFormat
-- [ ] tests: brackets, ranking, result-format, phase labels, integration (6-slots + positions)
-- [ ] validate: npm test, tsc, lint
+- [x] schema: Etapa.bracketFormat enum (STANDARD default | REPECHAJE) + migration ADD COLUMN ‚Äî `20260925140000_etapa_bracket_format` applied to dev.db (2026-09-26)
+- [x] back createEtapa: bracket slots by format (REPECHAJE = REPECHAJE_1/2, SEMIFINAL_1/2, BRONZE, FINAL); optional rng for deterministic zones; validate REPECHAJE only for 2-zone etapas
+- [x] brackets.ts: buildBrackets repechaje pairings (RE1=A2 vs B3, RE2=B2 vs A3) + missing-slot semantics
+- [x] recordResult/follow-up fill: each semi waits for ITS repechaje winner; BRONZE from semi losers; edit guards for new stages
+- [x] result-format: SINGLE_21 allowed in REPECHAJE_1/2 and BRONZE; semis stay TWO_15, final BEST_OF_3_21
+- [x] ranking computeFinalPositions: BRONZE winner/loser = 3ÔøΩ/4ÔøΩ when present (fallback stays)
+- [x] front phase.ts labels (Repechaje 1/2, 3er y 4to puesto) + bracket tree UI renders repechaje nodes
+- [x] route/api: createEtapa accepts bracketFormat
+- [x] tests: brackets, ranking, result-format, phase labels, integration (6-slots + positions)
+- [x] validate: npm test, tsc, lint ‚Äî todo commit `70694e1` feat(back): repechaje bracket format for Etapa 1 (2A vs 3B, bronze match)
