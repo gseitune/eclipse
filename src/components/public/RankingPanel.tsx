@@ -8,6 +8,50 @@ import { ApiError } from "@/lib/front/types";
 const SCALE_LABEL =
   "Puntos: 1° 100 · 2° 80 · 3° 65 · 4° 50 · 5°-6° 40 · 7° 30 · 8° 25 · 9°+ 10";
 
+/* ── Podium star (gold / silver / bronze) ── */
+function MedalStar({ tier }: { tier: "gold" | "silver" | "bronze" }) {
+  const colorClass =
+    tier === "gold"
+      ? "text-yellow-400"
+      : tier === "silver"
+        ? "text-slate-400"
+        : "text-amber-700";
+  const label = tier === "gold" ? "Oro" : tier === "silver" ? "Plata" : "Bronce";
+  return (
+    <span
+      className="w-5 inline-flex justify-center"
+      role="img"
+      aria-label={`${label} — puesto`}
+      title={`${label} — puesto`}
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        className={`h-4 w-4 ${colorClass}`}
+        aria-hidden="true"
+      >
+        <path
+          fillRule="evenodd"
+          d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z"
+          clipRule="evenodd"
+        />
+      </svg>
+    </span>
+  );
+}
+
+function RankBadge({ index }: { index: number }) {
+  if (index === 0) return <MedalStar tier="gold" />;
+  if (index === 1) return <MedalStar tier="silver" />;
+  if (index === 2) return <MedalStar tier="bronze" />;
+  return (
+    <span className="w-5 text-center font-bold text-stone-400">
+      {index + 1}
+    </span>
+  );
+}
+
 export function RankingPanel() {
   const [data, setData] = useState<RankingResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -86,9 +130,7 @@ export function RankingPanel() {
                         : "text-stone-700"
                     }`}
                   >
-                    <span className="w-5 text-center font-bold text-stone-400">
-                      {idx + 1}
-                    </span>
+                    <RankBadge index={idx} />
                     <span className="flex-1 truncate">{team.teamName}</span>
                     <span className="font-semibold text-stone-900">
                       {team.points}
