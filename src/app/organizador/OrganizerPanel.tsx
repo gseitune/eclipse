@@ -38,11 +38,6 @@ interface SectionConfig {
 
 const SECTIONS: readonly SectionConfig[] = [
   {
-    label: "Resultados",
-    hint: "Cargar o corregir resultados",
-    kind: "actionable",
-  },
-  {
     label: "Equipos",
     hint: "Alta, baja y estado de equipos — Próximamente",
     kind: "disabled",
@@ -138,10 +133,10 @@ function ResultsScoreboardCard({
     <button
       type="button"
       onClick={onOpen}
-      className="flex w-full items-center gap-4 rounded-xl border border-sand-300 bg-sand-50 px-5 py-4 text-left ring-1 ring-inset ring-sand-200 hover:bg-sand-100 hover:ring-sand-300 transition-colors min-h-[44px]"
+      className="flex w-full items-center gap-4 rounded-xl border border-sand-300 bg-sand-50 px-5 py-5 text-left ring-1 ring-inset ring-sand-200 hover:bg-sand-100 hover:ring-sand-300 transition-colors min-h-[44px]"
     >
       <span className="flex-1 min-w-0">
-        <span className="block text-sm font-semibold text-stone-900">
+        <span className="block text-base font-bold text-stone-900">
           Resultados
         </span>
         <span className="mt-0.5 block text-xs text-stone-500">
@@ -150,25 +145,25 @@ function ResultsScoreboardCard({
 
         {/* Live board */}
         {match ? (
-          <span className="mt-3 flex items-center gap-3 rounded-lg border border-sand-300 bg-white px-4 py-3">
-            <span className="flex-1 truncate text-sm font-semibold text-stone-900 text-right">
+          <span className="mt-4 flex items-center gap-4 rounded-lg border border-sand-300 bg-white px-5 py-5">
+            <span className="flex-1 truncate text-base font-semibold text-stone-900 text-right">
               {match.teamA?.name ?? "?"}
             </span>
-            <span className="flex items-baseline gap-1.5">
-              <span className="w-8 text-center text-lg font-bold text-stone-900">
+            <span className="flex items-baseline gap-2">
+              <span className="w-12 text-center text-4xl font-bold text-stone-900">
                 {wins.a}
               </span>
-              <span className="text-stone-400 font-bold">:</span>
-              <span className="w-8 text-center text-lg font-bold text-stone-900">
+              <span className="text-xl font-bold text-stone-400">:</span>
+              <span className="w-12 text-center text-4xl font-bold text-stone-900">
                 {wins.b}
               </span>
             </span>
-            <span className="flex-1 truncate text-sm font-semibold text-stone-900 text-left">
+            <span className="flex-1 truncate text-base font-semibold text-stone-900 text-left">
               {match.teamB?.name ?? "?"}
             </span>
           </span>
         ) : (
-          <span className="mt-3 flex items-center justify-center gap-2 rounded-lg border border-sand-200 bg-stone-100/70 px-4 py-4 text-stone-400">
+          <span className="mt-4 flex items-center justify-center gap-2 rounded-lg border border-sand-200 bg-stone-100/70 px-4 py-6 text-stone-400">
             <LockIcon />
             <span className="text-sm font-medium">
               {loading ? "Cargando…" : "Sin partido activo"}
@@ -271,11 +266,6 @@ export function OrganizerPanel({
           /* Sections list */
           <main className="mx-auto w-full max-w-3xl px-6 py-8">
             <nav aria-label="Secciones del panel" className="flex flex-col gap-3">
-              <ResultsScoreboardCard
-                match={nextMatch}
-                loading={loading}
-                onOpen={() => setActiveSection("resultados")}
-              />
               {SECTIONS.map((section) =>
                 section.kind === "actionable" ? (
                   <SectionCard
@@ -292,6 +282,11 @@ export function OrganizerPanel({
                   />
                 )
               )}
+              <ResultsScoreboardCard
+                match={nextMatch}
+                loading={loading}
+                onOpen={() => setActiveSection("resultados")}
+              />
             </nav>
           </main>
         )
