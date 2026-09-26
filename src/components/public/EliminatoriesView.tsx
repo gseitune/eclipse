@@ -117,7 +117,7 @@ export function EliminatoriesView({
     return (
       <section aria-label="Cuadro" className="rounded-2xl border border-sand-300 bg-white/40 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
         <h2 className="text-lg font-semibold text-stone-900">Cuadro</h2>
-        <div className="mt-4 flex items-center justify-center rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-6 text-sm text-amber-700">
+        <div className="mt-4 flex items-center justify-center rounded-xl border border-amber-soft-200 bg-amber-50/60 px-4 py-6 text-sm text-amber-700">
           <p>Cuadro disponible al finalizar el desempate</p>
         </div>
       </section>
@@ -149,7 +149,7 @@ export function EliminatoriesView({
           <div
             className={`w-full max-w-xs rounded-xl border p-4 ${
               finalComplete
-                ? "ring-2 ring-amber-500 ring-inset bg-amber-50/40"
+                ? "ring-2 ring-amber-soft-500 ring-inset bg-amber-50/40"
                 : "border-sand-200 bg-white/40"
             }`}
           >
@@ -161,7 +161,7 @@ export function EliminatoriesView({
                 onClick={() => handleOpenTeam(finalMatch, "A")}
                 className={`min-h-[44px] w-full rounded-lg px-3 py-2 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 ${
                   finalMatch.winnerId === finalMatch.teamAId && finalComplete
-                    ? "bg-amber-50 text-amber-800 font-bold ring-2 ring-amber-400"
+                    ? "bg-amber-50 text-amber-800 font-bold ring-2 ring-amber-soft-400"
                     : "text-stone-800 hover:bg-sand-100"
                 }`}
               >
@@ -171,7 +171,7 @@ export function EliminatoriesView({
                 onClick={() => handleOpenTeam(finalMatch, "B")}
                 className={`min-h-[44px] w-full rounded-lg px-3 py-2 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 ${
                   finalMatch.winnerId === finalMatch.teamBId && finalComplete
-                    ? "bg-amber-50 text-amber-800 font-bold ring-2 ring-amber-400"
+                    ? "bg-amber-50 text-amber-800 font-bold ring-2 ring-amber-soft-400"
                     : "text-stone-800 hover:bg-sand-100"
                 }`}
               >
@@ -219,7 +219,7 @@ export function EliminatoriesView({
                   ? "ring-2 ring-ember-500 ring-inset animate-pulse"
                   : "border-sand-200 bg-white/40"
               } ${
-                winner ? "ring-2 ring-amber-500 ring-inset" : ""
+                winner ? "ring-2 ring-amber-soft-500 ring-inset" : ""
               }`}
             >
               <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
@@ -237,7 +237,7 @@ export function EliminatoriesView({
                   onClick={() => handleOpenTeam(match, "A")}
                   className={`min-h-[44px] w-full rounded-lg px-3 py-2 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 ${
                     isWinnerA
-                      ? "bg-amber-50 text-amber-800 font-bold ring-2 ring-amber-400"
+                      ? "bg-amber-50 text-amber-800 font-bold ring-2 ring-amber-soft-400"
                       : "text-stone-800 hover:bg-sand-100"
                   }`}
                 >
@@ -248,7 +248,7 @@ export function EliminatoriesView({
                   onClick={() => handleOpenTeam(match, "B")}
                   className={`min-h-[44px] w-full rounded-lg px-3 py-2 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 ${
                     isWinnerB
-                      ? "bg-amber-50 text-amber-800 font-bold ring-2 ring-amber-400"
+                      ? "bg-amber-50 text-amber-800 font-bold ring-2 ring-amber-soft-400"
                       : "text-stone-800 hover:bg-sand-100"
                   }`}
                 >

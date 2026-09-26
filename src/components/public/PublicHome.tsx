@@ -144,7 +144,7 @@ export function PublicHome({
       <div className="mx-auto w-full max-w-3xl px-6 py-6 space-y-6">
         {/* DESEMPATE banner above standings */}
         {isDesempate && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3 text-sm text-amber-700">
+          <div className="rounded-xl border border-amber-soft-200 bg-amber-50/60 px-4 py-3 text-sm text-amber-700">
             Zonas definidas — desempate por el segundo mejor.
           </div>
         )}

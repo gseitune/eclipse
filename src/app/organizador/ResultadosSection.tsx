@@ -397,7 +397,7 @@ export function ResultadosSection({ onBack }: ResultadosSectionProps) {
                   type="button"
                   onClick={() => handleWinnerSubmit(nextMatch.teamAId!)}
                   disabled={submitting || !nextMatch.teamAId}
-                  className="flex-1 rounded-xl border-2 border-sand-300 bg-white py-4 px-4 text-center font-semibold text-stone-900 hover:border-amber-400 hover:bg-amber-50 disabled:opacity-50 transition-colors min-h-[44px]"
+                  className="flex-1 rounded-xl border-2 border-sand-300 bg-white py-4 px-4 text-center font-semibold text-stone-900 hover:border-amber-soft-400 hover:bg-amber-50 disabled:opacity-50 transition-colors min-h-[44px]"
                 >
                   <span className="block text-sm text-stone-500 mb-1">Gana</span>
                   <span className="text-base">{nextMatch.teamA?.name ?? "Equipo A"}</span>
@@ -406,7 +406,7 @@ export function ResultadosSection({ onBack }: ResultadosSectionProps) {
                   type="button"
                   onClick={() => handleWinnerSubmit(nextMatch.teamBId!)}
                   disabled={submitting || !nextMatch.teamBId}
-                  className="flex-1 rounded-xl border-2 border-sand-300 bg-white py-4 px-4 text-center font-semibold text-stone-900 hover:border-amber-400 hover:bg-amber-50 disabled:opacity-50 transition-colors min-h-[44px]"
+                  className="flex-1 rounded-xl border-2 border-sand-300 bg-white py-4 px-4 text-center font-semibold text-stone-900 hover:border-amber-soft-400 hover:bg-amber-50 disabled:opacity-50 transition-colors min-h-[44px]"
                 >
                   <span className="block text-sm text-stone-500 mb-1">Gana</span>
                   <span className="text-base">{nextMatch.teamB?.name ?? "Equipo B"}</span>
