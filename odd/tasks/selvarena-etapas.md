@@ -10,6 +10,32 @@ Delivery (push/PR/merge) stays user-owned; no RDD.
 Status: **IN PROGRESS** (implementation). Task map: engram topic
 `odd/selvarena-etapas/tasks`.
 
+## Scope update (Gabriel, 2026-09-25)
+
+Replaces the public "agenda" entry point: remove the `Ver agenda completa` /
+`Ver posiciones finales` link on PublicHome. In its place a combined panel:
+
+- **Left**: general points of the CURRENT circuit (annual ranking: points
+  accumulated per pair across ALL etapas, even etapas not yet created — the
+  organizer will upload them incrementally).
+- **Rest**: list of positions of ALL etapas (per-etapa final position of each
+  pair).
+
+Organizer panel gains the "Circuitos y etapas" section: create a new etapa
+(teams per circuito). **Once a circuito is finished it becomes immutable**
+(no more result/zone edits) — new `closedAt` flag on Etapa.
+
+Decisions confirmed this session:
+- Points scale: the official Plantilla (100-80-65-50-40-40-30-25-10-10; 9th+
+  floor 10). Per-position scoring accumulated across etapas.
+- Final position per etapa: bracket + zone standings (1st/2nd = Gran Final
+  winner/loser; 3rd/4th = semifinal losers by pts/dif; 5th+ by position in
+  zone standings, best zone leader = 5th; non-bracket teams follow).
+- Only etapas with the FINAL decided accumulate points; in-progress etapas
+  contribute nothing until closed (documented decision).
+- Pair-only ranking for now: the model has no per-player names yet (player
+  ranking deferred until Team stores players).
+
 ---
 
 ## Objective
@@ -75,31 +101,52 @@ Work-unit commits; no PRs/push.
 
 ## Checklist
 
-- [ ] (S1) `prisma/schema.prisma`: `Etapa` model; `etapaId` on Team/Match/
-      TournamentState (TournamentState per-etapa with unique etapaId);
-      migration (hand-written: add tables, backfill `Etapa 5` + etapaId on
-      existing rows); `prisma generate`; seed attaches etapaId. Checks: tsc.
-- [ ] (S2) Back scoping: `getState(etapaId)`, `getStandings(etapaId)`,
-      `getSchedule(etapaId)`, `getBracketsSnapshot(etapaId)`, `getNextMatch`,
-      `getTeamsByZone`, `generateZones`, `swapTeam`, `confirmZonification`,
-      `recordResult`, `editResult`, desempate/bracket machinery — all scoped.
-      Etapa create service (auth-guarded route `POST /api/etapas`) creates
-      etapa + teams + round-robin group matches + bracket slots.
-      Round-robin generator in tournament.ts (circle method) with zone split
-      and single-court sequential slots. State route accepts `?etapa=` and
-      includes `etapas` list. Tests: tournament round-robin + etapas service.
-- [ ] (S3) Public: `page.tsx` passes `etapas` + selected; PublicHome selector
-      (client-driven refetch); `lib/front/types.ts` adds `EtapaMeta` +
-      `etapaId` in snapshot. Checks: tsc + build.
-- [ ] (S4) Organizer: enable "Circuitos y etapas" section — create form
-      (name, date, team names textarea) and etapa switch; Resultados/
-      Zonificación/Posiciones bound to active etapa. Checks: tsc + build.
-- [ ] (S5) Ranking: `src/lib/ranking.ts` (positions → position points; pair +
-      per-player aggregation across etapas; scale constant from Plantilla);
-      `GET /api/ranking`; public "Ranking anual" view. Checks: tests.
-- [ ] (S6) Past etapas: organizer creates a closed etapa and enters past
-      stage results (match-by-match, same payload validation); ranking
-      reflects them. Checks: tests.
+- [x] (S1 + S2) Back etapas COMPLETO — commit `51fa319` en feat/selvarena-front:
+      schema `Etapa` + `etapaId` en Team/Match/TournamentState (state per-etapa,
+      id → cuid, unique etapaId); migración `20260924100000_etapas` con backfill
+      de la data actual como "Etapa 5"; `back.ts` scoped (todas las ops resuelven
+      la etapa, latest por default), `listEtapas`/`createEtapa` (teams → zonas →
+      fixture round-robin + slots de bracket en una transacción), `POST
+      /api/etapas` (organizer-only), `?etapa=` en /api/state y /api/zonification;
+      `roundRobinPairs` (círculo, bye para nones); seed con Etapa 5 scoped.
+      Checks: 116/116 tests, tsc, eslint.
+- [x] Visual tweaks front — commit `65f17c0`: marcador arriba de posiciones y
+      transparencia de cuadros (bg-white/40 + fondo lavado reducido en layout).
+- [x] (R1) Ranking back COMPLETO — commit `018840a` feat/back: `src/lib/ranking.ts`
+      (posiciones finales por etapa desde bracket + tabla de zona; escala Plantilla
+      100-80-65-50-40-40-30-25-10-10 con piso 10 para 9°+; agregación por pareja
+      acumulada en etapas FINAL-decided); `GET /api/ranking` devuelve escala +
+      ranking anual + positions por etapa. `package.json` agrega ranking.test.ts.
+      Checks: 20 tests ranking, 136/136 total, tsc, lint. Smoke: `/api/ranking` 200
+      {scale, ranking[], etapas[Etapa 5 finished:false]}.
+- [x] (R2) Inmutabilidad COMPLETO — commit `a16f29c` feat/back: `Etapa.closedAt
+      DateTime?` + migración `20260925100000_etapa_closed_at` + client regenerado;
+      guard `requireEtapaOpen` en generateZones/swapTeam/confirmZonification/
+      recordResult/editResult (409 etapa_cerrada); `POST /api/etapas/:id/close`
+      (organizer-only, 409 si ya cerrada o FINAL sin resultado, publica SSE);
+      `listEtapas` expone `closedAt` (contrato con el front). Tests de guard en
+      back.integration.test.ts. Checks: 136/136, tsc, lint.
+- [x] (S3) Public COMPLETO — commit `f12a2b1` feat/front: `lib/front/types.ts`
+      agrega `EtapaMeta{...,closedAt}` + `etapaId/etapa/etapas` en snapshot + tipos
+      de ranking; `api.ts` agrega fetchRanking/fetchEtapas/closeEtapa/createEtapa;
+      PublicHome sin link de agenda renderiza `<RankingPanel/>` (izquierda: ranking
+      anual; resto: posiciones por etapa de TODAS; nota de escala al pie; estados
+      vacío/en curso). Checks: tsc + build.
+- [x] (S4) Organizer COMPLETO — commit `f12a2b1` feat/front: `CircuitosSection.tsx`
+      (form crear etapa nombre/fecha/equipos; listado con "Cerrar circuito" cuando
+      ranking dice finished && !closedAt, derivado de `/api/ranking` + closedAt de
+      listEtapas); OrganizerPanel habilita "Circuitos y etapas" (case "circuitos").
+      Checks: tsc + build.
+- [ ] (S6) Past etapas (follow-up, no iniciado): la organizadora carga una etapa
+      ya cerrada con sus resultados; el ranking la acumula.
+
+## Progress log
+
+- 2026-09-25 W1 (back etapas): commit `51fa319` — ver arriba. Dev server
+  re-armado (PID 11812), `/api/etapas` 200, `/api/state` 200 con etapa Etapa 5.
+  Quedan SIN commitear (sesión de front paralela, no tocadas por mí):
+  layout.tsx, PosicionesSection.tsx, AgendaView.tsx, EliminatoriesView.tsx,
+  MatchTicker.tsx, PublicHome.tsx, StandingsTables.tsx.
 
 ## Notes
 
