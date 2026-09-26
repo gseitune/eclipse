@@ -40,7 +40,7 @@ function TeamButton({
         if (!player) return;
         onOpenTeam({ id: player.id, name: player.name, zone: "—" });
       }}
-      className={`flex min-h-[36px] w-full items-center justify-between gap-2 rounded-lg px-3 py-1.5 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 ${
+      className={`flex min-h-[32px] w-full items-center justify-between gap-2 rounded-lg px-3 py-1 text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 ${
         isWinner
           ? "bg-green-200/60 text-black font-bold ring-1 ring-inset ring-green-800/30"
           : "text-black hover:bg-sand-100"
@@ -218,7 +218,7 @@ export function EliminatoriesView({
           return (
             <div
               key={match.id}
-              className={`rounded-xl border p-3 ${
+              className={`rounded-xl border p-2.5 ${
                 live
                   ? "ring-2 ring-ember-500 ring-inset animate-pulse"
                   : "border-sand-200 bg-white/40"
@@ -235,7 +235,7 @@ export function EliminatoriesView({
                   EN VIVO
                 </span>
               )}
-              <div className="mt-2 space-y-1.5">
+              <div className="mt-1.5 space-y-1">
                 <TeamButton
                   match={match}
                   side="A"
