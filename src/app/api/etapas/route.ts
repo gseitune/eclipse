@@ -9,7 +9,12 @@ export const dynamic = "force-dynamic";
  * GET /api/etapas — public list of circuit stages (meta, newest last).
  * POST /api/etapas — organizer-only: creates a full etapa (teams → zones →
  * group round-robin fixture + bracket slots). Body:
- *   { name: string, date?: string | null, teams: string[] }
+ *   {
+ *     name: string,
+ *     date?: string | null,
+ *     teams: { name: string, maleName: string, femaleName: string }[]
+ *   }
+ * Mixto fijo: every team needs one male and one female player name.
  */
 export async function GET() {
   return NextResponse.json({ etapas: await listEtapas() });
@@ -26,14 +31,21 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
   const name = typeof body?.name === "string" ? body.name : "";
   const teams = Array.isArray(body?.teams)
-    ? body.teams.filter((t: unknown) => typeof t === "string")
+    ? body.teams.filter(
+        (t: unknown): t is { name: string; maleName: string; femaleName: string } =>
+          typeof t === "object" &&
+          t !== null &&
+          typeof (t as { name?: unknown }).name === "string" &&
+          typeof (t as { maleName?: unknown }).maleName === "string" &&
+          typeof (t as { femaleName?: unknown }).femaleName === "string",
+      )
     : [];
   const date = typeof body?.date === "string" ? body.date : null;
 
   try {
     const etapa = await createEtapa({
       name,
-      teams: teams as string[],
+      teams,
       ...(date !== null ? { date } : {}),
     });
     return NextResponse.json({ etapa }, { status: 201 });

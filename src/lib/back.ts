@@ -88,10 +88,16 @@ export async function listEtapas(): Promise<EtapaMeta[]> {
   }));
 }
 
+export interface CreateTeamInput {
+  name: string;
+  maleName: string;
+  femaleName: string;
+}
+
 export interface CreateEtapaInput {
   name: string;
   date?: string | null;
-  teams: string[];
+  teams: CreateTeamInput[];
 }
 
 /** MAX teams per etapa: 12 keeps the one-day single-court fixture sane. */
@@ -102,6 +108,9 @@ export const MAX_TEAMS_PER_ETAPA = 12;
  * the group round-robin fixture and the bracket slots, plus its tournament
  * state. The new etapa becomes the latest (active) one. Teams are capped at
  * MAX_TEAMS_PER_ETAPA and zone sizes follow tournament.ts rules.
+ *
+ * Mixto fijo: every team must carry exactly one male and one female player
+ * name — the per-sex individual ranking depends on them.
  */
 export async function createEtapa(input: CreateEtapaInput) {
   const name = input.name.trim();
@@ -110,7 +119,25 @@ export async function createEtapa(input: CreateEtapaInput) {
     throw new BackError("Etapa name is too long.", 400, "name_too_long");
   }
 
-  const teamNames = [...new Set(input.teams.map((t) => t.trim()).filter(Boolean))];
+  const uniqueTeams = new Map<string, CreateTeamInput>();
+  for (const rawTeam of input.teams ?? []) {
+    const teamName = typeof rawTeam?.name === "string" ? rawTeam.name.trim() : "";
+    const maleName = typeof rawTeam?.maleName === "string" ? rawTeam.maleName.trim() : "";
+    const femaleName = typeof rawTeam?.femaleName === "string" ? rawTeam.femaleName.trim() : "";
+    if (!teamName) continue;
+    if (!maleName || !femaleName) {
+      throw new BackError(
+        `Team "${teamName}" needs both players: mixto fijo requires one male and one female name.`,
+        400,
+        "team_players_required",
+      );
+    }
+    if (!uniqueTeams.has(teamName)) {
+      uniqueTeams.set(teamName, { name: teamName, maleName, femaleName });
+    }
+  }
+
+  const teamNames = [...uniqueTeams.keys()];
   if (teamNames.length < MIN_TEAMS) {
     throw new BackError(
       `Etapa needs at least 6 teams, got ${teamNames.length}.`,
@@ -127,6 +154,15 @@ export async function createEtapa(input: CreateEtapaInput) {
   }
   if (teamNames.some((t) => t.length > 60)) {
     throw new BackError("Team names must be 60 characters or fewer.", 400, "name_too_long");
+  }
+  for (const t of uniqueTeams.values()) {
+    if (t.maleName.length > 60 || t.femaleName.length > 60) {
+      throw new BackError(
+        "Player names must be 60 characters or fewer.",
+        400,
+        "name_too_long",
+      );
+    }
   }
 
   let date: Date | null = null;
@@ -149,7 +185,15 @@ export async function createEtapa(input: CreateEtapaInput) {
         state: { create: {} },
         teams: {
           create: groups.flatMap((group) =>
-            group.teams.map((teamName) => ({ name: teamName, zone: group.group })),
+            group.teams.map((teamName) => {
+              const team = uniqueTeams.get(teamName) as CreateTeamInput;
+              return {
+                name: teamName,
+                zone: group.group,
+                maleName: team.maleName,
+                femaleName: team.femaleName,
+              };
+            }),
           ),
         },
       },
@@ -199,13 +243,19 @@ export async function createEtapa(input: CreateEtapaInput) {
     teamCount: etapa.teams.length,
   });
 
+  // Real fixture size: intra-zone round-robin pairs + the 3 bracket slots.
+  const groupMatchCount = groups.reduce(
+    (acc, g) => acc + (g.teams.length * (g.teams.length - 1)) / 2,
+    0,
+  );
+
   return {
     id: etapa.id,
     name: etapa.name,
     date: etapa.date ? etapa.date.toISOString() : null,
     sortOrder: etapa.sortOrder,
     teamCount: etapa.teams.length,
-    matchCount: teamNames.length * (teamNames.length - 1) + 3,
+    matchCount: groupMatchCount + 3,
   };
 }
 

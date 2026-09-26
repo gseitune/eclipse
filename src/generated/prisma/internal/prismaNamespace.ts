@@ -870,6 +870,8 @@ export const TeamScalarFieldEnum = {
   etapaId: 'etapaId',
   name: 'name',
   zone: 'zone',
+  maleName: 'maleName',
+  femaleName: 'femaleName',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const

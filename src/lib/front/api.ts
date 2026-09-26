@@ -5,6 +5,7 @@ import type {
   LoginResponse,
   RankingResponse,
   EtapaMeta,
+  CreateEtapaInput,
 } from "./types";
 import { ApiError } from "./types";
 
@@ -141,11 +142,7 @@ export async function closeEtapa(
   return handleResponse(res);
 }
 
-export async function createEtapa(input: {
-  name: string;
-  date: string | null;
-  teams: string[];
-}): Promise<{ etapa: { id: string; name: string } }> {
+export async function createEtapa(input: CreateEtapaInput): Promise<{ etapa: { id: string; name: string } }> {
   const res = await fetch(`${BASE}/etapas`, {
     method: "POST",
     credentials: "same-origin",

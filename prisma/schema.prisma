@@ -73,16 +73,21 @@ model TournamentState {
 }
 
 model Team {
-  id        String   @id @default(cuid())
-  etapaId   String
-  etapa     Etapa    @relation(fields: [etapaId], references: [id], onDelete: Cascade)
-  name      String
-  zone      Zone
-  matchesA  Match[]  @relation("TeamA")
-  matchesB  Match[]  @relation("TeamB")
-  wonMatches Match[] @relation("Winner")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  etapaId    String
+  etapa      Etapa    @relation(fields: [etapaId], references: [id], onDelete: Cascade)
+  name       String
+  zone       Zone
+  // Fixed mixed-pair teams (mixto fijo): exactly one male + one female player.
+  // Nullable so loaded/seed etapas without players keep working; enforced at
+  // team creation time and filled by the team loading UI (S4).
+  maleName   String?
+  femaleName String?
+  matchesA   Match[]  @relation("TeamA")
+  matchesB   Match[]  @relation("TeamB")
+  wonMatches Match[]  @relation("Winner")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([etapaId])
 }

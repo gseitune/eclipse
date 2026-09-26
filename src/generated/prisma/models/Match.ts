@@ -757,10 +757,6 @@ export type NullableEnumZoneFieldUpdateOperationsInput = {
   set?: $Enums.Zone | null
 }
 
-export type NullableStringFieldUpdateOperationsInput = {
-  set?: string | null
-}
-
 export type NullableEnumSetFormatFieldUpdateOperationsInput = {
   set?: $Enums.SetFormat | null
 }

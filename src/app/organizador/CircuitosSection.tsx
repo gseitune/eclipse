@@ -34,7 +34,25 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
   // Form state
   const [nombre, setNombre] = useState("");
   const [fecha, setFecha] = useState("");
-  const [equipos, setEquipos] = useState("");
+  const [equipos, setEquipos] = useState<TeamRow[]>([]);
+
+  interface TeamRow {
+    name: string;
+    maleName: string;
+    femaleName: string;
+  }
+
+  function updateEquipo(index: number, patch: Partial<TeamRow>) {
+    setEquipos((rows) =>
+      rows.map((row, i) => (i === index ? { ...row, ...patch } : row)),
+    );
+  }
+
+  const allRowsFilled =
+    equipos.length > 0 &&
+    equipos.every(
+      (row) => row.name.trim() && row.maleName.trim() && row.femaleName.trim(),
+    );
 
   // Load data
   useEffect(() => {
@@ -82,21 +100,25 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setSubmitMsg(null);
-    const teamLines = equipos
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean);
-    if (!nombre.trim() || teamLines.length === 0) return;
+    if (!nombre.trim() || !allRowsFilled) return;
     setSubmitting(true);
     try {
-      await createEtapa({ name: nombre.trim(), date: fecha || null, teams: teamLines });
+      await createEtapa({
+        name: nombre.trim(),
+        date: fecha || null,
+        teams: equipos.map((row) => ({
+          name: row.name.trim(),
+          maleName: row.maleName.trim(),
+          femaleName: row.femaleName.trim(),
+        })),
+      });
       // Reload list
       const resp = await fetchEtapas();
       setEtapas(resp.etapas);
       // Clear form
       setNombre("");
       setFecha("");
-      setEquipos("");
+      setEquipos([]);
       setSubmitMsg("Etapa creada");
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : String(err);
@@ -224,23 +246,80 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
             />
           </div>
           <div>
-            <label htmlFor="circuito-equipos" className="block text-xs font-medium text-stone-600 mb-1">
-              Equipos (uno por línea)
-            </label>
-            <textarea
-              id="circuito-equipos"
-              required
-              value={equipos}
-              onChange={(e) => setEquipos(e.target.value)}
+            <span className="block text-xs font-medium text-stone-600 mb-1">
+              Equipos — mixto fijo: un jugador masculino y una jugadora femenina por equipo
+            </span>
+            {equipos.length === 0 ? (
+              <p className="text-sm text-stone-400 mb-2">
+                Todavía no hay equipos cargados.
+              </p>
+            ) : (
+              <ul className="space-y-3 mb-2">
+                {equipos.map((row, index) => (
+                  <li
+                    key={index}
+                    className="rounded-lg border border-sand-200 bg-white p-3 space-y-2"
+                  >
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <input
+                        type="text"
+                        aria-label={`Equipo ${index + 1}`}
+                        value={row.name}
+                        onChange={(e) => updateEquipo(index, { name: e.target.value })}
+                        disabled={submitting}
+                        placeholder="Nombre del equipo"
+                        className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                      />
+                      <input
+                        type="text"
+                        aria-label={`Jugador masculino ${index + 1}`}
+                        value={row.maleName}
+                        onChange={(e) => updateEquipo(index, { maleName: e.target.value })}
+                        disabled={submitting}
+                        placeholder="Jugador masculino"
+                        className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                      />
+                      <input
+                        type="text"
+                        aria-label={`Jugadora femenina ${index + 1}`}
+                        value={row.femaleName}
+                        onChange={(e) => updateEquipo(index, { femaleName: e.target.value })}
+                        disabled={submitting}
+                        placeholder="Jugadora femenina"
+                        className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEquipos((rows) => rows.filter((_, i) => i !== index))
+                      }
+                      disabled={submitting}
+                      className="text-xs font-medium text-stone-500 hover:text-red-600 disabled:opacity-50 transition-colors"
+                    >
+                      Quitar
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <button
+              type="button"
+              onClick={() =>
+                setEquipos((rows) => [
+                  ...rows,
+                  { name: "", maleName: "", femaleName: "" },
+                ])
+              }
               disabled={submitting}
-              placeholder="Equipo Alpha&#10;Equipo Beta&#10;..."
-              rows={4}
-              className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px] resize-vertical"
-            />
+              className="inline-flex items-center gap-1 rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm font-medium text-stone-700 hover:bg-sand-50 disabled:opacity-50 transition-colors min-h-[44px]"
+            >
+              + Agregar equipo
+            </button>
           </div>
           <button
             type="submit"
-            disabled={submitting || !nombre.trim() || !equipos.trim()}
+            disabled={submitting || !nombre.trim() || !allRowsFilled}
             className="w-full rounded-lg bg-amber-600 px-4 py-3 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50 transition-colors min-h-[44px]"
           >
             {submitting ? "Creando…" : "Crear etapa"}

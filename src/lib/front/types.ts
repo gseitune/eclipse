@@ -170,6 +170,19 @@ export interface RankingResponse {
   etapas: EtapaPositions[];
 }
 
+/** Mixto fijo: each team carries one male + one female player name. */
+export interface CreateTeamInput {
+  name: string;
+  maleName: string;
+  femaleName: string;
+}
+
+export interface CreateEtapaInput {
+  name: string;
+  date: string | null;
+  teams: CreateTeamInput[];
+}
+
 export class ApiError extends Error {
   constructor(
     public readonly status: number,

@@ -189,4 +189,18 @@ Work-unit commits; no PRs/push.
   (mejorada).xlsx` â†’ sheet "Puntos Etapa" + "Equipos" (D:E scale, H4/H5 match
   points, L:N player names). Exact fidelity target.
 - The rest of the app (SSE, auth, editing guards) is etapa-agnostic but must
-  not break; SSE events stay global for now (one active etapa at a time).
+  not break; SSE events stay global for now (one active etapa at a time).- 2026-09-26 Work unit: team players with sex (mixto fijo). Schema Team
+  + `maleName String?` + `femaleName String?`; migration
+  `20260925130000_team_players_sex` (ADD COLUMN x2). `createEtapa` payload
+  now `teams: { name, maleName, femaleName }[]`; validation requires both
+  players per team (reason `team_players_required`), dedupes by trimmed name,
+  player names <= 60 chars. `/api/etapas` POST parses object teams.
+  `CircuitosSection` carga con filas estructuradas (Equipo / Masculino /
+  Femenino + Agregar equipos), reemplaza el textarea. Ranking per-sex queda
+  como S5 pendiente. Gotcha: `createEtapa` devolvía `matchCount`
+  teams*(teams-1)+3 ignorando la zonificación (ej 6 equipos decía 33, real 9)
+  — corregido al tamaño real de fixture.
+  Checks: 140/140 tests, tsc, lint. Smoke seed OK + /api/state 200.
+- 2026-09-26 User: subió 2 archivos más de etapas jugadas (las faltantes se
+  suspendieron) y va a dictar quién es hombre/mujer de los nombres — NO
+  inferir género; solicitar la lista cuando se procesen los briefs.

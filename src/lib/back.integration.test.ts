@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -31,6 +31,7 @@ let editResult!: BackModule["editResult"];
 let recordResult!: BackModule["recordResult"];
 let getStandings!: BackModule["getStandings"];
 let getNextMatch!: BackModule["getNextMatch"];
+let createEtapa!: BackModule["createEtapa"];
 let BackError!: BackModule["BackError"];
 let InvalidResultError!: ResultFormatModule["InvalidResultError"];
 let subscribeSse!: EventsModule["subscribeSse"];
@@ -88,6 +89,7 @@ describe("recordResult/editResult (integration)", () => {
     recordResult = back.recordResult;
     getStandings = back.getStandings;
     getNextMatch = back.getNextMatch;
+    createEtapa = back.createEtapa;
     BackError = back.BackError;
     const input = await import("./result-format");
     InvalidResultError = input.InvalidResultError;
@@ -362,6 +364,91 @@ it("blocks editing a semifinal once the final played", async () => {
         err instanceof BackError &&
         err.status === 409 &&
         err.reason === "etapa_cerrada",
+    );
+  });
+});
+
+describe("createEtapa (integration) — mixto fijo", () => {
+  const MIN_TEAMS = 6;
+
+  before(async () => {
+    // The first describe's after() disconnected and deleted the throwaway db
+    // dir. Recreate it and push the schema again for createEtapa tests.
+    mkdirSync(dir, { recursive: true });
+    execSync(`npx prisma db push --url ${dbUrl}`, {
+      cwd: repoRoot,
+      stdio: "pipe",
+    });
+  });
+
+  after(async () => {
+    await prisma.$disconnect();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  function teams(count: number, overrides?: Partial<{ name: string; maleName: string; femaleName: string }>) {
+    return Array.from({ length: count }, (_, i) => ({
+      name: `Equipo ${i + 1}`,
+      maleName: `Hombre ${i + 1}`,
+      femaleName: `Mujer ${i + 1}`,
+      ...overrides,
+    }));
+  }
+
+  it("creates a full etapa persisting players and a 9-match fixture for 6 teams", async () => {
+    const etapa = await createEtapa({ name: "Mixta", teams: teams(MIN_TEAMS) });
+    const rows = await prisma.team.findMany({
+      where: { etapaId: etapa.id },
+      orderBy: { name: "asc" },
+    });
+    assert.equal(rows.length, MIN_TEAMS);
+    assert.equal(rows[0].maleName, "Hombre 1");
+    assert.equal(rows[0].femaleName, "Mujer 1");
+    // 6 teams → 2 zones of 3 → 3+3 intra-zone round-robin + 3 bracket slots
+    assert.equal(
+      await prisma.match.count({ where: { etapaId: etapa.id } }),
+      9,
+    );
+    assert.equal(etapa.matchCount, 9, "summary reflects the real fixture size");
+  });
+
+  it("rejects a team missing the male or female player (team_players_required)", async () => {
+    const missingMale = teams(MIN_TEAMS);
+    missingMale[0] = { name: "Sin hombre", maleName: "", femaleName: "Mujer X" };
+    await assert.rejects(
+      () => createEtapa({ name: "Sin hombre", teams: missingMale }),
+      (err: unknown) =>
+        err instanceof BackError &&
+        err.status === 400 &&
+        err.reason === "team_players_required",
+    );
+
+    const missingFemale = teams(MIN_TEAMS);
+    missingFemale[0] = { name: "Sin mujer", maleName: "Hombre X", femaleName: "" };
+    await assert.rejects(
+      () => createEtapa({ name: "Sin mujer", teams: missingFemale }),
+      (err: unknown) =>
+        err instanceof BackError &&
+        err.status === 400 &&
+        err.reason === "team_players_required",
+    );
+  });
+
+  it("dedupes teams by trimmed name before validation", async () => {
+    const dup = teams(MIN_TEAMS + 1);
+    dup[dup.length - 1] = { ...dup[0], name: `  ${dup[0].name}  ` };
+    const etapa = await createEtapa({ name: "Duplicada", teams: dup });
+    assert.equal(
+      await prisma.team.count({ where: { etapaId: etapa.id } }),
+      MIN_TEAMS,
+      "duplicate rows collapse into one team",
+    );
+  });
+
+  it("enforces the minimum and maximum team counts", async () => {
+    await assert.rejects(
+      () => createEtapa({ name: "Pocos", teams: teams(MIN_TEAMS - 1) }),
+      (err: unknown) => err instanceof BackError && err.reason === "too_few_teams",
     );
   });
 });
