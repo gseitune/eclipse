@@ -7,7 +7,7 @@ import {
   type ScheduleMatchInput,
   type ScheduleRow,
 } from "./schedule";
-import { buildBrackets, nextRoundPairings, selectBestSecond, type BestSecondSelection } from "./brackets";
+import { buildBrackets, buildCuartosBrackets, nextRoundPairings, selectBestSecond, selectBestThird, type BestSecondSelection, type BestThirdSelection } from "./brackets";
 import { regenerateZones, swapZone, type ZoneId } from "./zonification";
 import { distributeTeams, MIN_TEAMS, roundRobinPairs } from "./tournament";
 import {
@@ -101,7 +101,7 @@ export interface CreateEtapaInput {
   name: string;
   date?: string | null;
   teams: CreateTeamInput[];
-  bracketFormat?: "STANDARD" | "REPECHAJE";
+  bracketFormat?: "STANDARD" | "REPECHAJE" | "CUARTOS";
 }
 
 /** MAX teams per etapa: 12 keeps the one-day single-court fixture sane. */
@@ -181,8 +181,8 @@ export async function createEtapa(input: CreateEtapaInput, _opts?: { rng?: () =>
     date = parsed;
   }
 
-  const groups = distributeTeams(teamNames);
-  const bracketFormat = input.bracketFormat ?? "STANDARD" as "STANDARD" | "REPECHAJE";
+  const groups = distributeTeams(teamNames, _opts?.rng);
+  const bracketFormat = input.bracketFormat ?? "STANDARD" as "STANDARD" | "REPECHAJE" | "CUARTOS";
   // Validate REPECHAJE: requires exactly 2 zones and <= 10 teams.
   if (bracketFormat === "REPECHAJE") {
     const zoneCount = groups.length;
@@ -194,8 +194,27 @@ export async function createEtapa(input: CreateEtapaInput, _opts?: { rng?: () =>
       );
     }
   }
+  // Validate CUARTOS: requires exactly 3 zones and 11–12 teams.
+  if (bracketFormat === "CUARTOS") {
+    const zoneCount = groups.length;
+    if (zoneCount !== 3) {
+      throw new BackError(
+        `CUARTOS requires exactly 3 zones, got ${zoneCount}.`,
+        400,
+        "cuartos_three_zones_only",
+      );
+    }
+    if (teamNames.length < 11 || teamNames.length > 12) {
+      throw new BackError(
+        `CUARTOS requires 11-12 teams, got ${teamNames.length}.`,
+        400,
+        "cuartos_team_count",
+      );
+    }
+  }
 
   const isRepechaje = bracketFormat === "REPECHAJE";
+  const isCuartos = bracketFormat === "CUARTOS";
 
   const etapa = await prisma.$transaction(async (tx) => {
     const created = await tx.etapa.create({
@@ -247,6 +266,17 @@ export async function createEtapa(input: CreateEtapaInput, _opts?: { rng?: () =>
           { stage: "BRONZE" as Stage, slot: slot++ },
           { stage: "FINAL" as Stage, slot: slot++ },
         ]
+      : isCuartos
+      ? [
+          { stage: "REPECHAJE_1" as Stage, slot: slot++ },
+          { stage: "CUARTOS_1" as Stage, slot: slot++ },
+          { stage: "CUARTOS_2" as Stage, slot: slot++ },
+          { stage: "CUARTOS_3" as Stage, slot: slot++ },
+          { stage: "CUARTOS_4" as Stage, slot: slot++ },
+          { stage: "SEMIFINAL_1" as Stage, slot: slot++ },
+          { stage: "SEMIFINAL_2" as Stage, slot: slot++ },
+          { stage: "FINAL" as Stage, slot: slot++ },
+        ]
       : [
           { stage: "SEMIFINAL_1" as Stage, slot: slot++ },
           { stage: "SEMIFINAL_2" as Stage, slot: slot++ },
@@ -276,7 +306,7 @@ export async function createEtapa(input: CreateEtapaInput, _opts?: { rng?: () =>
   });
 
   // Real fixture size: intra-zone round-robin pairs + bracket slots.
-  const bracketSlotCount = isRepechaje ? 6 : 3;
+  const bracketSlotCount = isRepechaje ? 6 : isCuartos ? 8 : 3;
   const groupMatchCount = groups.reduce(
     (acc, g) => acc + (g.teams.length * (g.teams.length - 1)) / 2,
     0,
@@ -643,9 +673,11 @@ async function finalizeBrackets(
   standings: Partial<Record<Zone, StandingRow[]>>,
   etapaId: string,
   resolvedSecondId?: string,
+  format?: "STANDARD" | "REPECHAJE" | "CUARTOS",
 ): Promise<{ ok: boolean; missing: string[] }> {
   const { pairings, missing } = buildBrackets(standings, {
     ...(resolvedSecondId ? { resolvedSecondId } : {}),
+    format,
   });
   if (missing.length > 0 || pairings.length === 0) {
     publishSse("brackets-blocked", { missing });
@@ -725,7 +757,7 @@ async function createDesempateMatch(selection: {
 export async function getBracketsSnapshot(etapaId?: string | null) {
   const id = await resolveEtapaId(etapaId);
   return prisma.match.findMany({
-    where: { etapaId: id, stage: { in: ["REPECHAJE_1", "REPECHAJE_2", "SEMIFINAL_1", "SEMIFINAL_2", "BRONZE", "FINAL"] } },
+    where: { etapaId: id, stage: { in: ["REPECHAJE_1", "REPECHAJE_2", "SEMIFINAL_1", "SEMIFINAL_2", "BRONZE", "FINAL", "CUARTOS_1", "CUARTOS_2", "CUARTOS_3", "CUARTOS_4"] } },
     orderBy: { slot: "asc" },
     include: { teamA: true, teamB: true, winner: true },
   });
@@ -756,11 +788,21 @@ export async function getStateSnapshot(etapaId?: string | null) {
       listEtapas(),
     ]);
   const etapa = etapas.find((e) => e.id === id) ?? null;
+  const etapaRecord = await prisma.etapa.findUnique({
+    where: { id: id },
+    select: { bracketFormat: true },
+  });
+  const fmt = etapaRecord?.bracketFormat;
 
   const zonesPresent = Object.keys(standings) as Zone[];
-  let selection: BestSecondSelection | null = null;
+  let bestThirdSelection: BestThirdSelection | null = null;
+  let bestSecondSelection: BestSecondSelection | null = null;
   if (state.phase !== "ELIMINATORIES" && zonesPresent.length === 3) {
-    selection = selectBestSecond(standings);
+    if (fmt === "CUARTOS") {
+      bestThirdSelection = selectBestThird(standings);
+    } else {
+      bestSecondSelection = selectBestSecond(standings);
+    }
   }
 
   const pendingDesempate =
@@ -770,7 +812,7 @@ export async function getStateSnapshot(etapaId?: string | null) {
     needed:
       state.phase === "DESEMPATE" ||
       pendingDesempate !== null ||
-      selection?.kind === "playoff",
+      bestSecondSelection?.kind === "playoff",
     pending: pendingDesempate !== null,
     match: pendingDesempate
       ? {
@@ -793,8 +835,10 @@ export async function getStateSnapshot(etapaId?: string | null) {
   };
 
   const bracketsBlocked =
-    selection?.kind === "blocked"
-      ? { reason: "three_seconds_tie", teamIds: selection.teamIds }
+    bestThirdSelection?.kind === "blocked"
+      ? { reason: "best_third_tie", teamIds: bestThirdSelection.teamIds }
+      : bestSecondSelection?.kind === "blocked"
+      ? { reason: "three_seconds_tie", teamIds: bestSecondSelection.teamIds }
       : null;
 
   return {
@@ -838,9 +882,12 @@ interface ReconcileOutcome {
 
 /**
  * Fills descendant bracket slots when a feeder match records a result.
- * - REPECHAJE_1 result → fill SEMIFINAL_2 (1°B vs winner RE1)
- * - REPECHAJE_2 result → fill SEMIFINAL_1 (1°A vs winner RE2)
- * - Both semis have winners → fill FINAL (winners) AND BRONZE (losers)
+ * - CUARTOS_1 result → when all 4 QFs done, fill SEMIFINAL_1/2
+ * - CUARTOS REPECHAJE_1 result → fill CUARTOS_4 (best 3rd vs RE1 winner)
+ * - Semis → only FINAL (CUARTOS has no BRONZE)
+ * - REPECHAJE_1 → fill SEMIFINAL_2 (1°B vs winner RE1) [REPECHAJE format]
+ * - REPECHAJE_2 → fill SEMIFINAL_1 (1°A vs winner RE2) [REPECHAJE format]
+ * - Both semis → fill FINAL and BRONZE [REPECHAJE/STANDARD format]
  *
  * Returns true if any slot was updated.
  */
@@ -852,17 +899,44 @@ async function fillDescendantMatches(
   const updated = await prisma.$transaction(async (tx) => {
     let changed = false;
 
-    if (stage === "REPECHAJE_1" || stage === "REPECHAJE_2") {
-      // Determine which semi to fill and who plays whom.
-      // Need 1°A and 1°B from standings.
+    const etapa = await prisma.etapa.findUnique({
+      where: { id: etapaId },
+      select: { bracketFormat: true },
+    });
+    const fmt = etapa?.bracketFormat ?? "STANDARD";
+
+    if (fmt === "CUARTOS" && stage === "REPECHAJE_1") {
+      const standings = await getStandings(etapaId);
+      const bestThird = selectBestThird(standings);
+      const bestThirdId = bestThird?.kind === "direct" ? bestThird.teamId : null;
+      if (!bestThirdId) return false;
+
+      const re1Match = await tx.match.findFirst({
+        where: { etapaId, stage: "REPECHAJE_1" as Stage, resultStatus: "COMPLETE" },
+      });
+      const re1Winner = re1Match?.winnerId ?? null;
+      if (!re1Winner) return false;
+
+      const cuartos4 = await tx.match.findFirst({
+        where: { etapaId, stage: "CUARTOS_4" as Stage },
+      });
+      if (!cuartos4) return false;
+
+      const updateData: Record<string, string | null> = {};
+      if (cuartos4.teamAId === null) updateData.teamAId = bestThirdId;
+      if (cuartos4.teamBId === null) updateData.teamBId = re1Winner;
+      if (Object.keys(updateData).length > 0) {
+        await tx.match.update({ where: { id: cuartos4.id }, data: updateData });
+        changed = true;
+      }
+    } else if (stage === "REPECHAJE_1" || stage === "REPECHAJE_2") {
       const standings = await getStandings(etapaId);
       const a1Id = standings.A?.[0]?.teamId ?? null;
       const b1Id = standings.B?.[0]?.teamId ?? null;
       if (!a1Id || !b1Id) return false;
 
-      // Read all existing bracket match results to determine current state.
       const allMatches = await prisma.match.findMany({
-        where: { etapaId, stage: { in: ["REPECHAJE_1", "REPECHAJE_2", "SEMIFINAL_1", "SEMIFINAL_2", "BRONZE", "FINAL"] as Stage[] } },
+        where: { etapaId, stage: { in: ["REPECHAJE_1", "REPECHAJE_2", "SEMIFINAL_1", "SEMIFINAL_2", "BRONZE", "FINAL", "CUARTOS_1", "CUARTOS_2", "CUARTOS_3", "CUARTOS_4"] as Stage[] } },
         select: { stage: true, teamAId: true, teamBId: true, winnerId: true, resultStatus: true },
       });
       const completed: Record<string, string | null> = {};
@@ -872,9 +946,8 @@ async function fillDescendantMatches(
         }
       }
 
-      const pairings = nextRoundPairings(standings, completed);
+      const pairings = nextRoundPairings(standings, completed, fmt as "STANDARD" | "REPECHAJE" | "CUARTOS");
       for (const p of pairings) {
-        // Only fill if the slot still has null teams (not yet filled).
         const existing = await tx.match.findFirst({
           where: { etapaId, stage: p.stage as Stage, teamAId: null, teamBId: null },
         });
@@ -887,7 +960,6 @@ async function fillDescendantMatches(
         }
       }
     } else if (stage === "SEMIFINAL_1" || stage === "SEMIFINAL_2") {
-      // Both semis need winners to fill FINAL and BRONZE.
       const allMatches = await prisma.match.findMany({
         where: { etapaId, stage: { in: ["SEMIFINAL_1", "SEMIFINAL_2"] as Stage[] } },
         select: { stage: true, teamAId: true, teamBId: true, winnerId: true, resultStatus: true },
@@ -899,7 +971,6 @@ async function fillDescendantMatches(
       if (winners["SEMIFINAL_1"] && winners["SEMIFINAL_2"]) {
         const w1 = winners["SEMIFINAL_1"]!;
         const w2 = winners["SEMIFINAL_2"]!;
-        // FINAL = winners
         const finalSlot = await tx.match.findFirst({
           where: { etapaId, stage: "FINAL" as Stage, teamAId: null, teamBId: null },
         });
@@ -910,20 +981,58 @@ async function fillDescendantMatches(
           });
           changed = true;
         }
-        // BRONZE = losers
-        const semi1Match = allMatches.find((m) => m.stage === "SEMIFINAL_1");
-        const semi2Match = allMatches.find((m) => m.stage === "SEMIFINAL_2");
-        const loser1 = w1 === semi1Match?.teamAId ? semi1Match.teamBId : semi1Match?.teamAId;
-        const loser2 = w2 === semi2Match?.teamAId ? semi2Match.teamBId : semi2Match?.teamAId;
-        const bronzeSlot = await tx.match.findFirst({
-          where: { etapaId, stage: "BRONZE" as Stage, teamAId: null, teamBId: null },
-        });
-        if (bronzeSlot && loser1 && loser2) {
-          await tx.match.update({
-            where: { id: bronzeSlot.id },
-            data: { teamAId: loser1, teamBId: loser2 },
+        if (fmt !== "CUARTOS") {
+          const semi1Match = allMatches.find((m) => m.stage === "SEMIFINAL_1");
+          const semi2Match = allMatches.find((m) => m.stage === "SEMIFINAL_2");
+          const loser1 = w1 === semi1Match?.teamAId ? semi1Match.teamBId : semi1Match?.teamAId;
+          const loser2 = w2 === semi2Match?.teamAId ? semi2Match.teamBId : semi2Match?.teamAId;
+          const bronzeSlot = await tx.match.findFirst({
+            where: { etapaId, stage: "BRONZE" as Stage, teamAId: null, teamBId: null },
           });
-          changed = true;
+          if (bronzeSlot && loser1 && loser2) {
+            await tx.match.update({
+              where: { id: bronzeSlot.id },
+              data: { teamAId: loser1, teamBId: loser2 },
+            });
+            changed = true;
+          }
+        }
+      }
+    } else if (fmt === "CUARTOS" && stage.startsWith("CUARTOS_")) {
+      const allQfMatches = await prisma.match.findMany({
+        where: { etapaId, stage: { in: ["CUARTOS_1", "CUARTOS_2", "CUARTOS_3", "CUARTOS_4"] as Stage[] } },
+        select: { stage: true, winnerId: true, resultStatus: true },
+      });
+      const qfWinners: Record<string, string | null> = {};
+      for (const m of allQfMatches) {
+        if (m.resultStatus !== "PENDING" && m.winnerId) qfWinners[m.stage] = m.winnerId;
+      }
+      const allQfDone = ["CUARTOS_1", "CUARTOS_2", "CUARTOS_3", "CUARTOS_4"].every(
+        (s) => qfWinners[s],
+      );
+      const semi1Match = await tx.match.findFirst({
+        where: { etapaId, stage: "SEMIFINAL_1" as Stage, teamAId: null, teamBId: null },
+      });
+      const semi2Match = await tx.match.findFirst({
+        where: { etapaId, stage: "SEMIFINAL_2" as Stage, teamAId: null, teamBId: null },
+      });
+
+      if (allQfDone && semi1Match && semi2Match) {
+        const q1w = qfWinners["CUARTOS_1"]!;
+        const q2w = qfWinners["CUARTOS_2"]!;
+        const q3w = qfWinners["CUARTOS_3"]!;
+        const q4w = qfWinners["CUARTOS_4"]!;
+        const standings = await getStandings(etapaId);
+        const pairings = getCuartosSemifinalPairingsFromBack(q1w, q2w, q3w, q4w, standings);
+        for (const p of pairings) {
+          const targetMatch = p.stage === "SEMIFINAL_1" ? semi1Match : semi2Match;
+          if (targetMatch) {
+            await tx.match.update({
+              where: { id: targetMatch.id },
+              data: { teamAId: p.teamAId, teamBId: p.teamBId },
+            });
+            changed = true;
+          }
         }
       }
     }
@@ -931,6 +1040,51 @@ async function fillDescendantMatches(
     return changed;
   });
   return updated;
+}
+
+/** Determine CUARTOS semifinal pairings avoiding same-zone winners. Prefer (QF1,QF4)+(QF2,QF3). */
+function getCuartosSemifinalPairingsFromBack(
+  q1w: string, q2w: string, q3w: string, q4w: string,
+  standings: Partial<Record<Zone, StandingRow[]>>,
+): Array<{ stage: string; teamAId: string; teamBId: string }> {
+  // Map winnerId → zone
+  const winnerZone = new Map<string, Zone>();
+  for (const z of ["A", "B", "C"] as const) {
+    const rows = standings[z];
+    if (!rows) continue;
+    for (const r of rows) {
+      winnerZone.set(r.teamId, z as Zone);
+    }
+  }
+
+  const pairings = [
+    // Option 1: (QF1,QF4)+(QF2,QF3)
+    [
+      { stage: "SEMIFINAL_1", teamAId: q1w, teamBId: q4w },
+      { stage: "SEMIFINAL_2", teamAId: q2w, teamBId: q3w },
+    ],
+    // Option 2: (QF1,QF3)+(QF2,QF4)
+    [
+      { stage: "SEMIFINAL_1", teamAId: q1w, teamBId: q3w },
+      { stage: "SEMIFINAL_2", teamAId: q2w, teamBId: q4w },
+    ],
+    // Option 3: (QF1,QF2)+(QF3,QF4)
+    [
+      { stage: "SEMIFINAL_1", teamAId: q1w, teamBId: q2w },
+      { stage: "SEMIFINAL_2", teamAId: q3w, teamBId: q4w },
+    ],
+  ];
+
+  // Pick the first option with 0 same-zone pairs.
+  for (const p of pairings) {
+    const s1 = winnerZone.get(p[0].teamAId) ?? winnerZone.get(p[0].teamBId);
+    const s2 = winnerZone.get(p[1].teamAId) ?? winnerZone.get(p[1].teamBId);
+    if (s1 !== s2) return p;
+  }
+  // If zero same-zone is impossible, pick the first (fewest same-zone pairs).
+  // Code comment: this case is unlikely with proper zone distribution but
+  // we fall through to the first option as a safe default.
+  return pairings[0];
 }
 
 /**
@@ -966,28 +1120,46 @@ async function reconcileAfterMatch(
       if (mayFinalize) {
         const standings = await getStandings(etapaId);
         const zones = Object.keys(standings) as Zone[];
+        const etapa = await prisma.etapa.findUnique({
+          where: { id: etapaId },
+          select: { bracketFormat: true },
+        });
+        const fmt = etapa?.bracketFormat;
         if (zones.length === 3) {
-          const selection = selectBestSecond(standings);
-          if (selection?.kind === "playoff") {
-            if (state.phase === "GROUPS") {
-              desempateCreated = await createDesempateMatch(selection, etapaId);
-            } else {
-              // Rebuild after an edit would need a fresh desempate: report it.
+          if (fmt === "CUARTOS") {
+            const selection = selectBestThird(standings);
+            if (selection?.kind === "blocked") {
               publishSse("brackets-blocked", {
-                reason: "needs_desempate",
-                teamAId: selection.teamAId,
-                teamBId: selection.teamBId,
+                reason: "best_third_tie",
+                teamIds: selection.teamIds,
               });
+            } else {
+              const res = await finalizeBrackets(standings, etapaId, undefined, "CUARTOS");
+              phaseChanged = res.ok;
+              bracketsChanged = res.ok;
             }
-          } else if (selection?.kind === "blocked") {
-            publishSse("brackets-blocked", {
-              reason: "three_seconds_tie",
-              teamIds: selection.teamIds,
-            });
           } else {
-            const res = await finalizeBrackets(standings, etapaId);
-            phaseChanged = res.ok;
-            bracketsChanged = res.ok;
+            const selection = selectBestSecond(standings);
+            if (selection?.kind === "playoff") {
+              if (state.phase === "GROUPS") {
+                desempateCreated = await createDesempateMatch(selection, etapaId);
+              } else {
+                publishSse("brackets-blocked", {
+                  reason: "needs_desempate",
+                  teamAId: selection.teamAId,
+                  teamBId: selection.teamBId,
+                });
+              }
+            } else if (selection?.kind === "blocked") {
+              publishSse("brackets-blocked", {
+                reason: "three_seconds_tie",
+                teamIds: selection.teamIds,
+              });
+            } else {
+              const res = await finalizeBrackets(standings, etapaId);
+              phaseChanged = res.ok;
+              bracketsChanged = res.ok;
+            }
           }
         } else {
           const res = await finalizeBrackets(standings, etapaId);

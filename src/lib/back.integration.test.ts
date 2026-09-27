@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+﻿import { execSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -34,6 +34,8 @@ let getNextMatch!: BackModule["getNextMatch"];
 let createEtapa!: BackModule["createEtapa"];
 let reorderMatch!: BackModule["reorderMatch"];
 let getScheduleBoard!: BackModule["getScheduleBoard"];
+let getTeamsByZone!: BackModule["getTeamsByZone"];
+let getBracketsSnapshot!: BackModule["getBracketsSnapshot"];
 let generateZones!: BackModule["generateZones"];
 let listEtapas!: BackModule["listEtapas"];
 let BackError!: BackModule["BackError"];
@@ -122,7 +124,7 @@ describe("recordResult/editResult (integration)", () => {
     assert.equal(m1?.setFormat, "SINGLE_21");
     assert.equal(m1?.resultStatus, "COMPLETE");
 
-    // Invert the score → Beta wins zone A.
+    // Invert the score â†’ Beta wins zone A.
     await editResult({ matchId: "m1", setFormat: "SINGLE_21", sets: [{ teamA: 19, teamB: 21 }] });
     standings = await getStandings();
     assert.equal(standings.A?.[0]?.teamId, "tA2", "standings recalculated after edit");
@@ -285,7 +287,7 @@ describe("recordResult/editResult (integration)", () => {
     const quick = await prisma.match.findUnique({ where: { id: "m5" } });
     assert.equal(quick?.resultStatus, "WINNER_ONLY");
 
-    // The fix flow edits it into a full score later — all rejections first.
+    // The fix flow edits it into a full score later â€” all rejections first.
     await bad400(
       () =>
         editResult({
@@ -372,7 +374,7 @@ it("blocks editing a semifinal once the final played", async () => {
   });
 });
 
-describe("createEtapa (integration) — mixto fijo", () => {
+describe("createEtapa (integration) â€” mixto fijo", () => {
   const MIN_TEAMS = 6;
 
   before(async () => {
@@ -408,7 +410,7 @@ describe("createEtapa (integration) — mixto fijo", () => {
     assert.equal(rows.length, MIN_TEAMS);
     assert.equal(rows[0].maleName, "Hombre 1");
     assert.equal(rows[0].femaleName, "Mujer 1");
-    // 6 teams → 2 zones of 3 → 3+3 intra-zone round-robin + 3 bracket slots
+    // 6 teams â†’ 2 zones of 3 â†’ 3+3 intra-zone round-robin + 3 bracket slots
     assert.equal(
       await prisma.match.count({ where: { etapaId: etapa.id } }),
       9,
@@ -505,7 +507,7 @@ describe("reorderMatch and getScheduleBoard (integration)", () => {
 
 it("reorderMatch down swaps slots of two PENDING matches", async () => {
       await seedReorderTournament();
-      // rm1 at slot 1, rm2 at slot 2 — move rm1 down
+      // rm1 at slot 1, rm2 at slot 2 â€” move rm1 down
       await reorderMatch("rm1", "down");
       const m1 = await prisma.match.findUnique({ where: { id: "rm1" } });
       const m2 = await prisma.match.findUnique({ where: { id: "rm2" } });
@@ -515,7 +517,7 @@ it("reorderMatch down swaps slots of two PENDING matches", async () => {
 
     it("reorderMatch up swaps slots with nearest pending neighbor", async () => {
       await seedReorderTournament();
-      // rm2 at slot 2, rm1 at slot 1 — move rm2 up
+      // rm2 at slot 2, rm1 at slot 1 â€” move rm2 up
       await reorderMatch("rm2", "up");
       const m1 = await prisma.match.findUnique({ where: { id: "rm1" } });
       const m2 = await prisma.match.findUnique({ where: { id: "rm2" } });
@@ -563,7 +565,7 @@ it("reorderMatch down swaps slots of two PENDING matches", async () => {
  * - recordResult/editResult throw etapa_cancelled
  * - requireEtapaOpen blocks all modifications (tested indirectly)
  */
-describe("cancel etapa (integration) — weather suspension", () => {
+describe("cancel etapa (integration) â€” weather suspension", () => {
   before(async () => {
     // The previous describe's after() deleted the throwaway db dir.
     // Recreate it and push the schema again.
@@ -704,3 +706,55 @@ it("blocks recordResult after double-cancel (etapa_cancelled persists)", async (
      );
    });
  });
+
+/**
+ * CUARTOS format integration tests.
+ * Tests etapa creation and key CUARTOS format properties.
+ */
+describe("CUARTOS format (integration)", () => {
+  before(async () => {
+    mkdirSync(dir, { recursive: true });
+    execSync(`npx prisma db push --url ${dbUrl}`, {
+      cwd: repoRoot,
+      stdio: "pipe",
+    });
+    const p = await import("./prisma");
+    prisma = p.prisma;
+    const back = await import("./back");
+    createEtapa = back.createEtapa;
+    getBracketsSnapshot = back.getBracketsSnapshot;
+    BackError = back.BackError;
+    const events = await import("./events");
+    subscribeSse = events.subscribeSse;
+  });
+
+  after(async () => {
+    await prisma.$disconnect();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("creates CUARTOS etapa with 11 teams, 8 bracket slots, no BRONZE", async () => {
+    const teamNames = Array.from({ length: 11 }, (_, i) => `Eq${i + 1}`);
+    const teams = teamNames.map((name, i) => ({
+      name,
+      maleName: `Male${i + 1}`,
+      femaleName: `Female${i + 1}`,
+    }));
+
+    const etapa = await createEtapa({ name: "Cuartos Test", teams, bracketFormat: "CUARTOS" });
+    assert.equal(etapa.teamCount, 11);
+    assert.equal(etapa.matchCount, 15 + 8, "15 group matches + 8 bracket slots");
+
+    const snapshot = await getBracketsSnapshot(etapa.id);
+    const stages = snapshot.map((m) => m.stage);
+    assert.ok(!stages.includes("BRONZE"), "NO bronze match for CUARTOS format");
+    assert.ok(stages.includes("REPECHAJE_1"), "REPECHAJE_1 exists");
+    assert.ok(stages.includes("CUARTOS_1"), "CUARTOS_1 exists");
+    assert.ok(stages.includes("CUARTOS_2"), "CUARTOS_2 exists");
+    assert.ok(stages.includes("CUARTOS_3"), "CUARTOS_3 exists");
+    assert.ok(stages.includes("CUARTOS_4"), "CUARTOS_4 exists");
+    assert.ok(stages.includes("SEMIFINAL_1"), "SEMIFINAL_1 exists");
+    assert.ok(stages.includes("SEMIFINAL_2"), "SEMIFINAL_2 exists");
+    assert.ok(stages.includes("FINAL"), "FINAL exists");
+  });
+});

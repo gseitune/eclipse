@@ -52,14 +52,18 @@ export interface ScheduleRow {
  * current match for editing: changing it would invalidate the bracket.
  */
 export const DESCENDANT_STAGES: Record<string, readonly string[]> = {
-  GROUPS: ["DESEMPATE", "SEMIFINAL_1", "SEMIFINAL_2", "FINAL", "BRONZE", "REPECHAJE_1", "REPECHAJE_2"],
-  DESEMPATE: ["SEMIFINAL_1", "SEMIFINAL_2", "FINAL", "BRONZE", "REPECHAJE_1", "REPECHAJE_2"],
+  GROUPS: ["DESEMPATE", "SEMIFINAL_1", "SEMIFINAL_2", "FINAL", "BRONZE", "REPECHAJE_1", "REPECHAJE_2", "CUARTOS_1", "CUARTOS_2", "CUARTOS_3", "CUARTOS_4"],
+  DESEMPATE: ["SEMIFINAL_1", "SEMIFINAL_2", "FINAL", "BRONZE", "REPECHAJE_1", "REPECHAJE_2", "CUARTOS_1", "CUARTOS_2", "CUARTOS_3", "CUARTOS_4"],
   SEMIFINAL_1: ["FINAL", "BRONZE"],
   SEMIFINAL_2: ["FINAL", "BRONZE"],
-  REPECHAJE_1: ["SEMIFINAL_2", "FINAL", "BRONZE"],
+  REPECHAJE_1: ["CUARTOS_1", "CUARTOS_2", "CUARTOS_3", "CUARTOS_4", "SEMIFINAL_1", "SEMIFINAL_2", "FINAL"],
   REPECHAJE_2: ["SEMIFINAL_1", "FINAL", "BRONZE"],
   BRONZE: ["FINAL"],
   FINAL: [],
+  CUARTOS_1: ["SEMIFINAL_1", "SEMIFINAL_2", "FINAL"],
+  CUARTOS_2: ["SEMIFINAL_1", "SEMIFINAL_2", "FINAL"],
+  CUARTOS_3: ["SEMIFINAL_1", "SEMIFINAL_2", "FINAL"],
+  CUARTOS_4: ["SEMIFINAL_1", "SEMIFINAL_2", "FINAL"],
 };
 
 /** Editing guard, pure: a match is editable iff it has a result and no descendant phase has one. */

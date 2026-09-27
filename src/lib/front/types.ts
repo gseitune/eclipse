@@ -17,7 +17,11 @@ export type Stage =
   | "FINAL"
   | "REPECHAJE_1"
   | "REPECHAJE_2"
-  | "BRONZE";
+  | "BRONZE"
+  | "CUARTOS_1"
+  | "CUARTOS_2"
+  | "CUARTOS_3"
+  | "CUARTOS_4";
 
 export interface StandingRow {
   teamId: string;
@@ -115,7 +119,7 @@ export interface DesempateInfo {
 }
 
 export interface BracketsBlocked {
-  reason: "three_seconds_tie";
+  reason: "three_seconds_tie" | "best_third_tie";
   teamIds: string[];
 }
 
@@ -209,7 +213,7 @@ export interface CreateEtapaInput {
   name: string;
   date?: string | null;
   teams: CreateTeamInput[];
-  bracketFormat?: "STANDARD" | "REPECHAJE";
+  bracketFormat?: "STANDARD" | "REPECHAJE" | "CUARTOS";
 }
 
 export class ApiError extends Error {

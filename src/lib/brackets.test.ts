@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 
 import type { Zone } from "../generated/prisma/client";
 import type { StandingRow } from "./standings";
-import { buildBrackets, isGroupPhaseComplete, selectBestSecond } from "./brackets";
+import { buildBrackets, buildCuartosBrackets, isGroupPhaseComplete, selectBestSecond, selectBestThird } from "./brackets";
 
 const A: Zone = "A";
 const B: Zone = "B";
@@ -167,5 +167,95 @@ describe("buildBrackets - REPECHAJE format (2 zones)", () => {
     const { pairings, missing } = buildBrackets(standings, { format: "REPECHAJE" });
     assert.deepEqual(pairings, []);
     assert.deepEqual(missing, ["A3"]);
+  });
+});
+
+describe("buildCuartosBrackets", () => {
+  it("11 teams (4/4/3): 6 direct QF entrants + RE1 with two losing thirds + best 3rd in QF4", () => {
+    const standings = {
+      A: [row("a1", A, 5, 8), row("a2", A, 4, 5), row("a3", A, 3, 2), row("a4", A, 0, -5)],
+      B: [row("b1", B, 5, 7), row("b2", B, 4, 3), row("b3", B, 2, 1), row("b4", B, 0, -6)],
+      C: [row("c1", C, 5, 6), row("c2", C, 3, 2), row("c3", C, 1, -1)],
+    };
+    const { pairings, missing } = buildCuartosBrackets(standings);
+    assert.deepEqual(missing, []);
+    assert.deepEqual(pairings, [
+      { stage: "REPECHAJE_1", teamAId: "b3", teamBId: "c3" },
+      { stage: "CUARTOS_1", teamAId: "c1", teamBId: "a2" },
+      { stage: "CUARTOS_2", teamAId: "a1", teamBId: "b2" },
+      { stage: "CUARTOS_3", teamAId: "b1", teamBId: "c2" },
+    ]);
+  });
+
+  it("best 3rd wins (higher won) advances directly to QF4 side", () => {
+    const standings = {
+      A: [row("a1", A, 5, 8), row("a2", A, 4, 5), row("a3", A, 4, 3), row("a4", A, 0, -5)],
+      B: [row("b1", B, 5, 7), row("b2", B, 4, 3), row("b3", B, 2, 1), row("b4", B, 0, -6)],
+      C: [row("c1", C, 5, 6), row("c2", C, 3, 2), row("c3", C, 2, -1)],
+    };
+    const { pairings, missing } = buildCuartosBrackets(standings);
+    assert.deepEqual(missing, []);
+    const re1 = pairings.find((p) => p.stage === "REPECHAJE_1");
+    assert.ok(re1);
+    assert.ok(
+      (re1.teamAId === "b3" && re1.teamBId === "c3") ||
+      (re1.teamAId === "c3" && re1.teamBId === "b3"),
+      "RE1 has the two losing thirds (b3 and c3)",
+    );
+  });
+
+  it("reports best_third_tie when two thirds are tied on won then setDiff", () => {
+    const standings = {
+      A: [row("a1", A, 5, 8), row("a2", A, 4, 5), row("a3", A, 3, 2), row("a4", A, 0, -5)],
+      B: [row("b1", B, 5, 7), row("b2", B, 4, 5), row("b3", B, 3, 2), row("b4", B, 0, -6)],
+      C: [row("c1", C, 5, 6), row("c2", C, 3, 1), row("c3", C, 2, -1)],
+    };
+    const { pairings, missing } = buildCuartosBrackets(standings);
+    assert.deepEqual(pairings, []);
+    assert.deepEqual(missing, ["Best third (3+ tied)"]);
+  });
+
+  it("reports missing when fewer than 3 zones", () => {
+    const standings = {
+      A: [row("a1", A, 4), row("a2", A, 3)],
+      B: [row("b1", B, 4), row("b2", B, 3)],
+    };
+    const { pairings, missing } = buildCuartosBrackets(standings);
+    assert.deepEqual(missing, [`CUARTOS needs 3 zones, got 2`]);
+  });
+
+  it("reports missing when team count is out of range", () => {
+    const standings = {
+      A: [row("a1", A, 4), row("a2", A, 3), row("a3", A, 2), row("a4", A, 1)],
+      B: [row("b1", B, 4), row("b2", B, 3), row("b3", B, 2), row("b4", B, 1)],
+      C: [row("c1", C, 4), row("c2", C, 3)],
+    };
+    const { pairings, missing } = buildCuartosBrackets(standings);
+    assert.ok(missing.length > 0);
+  });
+});
+
+describe("selectBestThird", () => {
+  it("picks the strongest third by won then setDiff (direct)", () => {
+    const standings = {
+      A: [row("a1", A, 4), row("a2", A, 3), row("a3", A, 2, 1)],
+      B: [row("b1", B, 4), row("b2", B, 3), row("b3", B, 2, 0)],
+      C: [row("c1", C, 4), row("c2", C, 3), row("c3", C, 2, -1)],
+    };
+    const selection = selectBestThird(standings);
+    assert.deepEqual(selection, { kind: "direct", teamId: "a3" });
+  });
+
+  it("returns blocked when two thirds are tied on won then setDiff", () => {
+    const standings = {
+      A: [row("a1", A, 4), row("a2", A, 3), row("a3", A, 2, 2)],
+      B: [row("b1", B, 4), row("b2", B, 3), row("b3", B, 2, 2)],
+      C: [row("c1", C, 4), row("c2", C, 3), row("c3", C, 1, 0)],
+    };
+    const selection = selectBestThird(standings);
+    assert.deepEqual(selection, {
+      kind: "blocked",
+      teamIds: ["a3", "b3"],
+    });
   });
 });

@@ -33,6 +33,7 @@ export function isKnownStage(stage: string): boolean {
   const known = [
     "GROUPS", "DESEMPATE", "SEMIFINAL_1", "SEMIFINAL_2", "FINAL",
     "REPECHAJE_1", "REPECHAJE_2", "BRONZE",
+    "CUARTOS_1", "CUARTOS_2", "CUARTOS_3", "CUARTOS_4",
   ];
   return (known as readonly string[]).includes(stage);
 }
@@ -55,6 +56,14 @@ export function stageLabel(stage: string): string {
       return "Repechaje 2";
     case "BRONZE":
       return "3er y 4to puesto";
+    case "CUARTOS_1":
+      return "Cuartos 1";
+    case "CUARTOS_2":
+      return "Cuartos 2";
+    case "CUARTOS_3":
+      return "Cuartos 3";
+    case "CUARTOS_4":
+      return "Cuartos 4";
     default:
       return "Partido";
   }

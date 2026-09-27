@@ -66,6 +66,10 @@ export const STAGE_FORMATS: Record<string, readonly SetFormatId[]> = {
   SEMIFINAL_1: ["SINGLE_21", "TWO_15_TIEBREAK"],
   SEMIFINAL_2: ["SINGLE_21", "TWO_15_TIEBREAK"],
   FINAL: ["BEST_OF_3_21"],
+  CUARTOS_1: ["SINGLE_21"],
+  CUARTOS_2: ["SINGLE_21"],
+  CUARTOS_3: ["SINGLE_21"],
+  CUARTOS_4: ["SINGLE_21"],
 };
 
 const FORMAT_CAP: Record<SetFormatId, number> = {
