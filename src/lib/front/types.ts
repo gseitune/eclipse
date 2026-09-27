@@ -209,11 +209,13 @@ export interface CreateTeamInput {
   femaleName: string;
 }
 
+export type BracketFormat = "STANDARD" | "REPECHAJE" | "CUARTOS";
+
 export interface CreateEtapaInput {
   name: string;
   date?: string | null;
   teams: CreateTeamInput[];
-  bracketFormat?: "STANDARD" | "REPECHAJE" | "CUARTOS";
+  bracketFormat?: BracketFormat;
 }
 
 export class ApiError extends Error {

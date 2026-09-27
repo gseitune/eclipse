@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { fetchEtapas, createEtapa, cancelEtapa } from "@/lib/front/api";
-import type { EtapaMeta } from "@/lib/front/types";
+import type { BracketFormat, EtapaMeta } from "@/lib/front/types";
 import { ApiError } from "@/lib/front/types";
 
 function formatDateEs(dateStr: string | null): string {
@@ -39,11 +39,15 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
   // Form state
   const [nombre, setNombre] = useState("");
   const [equipos, setEquipos] = useState<TeamRow[]>([]);
+  const [formato, setFormato] = useState<BracketFormat>("STANDARD");
 
   interface TeamRow {
     maleName: string;
     femaleName: string;
   }
+
+  // CUARTOS needs 3 zones, which only happens from 11 teams on.
+  const cuartosNeedsMoreTeams = formato === "CUARTOS" && (equipos.length < 11 || equipos.length > 12);
 
   // Etapa numbers allowed: 1..8, starting after the last existing one
   const ETAPA_MIN = 1;
@@ -112,6 +116,7 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
     try {
       await createEtapa({
         name: nombre,
+        bracketFormat: formato,
         teams: equipos.map((row) => ({
           name: deriveTeamName(row),
           maleName: row.maleName.trim(),
@@ -276,6 +281,25 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
             )}
           </div>
           <div>
+            <label
+              htmlFor="circuito-formato"
+              className="block text-xs font-medium text-stone-600 mb-1"
+            >
+              Formato
+            </label>
+            <select
+              id="circuito-formato"
+              value={formato}
+              onChange={(e) => setFormato(e.target.value as BracketFormat)}
+              disabled={submitting}
+              className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+            >
+              <option value="STANDARD">2 zonas — semis y final</option>
+              <option value="REPECHAJE">2 zonas — repechaje, semifinales y final</option>
+              <option value="CUARTOS">3 zonas — repechaje, cuartos, semis, bronce y final</option>
+            </select>
+          </div>
+          <div>
             <span className="block text-xs font-medium text-stone-600 mb-1">
               Equipos — mixto fijo: un jugador masculino y una jugadora femenina por equipo
             </span>
@@ -337,10 +361,18 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
             >
               + Agregar equipo
             </button>
+            <p className="mt-2 text-xs text-stone-500">
+              {equipos.length} {equipos.length === 1 ? "equipo" : "equipos"}
+            </p>
+            {cuartosNeedsMoreTeams && (
+              <p className="mt-1 text-xs font-medium text-red-600" role="alert">
+                El formato de 3 zonas necesita 11 o 12 parejas.
+              </p>
+            )}
           </div>
           <button
             type="submit"
-            disabled={submitting || !nombre || !allRowsFilled}
+            disabled={submitting || !nombre || !allRowsFilled || cuartosNeedsMoreTeams}
             className="w-full rounded-lg bg-amber-600 px-4 py-3 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50 transition-colors min-h-[44px]"
           >
             {submitting ? "Creando…" : "Crear etapa"}
