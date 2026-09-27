@@ -1,11 +1,19 @@
 import { PrismaClient } from "@/generated/prisma/client";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { PrismaLibSql } from "@prisma/adapter-libsql";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-const adapter = new PrismaBetterSqlite3({
-  url: process.env.DATABASE_URL ?? "file:./dev.db",
-});
+const databaseUrl = process.env.DATABASE_URL ?? "file:./dev.db";
+
+// Local SQLite keeps the zero-setup path; remote libsql:// URLs (Turso on
+// Vercel) go through the libSQL adapter so the exact same code serves both.
+const adapter = databaseUrl.startsWith("file:")
+  ? new PrismaBetterSqlite3({ url: databaseUrl })
+  : new PrismaLibSql({
+      url: databaseUrl,
+      authToken: process.env.DATABASE_AUTH_TOKEN,
+    });
 
 export const prisma =
   globalForPrisma.prisma ??
