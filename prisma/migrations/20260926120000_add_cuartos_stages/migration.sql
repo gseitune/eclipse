@@ -1,0 +1,3 @@
+﻿-- Add CUARTOS stages and CUARTOS bracket format
+-- SQLite stores enums as TEXT so no ALTER needed for enum extension.
+-- This migration file is tracked by Prisma for schema history.

@@ -16,6 +16,7 @@ enum Zone {
 enum BracketFormat {
   STANDARD
   REPECHAJE
+  CUARTOS
 }
 
 enum Stage {
@@ -27,6 +28,10 @@ enum Stage {
   REPECHAJE_1
   REPECHAJE_2
   BRONZE
+  CUARTOS_1
+  CUARTOS_2
+  CUARTOS_3
+  CUARTOS_4
 }
 
 enum ResultStatus {

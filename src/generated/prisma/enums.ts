@@ -20,7 +20,8 @@ export type Zone = (typeof Zone)[keyof typeof Zone]
 
 export const BracketFormat = {
   STANDARD: 'STANDARD',
-  REPECHAJE: 'REPECHAJE'
+  REPECHAJE: 'REPECHAJE',
+  CUARTOS: 'CUARTOS'
 } as const
 
 export type BracketFormat = (typeof BracketFormat)[keyof typeof BracketFormat]
@@ -34,7 +35,11 @@ export const Stage = {
   FINAL: 'FINAL',
   REPECHAJE_1: 'REPECHAJE_1',
   REPECHAJE_2: 'REPECHAJE_2',
-  BRONZE: 'BRONZE'
+  BRONZE: 'BRONZE',
+  CUARTOS_1: 'CUARTOS_1',
+  CUARTOS_2: 'CUARTOS_2',
+  CUARTOS_3: 'CUARTOS_3',
+  CUARTOS_4: 'CUARTOS_4'
 } as const
 
 export type Stage = (typeof Stage)[keyof typeof Stage]
