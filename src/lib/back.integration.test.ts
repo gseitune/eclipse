@@ -1,4 +1,4 @@
-﻿import { execSync } from "node:child_process";
+import { execSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -38,6 +38,9 @@ let getTeamsByZone!: BackModule["getTeamsByZone"];
 let getBracketsSnapshot!: BackModule["getBracketsSnapshot"];
 let generateZones!: BackModule["generateZones"];
 let listEtapas!: BackModule["listEtapas"];
+let getState!: BackModule["getState"];
+let getStateSnapshot!: BackModule["getStateSnapshot"];
+let resolveBestThird!: BackModule["resolveBestThird"];
 let BackError!: BackModule["BackError"];
 let InvalidResultError!: ResultFormatModule["InvalidResultError"];
 let subscribeSse!: EventsModule["subscribeSse"];
@@ -582,6 +585,9 @@ describe("cancel etapa (integration) â€” weather suspension", () => {
     reorderMatch = back.reorderMatch;
     generateZones = back.generateZones;
     listEtapas = back.listEtapas;
+    getState = back.getState;
+    getStateSnapshot = back.getStateSnapshot;
+    resolveBestThird = back.resolveBestThird;
     BackError = back.BackError;
     const events = await import("./events");
     subscribeSse = events.subscribeSse;
@@ -723,6 +729,7 @@ describe("CUARTOS format (integration)", () => {
     const back = await import("./back");
     createEtapa = back.createEtapa;
     getBracketsSnapshot = back.getBracketsSnapshot;
+    getTeamsByZone = back.getTeamsByZone;
     BackError = back.BackError;
     const events = await import("./events");
     subscribeSse = events.subscribeSse;
@@ -733,7 +740,7 @@ describe("CUARTOS format (integration)", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("creates CUARTOS etapa with 11 teams, 8 bracket slots, no BRONZE", async () => {
+  it("creates CUARTOS etapa with 11 teams, 9 bracket slots including BRONZE", async () => {
     const teamNames = Array.from({ length: 11 }, (_, i) => `Eq${i + 1}`);
     const teams = teamNames.map((name, i) => ({
       name,
@@ -743,11 +750,11 @@ describe("CUARTOS format (integration)", () => {
 
     const etapa = await createEtapa({ name: "Cuartos Test", teams, bracketFormat: "CUARTOS" });
     assert.equal(etapa.teamCount, 11);
-    assert.equal(etapa.matchCount, 15 + 8, "15 group matches + 8 bracket slots");
+    assert.equal(etapa.matchCount, 15 + 9, "15 group matches + 9 bracket slots");
 
     const snapshot = await getBracketsSnapshot(etapa.id);
     const stages = snapshot.map((m) => m.stage);
-    assert.ok(!stages.includes("BRONZE"), "NO bronze match for CUARTOS format");
+    assert.ok(stages.includes("BRONZE"), "BRONZE match exists for CUARTOS format");
     assert.ok(stages.includes("REPECHAJE_1"), "REPECHAJE_1 exists");
     assert.ok(stages.includes("CUARTOS_1"), "CUARTOS_1 exists");
     assert.ok(stages.includes("CUARTOS_2"), "CUARTOS_2 exists");
@@ -756,5 +763,199 @@ describe("CUARTOS format (integration)", () => {
     assert.ok(stages.includes("SEMIFINAL_1"), "SEMIFINAL_1 exists");
     assert.ok(stages.includes("SEMIFINAL_2"), "SEMIFINAL_2 exists");
     assert.ok(stages.includes("FINAL"), "FINAL exists");
+  });
+
+  it("CUARTOS fills BRONZE with semifinal losers and FINAL with winners", async () => {
+    const teamNames = Array.from({ length: 11 }, (_, i) => `Eq${i + 1}`);
+    const teams = teamNames.map((name, i) => ({
+      name,
+      maleName: `Male${i + 1}`,
+      femaleName: `Female${i + 1}`,
+    }));
+
+    // rng=()=>0 produces zones A=4 (Eq1-4), B=3 (Eq5-7), C=4 (Eq8-11)
+    let counter = 0;
+    const rng = () => { counter += 1; return (counter * 0.5) % 1; };
+    const etapa = await createEtapa({ name: "Cuartos Test 2", teams, bracketFormat: "CUARTOS" }, { rng });
+
+    const teamsByZone = await getTeamsByZone(etapa.id);
+    const zoneA = teamsByZone.A.map((t) => t.id);
+    const zoneB = teamsByZone.B.map((t) => t.id);
+    const zoneC = teamsByZone.C.map((t) => t.id);
+    // 11 teams over 3 balanced zones: 4/3/4. Assert it so a change in
+    // distributeTeams fails here instead of silently breaking the bracket.
+    assert.deepEqual([zoneA.length, zoneB.length, zoneC.length], [4, 3, 4]);
+
+    // Record all 15 group results with differentiated scores so selectBestThird
+    // picks a clear best third (A3 has higher setDiff than C3).
+    const allGroupMatches = await prisma.match.findMany({
+      where: { etapaId: etapa.id, stage: "GROUPS" },
+      orderBy: { slot: "asc" },
+    });
+
+    // Intended finishing order per zone: index 0 = champion, 2 = third.
+    // Every group match is decided in favour of the better-ranked team, and the
+    // score is placed on the correct side (teamA/teamB) so the outcome does not
+    // depend on the round-robin slot orientation.
+    const zoneOrder: readonly (readonly string[])[] = [zoneA, zoneB, zoneC];
+    const rankOf = (id: string) => {
+      for (const list of zoneOrder) {
+        const i = list.indexOf(id);
+        if (i >= 0) return i;
+      }
+      return Number.MAX_SAFE_INTEGER;
+    };
+
+    for (const m of allGroupMatches) {
+      const teamAId = m.teamAId!;
+      const teamBId = m.teamBId!;
+      const isA3VsA4 = (teamAId === zoneA[2] && teamBId === zoneA[3]) || (teamAId === zoneA[3] && teamBId === zoneA[2]);
+      const isC3VsC4 = (teamAId === zoneC[2] && teamBId === zoneC[3]) || (teamAId === zoneC[3] && teamBId === zoneC[2]);
+      if (isA3VsA4) {
+        // A3 wins by a wide margin so its zone setDiff stays strictly above C3's.
+        const aWins = zoneA[2] === teamAId;
+        await recordResult({ matchId: m.id, setFormat: "SINGLE_21", sets: [{ teamA: aWins ? 21 : 5, teamB: aWins ? 5 : 21 }] });
+      } else if (isC3VsC4) {
+        // C3 wins narrowly, so A3 is the unique best third.
+        const aWins = zoneC[2] === teamAId;
+        await recordResult({ matchId: m.id, setFormat: "SINGLE_21", sets: [{ teamA: aWins ? 21 : 19, teamB: aWins ? 19 : 21 }] });
+      } else {
+        const aWins = rankOf(teamAId) <= rankOf(teamBId);
+        await recordResult({ matchId: m.id, setFormat: "SINGLE_21", sets: [{ teamA: aWins ? 21 : 19, teamB: aWins ? 19 : 21 }] });
+      }
+    }
+
+    // Single-set group stages leave the two 4-team zone thirds tied, so the
+    // bracket waits for the organizer instead of inventing a tiebreaker.
+    const blockedState = await getStateSnapshot(etapa.id);
+    assert.equal(blockedState.bracketsBlocked?.reason, "best_third_tie");
+    const tiedIds = blockedState.bracketsBlocked?.teamIds ?? [];
+    assert.equal(tiedIds.length, 2, "exactly the two 4-team zone thirds tie");
+
+    const emptyRepechage = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "REPECHAJE_1" },
+    });
+    assert.ok(!emptyRepechage?.teamAId, "repechage stays empty until the pick");
+
+    // The organizer names the best third; the repechage takes the other two.
+    const picked = tiedIds[0]!;
+    const resolved = await resolveBestThird(etapa.id, picked);
+    assert.equal(resolved.ok, true, `resolve failed: ${resolved.missing.join(", ")}`);
+
+    // Verify REPECHAJE_1 has both teams
+    const re1Matches = await prisma.match.findMany({
+      where: { etapaId: etapa.id, stage: "REPECHAJE_1" },
+      include: { teamA: true, teamB: true },
+    });
+    assert.equal(re1Matches.length, 1);
+    assert.ok(re1Matches[0].teamAId && re1Matches[0].teamBId, "RE1 has both teams");
+    const re1Teams = [re1Matches[0].teamAId!, re1Matches[0].teamBId!];
+    assert.ok(!re1Teams.includes(picked), "the picked third does not play the repechage");
+    const afterState = await getStateSnapshot(etapa.id);
+    assert.equal(afterState.bracketsBlocked, null, "no longer blocked");
+
+    // Play REPECHAJE_1 (teamA always wins 21-18, so read the winner back)
+    const re1 = re1Matches[0];
+    await recordResult({ matchId: re1.id, setFormat: "SINGLE_21", sets: [{ teamA: 21, teamB: 18 }] });
+    const re1Played = await prisma.match.findFirst({
+      where: { id: re1.id },
+      select: { winnerId: true },
+    });
+    const re1Winner = re1Played?.winnerId;
+    assert.ok(re1Winner, "repechage has a winner");
+
+    // Verify QFs are filled
+    const qfMatches = await prisma.match.findMany({
+      where: { etapaId: etapa.id, stage: { in: ["CUARTOS_1", "CUARTOS_2", "CUARTOS_3", "CUARTOS_4"] } },
+      include: { teamA: true, teamB: true },
+    });
+    assert.equal(qfMatches.length, 4);
+    for (const qf of qfMatches) {
+      assert.ok(qf.teamAId && qf.teamBId, `${qf.stage} has both teams`);
+    }
+    const qf4 = qfMatches.find((m) => m.stage === "CUARTOS_4")!;
+    assert.ok(
+      qf4.teamAId === picked || qf4.teamBId === picked,
+      "the picked third is in CUARTOS_4",
+    );
+    assert.ok(
+      qf4.teamAId === re1Winner || qf4.teamBId === re1Winner,
+      "the repechage winner is in CUARTOS_4",
+    );
+
+    // Play all 4 QFs
+    for (const qf of qfMatches) {
+      await recordResult({ matchId: qf.id, setFormat: "SINGLE_21", sets: [{ teamA: 21, teamB: 19 }] });
+    }
+
+    // Verify SEMIFINALs are filled
+    const semiMatches = await prisma.match.findMany({
+      where: { etapaId: etapa.id, stage: { in: ["SEMIFINAL_1", "SEMIFINAL_2"] } },
+      include: { teamA: true, teamB: true },
+    });
+    assert.equal(semiMatches.length, 2);
+    for (const semi of semiMatches) {
+      assert.ok(semi.teamAId && semi.teamBId, `${semi.stage} has both teams`);
+    }
+
+    // Play both semis (teamA always wins 21-18, so read the winner back)
+    await recordResult({ matchId: semiMatches[0].id, setFormat: "SINGLE_21", sets: [{ teamA: 21, teamB: 18 }] });
+    await recordResult({ matchId: semiMatches[1].id, setFormat: "SINGLE_21", sets: [{ teamA: 21, teamB: 18 }] });
+    const semisPlayed = await prisma.match.findMany({
+      where: { id: { in: semiMatches.map((s) => s.id) } },
+      select: { stage: true, teamAId: true, teamBId: true, winnerId: true },
+    });
+    const semiWinners = semisPlayed.map((m) => m.winnerId);
+    assert.ok(semiWinners.every((w): w is string => !!w), "both semis have a winner");
+
+    // Verify BRONZE exists with the two semifinal losers
+    const bronzeMatch = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "BRONZE" },
+      include: { teamA: true, teamB: true },
+    });
+    assert.ok(bronzeMatch, "BRONZE match exists");
+    assert.ok(bronzeMatch.teamAId && bronzeMatch.teamBId, "BRONZE has both teams");
+    const bronzeLosers = semisPlayed
+      .flatMap((m) => [m.teamAId, m.teamBId])
+      .filter((id): id is string => !!id && !semiWinners.includes(id));
+    assert.equal(bronzeLosers.length, 2, "two semifinal losers");
+    assert.ok(
+      (bronzeMatch.teamAId === bronzeLosers[0] && bronzeMatch.teamBId === bronzeLosers[1]) ||
+      (bronzeMatch.teamAId === bronzeLosers[1] && bronzeMatch.teamBId === bronzeLosers[0]),
+      "BRONZE has the two semifinal losers",
+    );
+
+    // Verify FINAL has the winners
+    const finalMatch = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "FINAL" },
+      include: { teamA: true, teamB: true },
+    });
+    assert.ok(finalMatch, "FINAL match exists");
+    assert.ok(finalMatch.teamAId && finalMatch.teamBId, "FINAL has both teams");
+    assert.deepEqual(
+      [finalMatch.teamAId, finalMatch.teamBId].sort(),
+      [...semiWinners].sort(),
+      "FINAL has the two semifinal winners",
+    );
+
+    // Bracket slots start without a format; the FINAL must accept the
+    // best-of-three (2x21, third set as tiebreak) the tournament final uses.
+    assert.equal(finalMatch!.setFormat, null, "unplayed slot has no format yet");
+    await assert.rejects(
+      () => recordResult({ matchId: finalMatch!.id, setFormat: "BEST_OF_3_21", sets: [{ teamA: 21, teamB: 15 }] }).then(() => {}),
+      "a 2-set result cannot close a best-of-three",
+    );
+    await recordResult({
+      matchId: finalMatch!.id,
+      setFormat: "BEST_OF_3_21",
+      sets: [{ teamA: 21, teamB: 15 }, { teamA: 15, teamB: 21 }, { teamA: 21, teamB: 19 }],
+    });
+    const finalPlayed = await prisma.match.findFirst({
+      where: { id: finalMatch!.id },
+      select: { setFormat: true, resultStatus: true, winnerId: true },
+    });
+    assert.equal(finalPlayed?.setFormat, "BEST_OF_3_21");
+    assert.equal(finalPlayed?.resultStatus, "COMPLETE");
+    assert.equal(finalPlayed?.winnerId, finalMatch!.teamAId, "teamA won 2-1");
   });
 });

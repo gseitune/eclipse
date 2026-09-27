@@ -143,6 +143,21 @@ export async function closeEtapa(
   return handleResponse(res);
 }
 
+/** Organizer names the best third when the automatic selection ties. */
+export async function resolveBestThird(
+  etapaId: string,
+  teamId: string,
+): Promise<{ ok: boolean; missing: string[] }> {
+  const res = await fetch(`${BASE}/best-third`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+    body: JSON.stringify({ etapaId, teamId }),
+  });
+  return handleResponse(res);
+}
+
 export async function cancelEtapa(
   etapaId: string,
   password: string,

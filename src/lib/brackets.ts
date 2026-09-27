@@ -33,6 +33,12 @@ export interface BracketPairing {
 export interface BuildBracketsOptions {
   /** Best-second already resolved (e.g. the DESEMPATE winner). */
   resolvedSecondId?: string;
+  /**
+   * Best third already resolved by the organizer. Single-set group stages make
+   * (won, setDiff) tie between the thirds of two 4-team zones by construction,
+   * so the organizer picks the best third instead of the engine inventing one.
+   */
+  resolvedThirdId?: string;
   /** Tournament bracket format. Defaults to STANDARD. */
   format?: BracketFormat;
 }
@@ -248,7 +254,7 @@ export function selectBestThird(
 /** Build CUARTOS bracket pairings for a 3-zone tournament (11–12 teams). */
 export function buildCuartosBrackets(
   standings: StandingsByZone,
-  __options: BuildBracketsOptions = {},
+  options: BuildBracketsOptions = {},
 ): { pairings: BracketPairing[]; missing: string[] } {
   const zones = (Object.keys(standings) as Zone[]).filter((z) =>
     standings[z]?.some((r) => r.zone === z),
@@ -279,11 +285,13 @@ export function buildCuartosBrackets(
   if (missing.length > 0) return { pairings: [], missing };
 
   const bestThird = selectBestThird(standings);
-  if (bestThird?.kind === "blocked") {
+  if (!options.resolvedThirdId && bestThird?.kind === "blocked") {
     return { pairings: [], missing: ["Best third (3+ tied)"] };
   }
 
-  const bestThirdId = bestThird?.kind === "direct" ? bestThird.teamId : null;
+  const bestThirdId =
+    options.resolvedThirdId ??
+    (bestThird?.kind === "direct" ? bestThird.teamId : null);
 
   // Identify the two losing thirds (for REPECHAJE_1)
   const allThirds = [a3!, b3!, c3!].filter((r): r is StandingRow => r !== undefined);

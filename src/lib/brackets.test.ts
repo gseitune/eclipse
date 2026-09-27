@@ -259,3 +259,43 @@ describe("selectBestThird", () => {
     });
   });
 });
+
+describe("buildCuartosBrackets with an organizer-resolved best third", () => {
+  // The single-set group format ties the thirds of two 4-team zones, so the
+  // organizer names the best third and the repechage takes the other two.
+  const tied = {
+    A: [row("a1", A, 3), row("a2", A, 2), row("a3", A, 1, -1), row("a4", A, 0, -3)],
+    B: [row("b1", B, 3), row("b2", B, 2), row("b3", B, 1, -1), row("b4", B, 0, -3)],
+    C: [row("c1", C, 2), row("c2", C, 1), row("c3", C, 0, -2)],
+  };
+
+  it("stays blocked without a resolved third", () => {
+    const result = buildCuartosBrackets(tied, { format: "CUARTOS" });
+    assert.deepEqual(result.pairings, []);
+    assert.ok(result.missing.length > 0, "tie blocks the bracket");
+  });
+
+  it("fills the repechage with the two thirds that lost the pick", () => {
+    const result = buildCuartosBrackets(tied, {
+      format: "CUARTOS",
+      resolvedThirdId: "b3",
+    });
+    assert.deepEqual(result.missing, []);
+    const re = result.pairings.find((p) => p.stage === "REPECHAJE_1");
+    assert.ok(re, "repechage is filled");
+    assert.deepEqual(
+      [re!.teamAId, re!.teamBId].sort(),
+      ["a3", "c3"],
+      "repechage holds the two thirds that were not picked",
+    );
+    assert.ok(
+      result.pairings.every((p) => {
+        if (p.stage !== "CUARTOS_1" && p.stage !== "CUARTOS_2" && p.stage !== "CUARTOS_3") {
+          return true;
+        }
+        return p.teamAId !== "b3" && p.teamBId !== "b3";
+      }),
+      "the picked third only enters at CUARTOS_4, which stays empty here",
+    );
+  });
+});

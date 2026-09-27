@@ -268,15 +268,16 @@ export async function createEtapa(input: CreateEtapaInput, _opts?: { rng?: () =>
         ]
       : isCuartos
       ? [
-          { stage: "REPECHAJE_1" as Stage, slot: slot++ },
-          { stage: "CUARTOS_1" as Stage, slot: slot++ },
-          { stage: "CUARTOS_2" as Stage, slot: slot++ },
-          { stage: "CUARTOS_3" as Stage, slot: slot++ },
-          { stage: "CUARTOS_4" as Stage, slot: slot++ },
-          { stage: "SEMIFINAL_1" as Stage, slot: slot++ },
-          { stage: "SEMIFINAL_2" as Stage, slot: slot++ },
-          { stage: "FINAL" as Stage, slot: slot++ },
-        ]
+           { stage: "REPECHAJE_1" as Stage, slot: slot++ },
+           { stage: "CUARTOS_1" as Stage, slot: slot++ },
+           { stage: "CUARTOS_2" as Stage, slot: slot++ },
+           { stage: "CUARTOS_3" as Stage, slot: slot++ },
+           { stage: "CUARTOS_4" as Stage, slot: slot++ },
+           { stage: "SEMIFINAL_1" as Stage, slot: slot++ },
+           { stage: "SEMIFINAL_2" as Stage, slot: slot++ },
+           { stage: "BRONZE" as Stage, slot: slot++ },
+           { stage: "FINAL" as Stage, slot: slot++ },
+         ]
       : [
           { stage: "SEMIFINAL_1" as Stage, slot: slot++ },
           { stage: "SEMIFINAL_2" as Stage, slot: slot++ },
@@ -306,7 +307,7 @@ export async function createEtapa(input: CreateEtapaInput, _opts?: { rng?: () =>
   });
 
   // Real fixture size: intra-zone round-robin pairs + bracket slots.
-  const bracketSlotCount = isRepechaje ? 6 : isCuartos ? 8 : 3;
+  const bracketSlotCount = isRepechaje ? 6 : isCuartos ? 9 : 3;
   const groupMatchCount = groups.reduce(
     (acc, g) => acc + (g.teams.length * (g.teams.length - 1)) / 2,
     0,
@@ -674,9 +675,11 @@ async function finalizeBrackets(
   etapaId: string,
   resolvedSecondId?: string,
   format?: "STANDARD" | "REPECHAJE" | "CUARTOS",
+  resolvedThirdId?: string,
 ): Promise<{ ok: boolean; missing: string[] }> {
   const { pairings, missing } = buildBrackets(standings, {
     ...(resolvedSecondId ? { resolvedSecondId } : {}),
+    ...(resolvedThirdId ? { resolvedThirdId } : {}),
     format,
   });
   if (missing.length > 0 || pairings.length === 0) {
@@ -907,15 +910,25 @@ async function fillDescendantMatches(
 
     if (fmt === "CUARTOS" && stage === "REPECHAJE_1") {
       const standings = await getStandings(etapaId);
-      const bestThird = selectBestThird(standings);
-      const bestThirdId = bestThird?.kind === "direct" ? bestThird.teamId : null;
-      if (!bestThirdId) return false;
 
       const re1Match = await tx.match.findFirst({
         where: { etapaId, stage: "REPECHAJE_1" as Stage, resultStatus: "COMPLETE" },
       });
       const re1Winner = re1Match?.winnerId ?? null;
-      if (!re1Winner) return false;
+      if (!re1Winner || !re1Match) return false;
+
+      // The best third is the zone third that is NOT in the repechage. It was
+      // either the direct selection or the organizer's manual pick — both leave
+      // the repechage holding the other two thirds, so no stored flag is needed
+      // (and a tied selection must not be recomputed here: it stays blocked).
+      const inRepechaje = new Set(
+        [re1Match.teamAId, re1Match.teamBId].filter((id): id is string => !!id),
+      );
+      const thirds = (["A", "B", "C"] as Zone[])
+        .map((z) => standings[z]?.[2]?.teamId)
+        .filter((id): id is string => !!id);
+      const bestThirdId = thirds.find((id) => !inRepechaje.has(id));
+      if (!bestThirdId) return false;
 
       const cuartos4 = await tx.match.findFirst({
         where: { etapaId, stage: "CUARTOS_4" as Stage },
@@ -981,21 +994,19 @@ async function fillDescendantMatches(
           });
           changed = true;
         }
-        if (fmt !== "CUARTOS") {
-          const semi1Match = allMatches.find((m) => m.stage === "SEMIFINAL_1");
-          const semi2Match = allMatches.find((m) => m.stage === "SEMIFINAL_2");
-          const loser1 = w1 === semi1Match?.teamAId ? semi1Match.teamBId : semi1Match?.teamAId;
-          const loser2 = w2 === semi2Match?.teamAId ? semi2Match.teamBId : semi2Match?.teamAId;
-          const bronzeSlot = await tx.match.findFirst({
-            where: { etapaId, stage: "BRONZE" as Stage, teamAId: null, teamBId: null },
+        const semi1Match = allMatches.find((m) => m.stage === "SEMIFINAL_1");
+        const semi2Match = allMatches.find((m) => m.stage === "SEMIFINAL_2");
+        const loser1 = w1 === semi1Match?.teamAId ? semi1Match.teamBId : semi1Match?.teamAId;
+        const loser2 = w2 === semi2Match?.teamAId ? semi2Match.teamBId : semi2Match?.teamAId;
+        const bronzeSlot = await tx.match.findFirst({
+          where: { etapaId, stage: "BRONZE" as Stage, teamAId: null, teamBId: null },
+        });
+        if (bronzeSlot && loser1 && loser2) {
+          await tx.match.update({
+            where: { id: bronzeSlot.id },
+            data: { teamAId: loser1, teamBId: loser2 },
           });
-          if (bronzeSlot && loser1 && loser2) {
-            await tx.match.update({
-              where: { id: bronzeSlot.id },
-              data: { teamAId: loser1, teamBId: loser2 },
-            });
-            changed = true;
-          }
+          changed = true;
         }
       }
     } else if (fmt === "CUARTOS" && stage.startsWith("CUARTOS_")) {
@@ -1085,6 +1096,44 @@ function getCuartosSemifinalPairingsFromBack(
   // Code comment: this case is unlikely with proper zone distribution but
   // we fall through to the first option as a safe default.
   return pairings[0];
+}
+
+/**
+ * Organizer picks the best third when the automatic selection ties.
+ *
+ * With single-set group stages the third of a 4-team zone is always 1 win / -1
+ * setDiff, so the thirds of two 4-team zones tie by construction and the engine
+ * refuses to invent a tiebreaker. The organizer names the winner; the repechage
+ * is then filled with the other two thirds. Only a team that is actually in the
+ * tie is accepted.
+ */
+export async function resolveBestThird(
+  etapaId: string,
+  teamId: string,
+): Promise<{ ok: boolean; missing: string[] }> {
+  const etapa = await prisma.etapa.findUnique({
+    where: { id: etapaId },
+    select: { bracketFormat: true },
+  });
+  if (etapa?.bracketFormat !== "CUARTOS") {
+    throw new BackError(
+      "Best third can only be resolved in the CUARTOS format.",
+      400,
+      "not_cuartos_format",
+    );
+  }
+
+  const standings = await getStandings(etapaId);
+  const selection = selectBestThird(standings);
+  if (selection?.kind !== "blocked" || !selection.teamIds.includes(teamId)) {
+    throw new BackError(
+      "That team is not tied for best third.",
+      400,
+      "team_not_tied_for_best_third",
+    );
+  }
+
+  return finalizeBrackets(standings, etapaId, undefined, "CUARTOS", teamId);
 }
 
 /**
