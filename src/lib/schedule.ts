@@ -20,6 +20,8 @@ export interface ScheduleMatchInput {
   setFormat: SetFormatId | null;
   resultStatus: ResultStatus;
   recordedAt: Date | null;
+  manualStartAt?: string | null;
+  manualEndAt?: string | null;
 }
 
 export interface ScheduleRow {
@@ -41,6 +43,8 @@ export interface ScheduleRow {
    * the bracket). FINAL is always editable once played.
    */
   editable: boolean;
+  manualStartAt?: string | null;
+  manualEndAt?: string | null;
 }
 
 /**
@@ -105,17 +109,23 @@ export function computeSchedule(
   );
 
   for (const m of ordered) {
+    const hasManual = m.manualStartAt != null;
+    const manualWindow = hasManual ? formatManualWindow(m.manualStartAt as string, (m.manualEndAt as string | null) ?? null) : null;
+    const scheduled = hasManual ? manualWindow : (m.timeLabel ?? null);
+
     if (firstRecordedSlot === undefined || m.slot <= firstRecordedSlot) {
       rows.push({
         id: m.id,
         slot: m.slot,
         stage: m.stage,
-        scheduled: m.timeLabel ?? null,
+        scheduled,
         estimated: null,
         estimatedFromResult: false,
         sets: m.sets,
         setFormat: m.setFormat,
         editable: editableByMatch.get(m.id) ?? false,
+        manualStartAt: m.manualStartAt ?? null,
+        manualEndAt: m.manualEndAt ?? null,
       });
       continue;
     }
@@ -129,12 +139,14 @@ export function computeSchedule(
           id: m.id,
           slot: m.slot,
           stage: m.stage,
-          scheduled: m.timeLabel ?? null,
+          scheduled,
           estimated: null,
           estimatedFromResult: false,
           sets: m.sets,
           setFormat: m.setFormat,
           editable: editableByMatch.get(m.id) ?? false,
+          manualStartAt: m.manualStartAt ?? null,
+          manualEndAt: m.manualEndAt ?? null,
         });
         continue;
       }
@@ -147,15 +159,24 @@ export function computeSchedule(
       id: m.id,
       slot: m.slot,
       stage: m.stage,
-      scheduled: m.timeLabel ?? null,
+      scheduled,
       estimated: `${toTimeOnly(start.toISOString())} - ${toTimeOnly(end.toISOString())}`,
       estimatedFromResult: true,
       sets: m.sets,
       setFormat: m.setFormat,
       editable: editableByMatch.get(m.id) ?? false,
+      manualStartAt: m.manualStartAt ?? null,
+      manualEndAt: m.manualEndAt ?? null,
     });
     nextStart = end;
   }
 
   return rows;
+}
+
+function formatManualWindow(startIso: string, endIso: string | null): string | null {
+  if (!startIso) return null;
+  const start = toTimeOnly(startIso);
+  const end = endIso ? toTimeOnly(endIso) : start;
+  return `${start} - ${end}`;
 }

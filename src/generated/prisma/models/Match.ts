@@ -47,6 +47,8 @@ export type MatchMinAggregateOutputType = {
   resultStatus: $Enums.ResultStatus | null
   winnerId: string | null
   recordedAt: Date | null
+  manualStartAt: Date | null
+  manualEndAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -64,6 +66,8 @@ export type MatchMaxAggregateOutputType = {
   resultStatus: $Enums.ResultStatus | null
   winnerId: string | null
   recordedAt: Date | null
+  manualStartAt: Date | null
+  manualEndAt: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -82,6 +86,8 @@ export type MatchCountAggregateOutputType = {
   resultStatus: number
   winnerId: number
   recordedAt: number
+  manualStartAt: number
+  manualEndAt: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -109,6 +115,8 @@ export type MatchMinAggregateInputType = {
   resultStatus?: true
   winnerId?: true
   recordedAt?: true
+  manualStartAt?: true
+  manualEndAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -126,6 +134,8 @@ export type MatchMaxAggregateInputType = {
   resultStatus?: true
   winnerId?: true
   recordedAt?: true
+  manualStartAt?: true
+  manualEndAt?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -144,6 +154,8 @@ export type MatchCountAggregateInputType = {
   resultStatus?: true
   winnerId?: true
   recordedAt?: true
+  manualStartAt?: true
+  manualEndAt?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -249,6 +261,8 @@ export type MatchGroupByOutputType = {
   resultStatus: $Enums.ResultStatus
   winnerId: string | null
   recordedAt: Date | null
+  manualStartAt: Date | null
+  manualEndAt: Date | null
   createdAt: Date
   updatedAt: Date
   _count: MatchCountAggregateOutputType | null
@@ -290,6 +304,8 @@ export type MatchWhereInput = {
   resultStatus?: Prisma.EnumResultStatusFilter<"Match"> | $Enums.ResultStatus
   winnerId?: Prisma.StringNullableFilter<"Match"> | string | null
   recordedAt?: Prisma.DateTimeNullableFilter<"Match"> | Date | string | null
+  manualStartAt?: Prisma.DateTimeNullableFilter<"Match"> | Date | string | null
+  manualEndAt?: Prisma.DateTimeNullableFilter<"Match"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Match"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Match"> | Date | string
   etapa?: Prisma.XOR<Prisma.EtapaScalarRelationFilter, Prisma.EtapaWhereInput>
@@ -312,6 +328,8 @@ export type MatchOrderByWithRelationInput = {
   resultStatus?: Prisma.SortOrder
   winnerId?: Prisma.SortOrderInput | Prisma.SortOrder
   recordedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  manualStartAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  manualEndAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   etapa?: Prisma.EtapaOrderByWithRelationInput
@@ -337,6 +355,8 @@ export type MatchWhereUniqueInput = Prisma.AtLeast<{
   resultStatus?: Prisma.EnumResultStatusFilter<"Match"> | $Enums.ResultStatus
   winnerId?: Prisma.StringNullableFilter<"Match"> | string | null
   recordedAt?: Prisma.DateTimeNullableFilter<"Match"> | Date | string | null
+  manualStartAt?: Prisma.DateTimeNullableFilter<"Match"> | Date | string | null
+  manualEndAt?: Prisma.DateTimeNullableFilter<"Match"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Match"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Match"> | Date | string
   etapa?: Prisma.XOR<Prisma.EtapaScalarRelationFilter, Prisma.EtapaWhereInput>
@@ -359,6 +379,8 @@ export type MatchOrderByWithAggregationInput = {
   resultStatus?: Prisma.SortOrder
   winnerId?: Prisma.SortOrderInput | Prisma.SortOrder
   recordedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  manualStartAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  manualEndAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.MatchCountOrderByAggregateInput
@@ -385,6 +407,8 @@ export type MatchScalarWhereWithAggregatesInput = {
   resultStatus?: Prisma.EnumResultStatusWithAggregatesFilter<"Match"> | $Enums.ResultStatus
   winnerId?: Prisma.StringNullableWithAggregatesFilter<"Match"> | string | null
   recordedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Match"> | Date | string | null
+  manualStartAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Match"> | Date | string | null
+  manualEndAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Match"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Match"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Match"> | Date | string
 }
@@ -399,6 +423,8 @@ export type MatchCreateInput = {
   setFormat?: $Enums.SetFormat | null
   resultStatus?: $Enums.ResultStatus
   recordedAt?: Date | string | null
+  manualStartAt?: Date | string | null
+  manualEndAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   etapa: Prisma.EtapaCreateNestedOneWithoutMatchesInput
@@ -421,6 +447,8 @@ export type MatchUncheckedCreateInput = {
   resultStatus?: $Enums.ResultStatus
   winnerId?: string | null
   recordedAt?: Date | string | null
+  manualStartAt?: Date | string | null
+  manualEndAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -435,6 +463,8 @@ export type MatchUpdateInput = {
   setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualStartAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualEndAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   etapa?: Prisma.EtapaUpdateOneRequiredWithoutMatchesNestedInput
@@ -457,6 +487,8 @@ export type MatchUncheckedUpdateInput = {
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   winnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualStartAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualEndAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -475,6 +507,8 @@ export type MatchCreateManyInput = {
   resultStatus?: $Enums.ResultStatus
   winnerId?: string | null
   recordedAt?: Date | string | null
+  manualStartAt?: Date | string | null
+  manualEndAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -489,6 +523,8 @@ export type MatchUpdateManyMutationInput = {
   setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualStartAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualEndAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -507,6 +543,8 @@ export type MatchUncheckedUpdateManyInput = {
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   winnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualStartAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualEndAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -535,6 +573,8 @@ export type MatchCountOrderByAggregateInput = {
   resultStatus?: Prisma.SortOrder
   winnerId?: Prisma.SortOrder
   recordedAt?: Prisma.SortOrder
+  manualStartAt?: Prisma.SortOrder
+  manualEndAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -556,6 +596,8 @@ export type MatchMaxOrderByAggregateInput = {
   resultStatus?: Prisma.SortOrder
   winnerId?: Prisma.SortOrder
   recordedAt?: Prisma.SortOrder
+  manualStartAt?: Prisma.SortOrder
+  manualEndAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -573,6 +615,8 @@ export type MatchMinOrderByAggregateInput = {
   resultStatus?: Prisma.SortOrder
   winnerId?: Prisma.SortOrder
   recordedAt?: Prisma.SortOrder
+  manualStartAt?: Prisma.SortOrder
+  manualEndAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -775,6 +819,8 @@ export type MatchCreateWithoutEtapaInput = {
   setFormat?: $Enums.SetFormat | null
   resultStatus?: $Enums.ResultStatus
   recordedAt?: Date | string | null
+  manualStartAt?: Date | string | null
+  manualEndAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   teamA?: Prisma.TeamCreateNestedOneWithoutMatchesAInput
@@ -795,6 +841,8 @@ export type MatchUncheckedCreateWithoutEtapaInput = {
   resultStatus?: $Enums.ResultStatus
   winnerId?: string | null
   recordedAt?: Date | string | null
+  manualStartAt?: Date | string | null
+  manualEndAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -841,6 +889,8 @@ export type MatchScalarWhereInput = {
   resultStatus?: Prisma.EnumResultStatusFilter<"Match"> | $Enums.ResultStatus
   winnerId?: Prisma.StringNullableFilter<"Match"> | string | null
   recordedAt?: Prisma.DateTimeNullableFilter<"Match"> | Date | string | null
+  manualStartAt?: Prisma.DateTimeNullableFilter<"Match"> | Date | string | null
+  manualEndAt?: Prisma.DateTimeNullableFilter<"Match"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Match"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Match"> | Date | string
 }
@@ -855,6 +905,8 @@ export type MatchCreateWithoutTeamAInput = {
   setFormat?: $Enums.SetFormat | null
   resultStatus?: $Enums.ResultStatus
   recordedAt?: Date | string | null
+  manualStartAt?: Date | string | null
+  manualEndAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   etapa: Prisma.EtapaCreateNestedOneWithoutMatchesInput
@@ -875,6 +927,8 @@ export type MatchUncheckedCreateWithoutTeamAInput = {
   resultStatus?: $Enums.ResultStatus
   winnerId?: string | null
   recordedAt?: Date | string | null
+  manualStartAt?: Date | string | null
+  manualEndAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -898,6 +952,8 @@ export type MatchCreateWithoutTeamBInput = {
   setFormat?: $Enums.SetFormat | null
   resultStatus?: $Enums.ResultStatus
   recordedAt?: Date | string | null
+  manualStartAt?: Date | string | null
+  manualEndAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   etapa: Prisma.EtapaCreateNestedOneWithoutMatchesInput
@@ -918,6 +974,8 @@ export type MatchUncheckedCreateWithoutTeamBInput = {
   resultStatus?: $Enums.ResultStatus
   winnerId?: string | null
   recordedAt?: Date | string | null
+  manualStartAt?: Date | string | null
+  manualEndAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -941,6 +999,8 @@ export type MatchCreateWithoutWinnerInput = {
   setFormat?: $Enums.SetFormat | null
   resultStatus?: $Enums.ResultStatus
   recordedAt?: Date | string | null
+  manualStartAt?: Date | string | null
+  manualEndAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   etapa: Prisma.EtapaCreateNestedOneWithoutMatchesInput
@@ -961,6 +1021,8 @@ export type MatchUncheckedCreateWithoutWinnerInput = {
   setFormat?: $Enums.SetFormat | null
   resultStatus?: $Enums.ResultStatus
   recordedAt?: Date | string | null
+  manualStartAt?: Date | string | null
+  manualEndAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1035,6 +1097,8 @@ export type MatchCreateManyEtapaInput = {
   resultStatus?: $Enums.ResultStatus
   winnerId?: string | null
   recordedAt?: Date | string | null
+  manualStartAt?: Date | string | null
+  manualEndAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1049,6 +1113,8 @@ export type MatchUpdateWithoutEtapaInput = {
   setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualStartAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualEndAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teamA?: Prisma.TeamUpdateOneWithoutMatchesANestedInput
@@ -1069,6 +1135,8 @@ export type MatchUncheckedUpdateWithoutEtapaInput = {
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   winnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualStartAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualEndAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1086,6 +1154,8 @@ export type MatchUncheckedUpdateManyWithoutEtapaInput = {
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   winnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualStartAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualEndAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1103,6 +1173,8 @@ export type MatchCreateManyTeamAInput = {
   resultStatus?: $Enums.ResultStatus
   winnerId?: string | null
   recordedAt?: Date | string | null
+  manualStartAt?: Date | string | null
+  manualEndAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1120,6 +1192,8 @@ export type MatchCreateManyTeamBInput = {
   resultStatus?: $Enums.ResultStatus
   winnerId?: string | null
   recordedAt?: Date | string | null
+  manualStartAt?: Date | string | null
+  manualEndAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1137,6 +1211,8 @@ export type MatchCreateManyWinnerInput = {
   setFormat?: $Enums.SetFormat | null
   resultStatus?: $Enums.ResultStatus
   recordedAt?: Date | string | null
+  manualStartAt?: Date | string | null
+  manualEndAt?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1151,6 +1227,8 @@ export type MatchUpdateWithoutTeamAInput = {
   setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualStartAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualEndAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   etapa?: Prisma.EtapaUpdateOneRequiredWithoutMatchesNestedInput
@@ -1171,6 +1249,8 @@ export type MatchUncheckedUpdateWithoutTeamAInput = {
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   winnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualStartAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualEndAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1188,6 +1268,8 @@ export type MatchUncheckedUpdateManyWithoutTeamAInput = {
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   winnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualStartAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualEndAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1202,6 +1284,8 @@ export type MatchUpdateWithoutTeamBInput = {
   setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualStartAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualEndAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   etapa?: Prisma.EtapaUpdateOneRequiredWithoutMatchesNestedInput
@@ -1222,6 +1306,8 @@ export type MatchUncheckedUpdateWithoutTeamBInput = {
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   winnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualStartAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualEndAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1239,6 +1325,8 @@ export type MatchUncheckedUpdateManyWithoutTeamBInput = {
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   winnerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualStartAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualEndAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1253,6 +1341,8 @@ export type MatchUpdateWithoutWinnerInput = {
   setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualStartAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualEndAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   etapa?: Prisma.EtapaUpdateOneRequiredWithoutMatchesNestedInput
@@ -1273,6 +1363,8 @@ export type MatchUncheckedUpdateWithoutWinnerInput = {
   setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualStartAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualEndAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1290,6 +1382,8 @@ export type MatchUncheckedUpdateManyWithoutWinnerInput = {
   setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   resultStatus?: Prisma.EnumResultStatusFieldUpdateOperationsInput | $Enums.ResultStatus
   recordedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualStartAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  manualEndAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1310,6 +1404,8 @@ export type MatchSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   resultStatus?: boolean
   winnerId?: boolean
   recordedAt?: boolean
+  manualStartAt?: boolean
+  manualEndAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   etapa?: boolean | Prisma.EtapaDefaultArgs<ExtArgs>
@@ -1332,6 +1428,8 @@ export type MatchSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   resultStatus?: boolean
   winnerId?: boolean
   recordedAt?: boolean
+  manualStartAt?: boolean
+  manualEndAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   etapa?: boolean | Prisma.EtapaDefaultArgs<ExtArgs>
@@ -1354,6 +1452,8 @@ export type MatchSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   resultStatus?: boolean
   winnerId?: boolean
   recordedAt?: boolean
+  manualStartAt?: boolean
+  manualEndAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   etapa?: boolean | Prisma.EtapaDefaultArgs<ExtArgs>
@@ -1376,11 +1476,13 @@ export type MatchSelectScalar = {
   resultStatus?: boolean
   winnerId?: boolean
   recordedAt?: boolean
+  manualStartAt?: boolean
+  manualEndAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type MatchOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "etapaId" | "stage" | "zone" | "slot" | "timeLabel" | "teamAId" | "teamBId" | "sets" | "setFormat" | "resultStatus" | "winnerId" | "recordedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["match"]>
+export type MatchOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "etapaId" | "stage" | "zone" | "slot" | "timeLabel" | "teamAId" | "teamBId" | "sets" | "setFormat" | "resultStatus" | "winnerId" | "recordedAt" | "manualStartAt" | "manualEndAt" | "createdAt" | "updatedAt", ExtArgs["result"]["match"]>
 export type MatchInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   etapa?: boolean | Prisma.EtapaDefaultArgs<ExtArgs>
   teamA?: boolean | Prisma.Match$teamAArgs<ExtArgs>
@@ -1425,6 +1527,8 @@ export type $MatchPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     resultStatus: $Enums.ResultStatus
     winnerId: string | null
     recordedAt: Date | null
+    manualStartAt: Date | null
+    manualEndAt: Date | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["match"]>
@@ -1867,6 +1971,8 @@ export interface MatchFieldRefs {
   readonly resultStatus: Prisma.FieldRef<"Match", 'ResultStatus'>
   readonly winnerId: Prisma.FieldRef<"Match", 'String'>
   readonly recordedAt: Prisma.FieldRef<"Match", 'DateTime'>
+  readonly manualStartAt: Prisma.FieldRef<"Match", 'DateTime'>
+  readonly manualEndAt: Prisma.FieldRef<"Match", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Match", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Match", 'DateTime'>
 }

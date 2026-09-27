@@ -462,6 +462,8 @@ export interface ScheduleBoardRow {
   teamB: { id: string; name: string } | null;
   resultStatus: string;
   editable: boolean;
+  manualStartAt?: string | null;
+  manualEndAt?: string | null;
 }
 
 export async function getScheduleBoard(etapaId?: string | null): Promise<ScheduleBoardRow[]> {
@@ -484,6 +486,8 @@ export async function getScheduleBoard(etapaId?: string | null): Promise<Schedul
     setFormat: m.setFormat,
     resultStatus: m.resultStatus,
     recordedAt: m.recordedAt,
+    manualStartAt: m.manualStartAt?.toISOString() ?? null,
+    manualEndAt: m.manualEndAt?.toISOString() ?? null,
   }));
 
   const rows = computeSchedule(input, state.prepMinutes, state.matchMinutes);
@@ -499,6 +503,8 @@ export async function getScheduleBoard(etapaId?: string | null): Promise<Schedul
       teamB: match.teamB ? { id: match.teamB.id, name: match.teamB.name } : null,
       resultStatus: match.resultStatus,
       editable: row.editable,
+      manualStartAt: row.manualStartAt,
+      manualEndAt: row.manualEndAt,
     };
   });
 }
@@ -597,6 +603,8 @@ export async function getSchedule(etapaId?: string | null): Promise<ScheduleRow[
         setFormat: true,
         resultStatus: true,
         recordedAt: true,
+        manualStartAt: true,
+        manualEndAt: true,
       },
       orderBy: { slot: "asc" },
     }),
@@ -610,6 +618,8 @@ export async function getSchedule(etapaId?: string | null): Promise<ScheduleRow[
     setFormat: m.setFormat,
     resultStatus: m.resultStatus,
     recordedAt: m.recordedAt,
+    manualStartAt: m.manualStartAt?.toISOString() ?? null,
+    manualEndAt: m.manualEndAt?.toISOString() ?? null,
   }));
   return computeSchedule(input, state.prepMinutes, state.matchMinutes);
 }

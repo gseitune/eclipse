@@ -121,6 +121,8 @@ model Match {
   winnerId     String?
   winner       Team?        @relation("Winner", fields: [winnerId], references: [id])
   recordedAt   DateTime?
+  manualStartAt DateTime?
+  manualEndAt  DateTime?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 
