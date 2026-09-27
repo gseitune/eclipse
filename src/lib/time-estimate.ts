@@ -47,24 +47,24 @@ export function computeTimeEstimate(
   let inProgressCount = 0;
 
   for (const row of rows) {
-    if (row.resultStatus === "PENDING") {
-      pendingCount++;
-    }
-
-    if (row.manualStartAt !== undefined && row.manualStartAt !== null && row.resultStatus !== "COMPLETE") {
-      inProgressCount++;
-    }
-
-    if (row.resultStatus === "COMPLETE") {
+    // Treat everything that is not "PENDING" as played:
+    // COMPLETE and WINNER_ONLY both count as played (0 remaining, not pending).
+    if (row.resultStatus !== "PENDING") {
       continue;
     }
 
-    if (row.manualEndAt !== undefined && row.manualEndAt !== null) {
-      const endMs = new Date(row.manualEndAt).getTime();
-      remainingMs += Math.max(0, endMs - nowMs);
-    } else if (row.manualStartAt !== undefined && row.manualStartAt !== null) {
-      const startMs = new Date(row.manualStartAt).getTime();
-      remainingMs += Math.max(0, defaultMs - (nowMs - startMs));
+    pendingCount++;
+
+    if (row.manualStartAt !== undefined && row.manualStartAt !== null) {
+      inProgressCount++;
+
+      if (row.manualEndAt !== undefined && row.manualEndAt !== null) {
+        const endMs = new Date(row.manualEndAt).getTime();
+        remainingMs += Math.max(0, endMs - nowMs);
+      } else {
+        const startMs = new Date(row.manualStartAt).getTime();
+        remainingMs += Math.max(0, defaultMs - (nowMs - startMs));
+      }
     } else {
       remainingMs += defaultMs;
     }

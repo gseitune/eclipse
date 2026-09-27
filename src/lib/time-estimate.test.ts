@@ -114,6 +114,22 @@ describe("computeTimeEstimate", () => {
     assert.equal(result!.inProgressCount, 2, "2 rows with manualStartAt but not COMPLETE");
   });
 
+  it("WINNER_ONLY rows count as played: not pending, not in-progress, 0 remaining", () => {
+    const tenMinAgoMs = nowMs - 10 * 60 * 1000;
+    const result = computeTimeEstimate(
+      [
+        { manualStartAt: new Date(tenMinAgoMs).toISOString(), resultStatus: "WINNER_ONLY" },
+        { manualStartAt: new Date(tenMinAgoMs).toISOString(), resultStatus: "PENDING" },
+      ],
+      nowMs,
+      defaultMs,
+    );
+    assert.ok(result, "should not be null");
+    assert.equal(result!.pendingCount, 1, "only the PENDING row counts as pending");
+    assert.equal(result!.inProgressCount, 1, "only the PENDING row counts as in progress");
+    assert.equal(result!.remainingMs, defaultMs - 10 * 60 * 1000, "WINNER_ONLY contributes 0 remaining");
+  });
+
   it("COMPLETE rows contribute 0 to remainingMs", () => {
     const result = computeTimeEstimate(
       [
