@@ -37,6 +37,9 @@ export interface ScheduleRow {
   scheduled: string | null;
   estimated: string | null;
   estimatedFromResult: boolean;
+  /** Manual organizer times (ISO) — set via POST /api/matches/:id/times. */
+  manualStartAt?: string | null;
+  manualEndAt?: string | null;
 }
 
 export interface TeamNamePair {

@@ -186,3 +186,17 @@ export async function rescheduleMatch(
   });
   return handleResponse(res);
 }
+
+export async function setMatchTimes(
+  matchId: string,
+  times: { startAt?: string | null; endAt?: string | null },
+): Promise<{ match: { id: string; manualStartAt: string | null; manualEndAt: string | null } }> {
+  const res = await fetch(`${BASE}/matches/${encodeURIComponent(matchId)}/times`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(times),
+    cache: "no-store",
+  });
+  return handleResponse(res);
+}

@@ -1,10 +1,11 @@
 "use client";
 
 import { logout } from "@/lib/front/api";
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLiveState } from "@/lib/front/use-live-state";
 import { setWins } from "@/lib/front/types";
 import type { MatchPublic } from "@/lib/front/types";
+import { computeTimeEstimate } from "@/lib/time-estimate";
 import { ResultadosSection } from "./ResultadosSection";
 import { CircuitosSection } from "./CircuitosSection";
 import { ReagendarSection } from "./ReagendarSection";
@@ -209,6 +210,78 @@ function ResultsScoreboardCard({
   );
 }
 
+/* ── Clock formatting helpers ── */
+function formatClock(ms: number): string {
+  return new Date(ms).toLocaleTimeString("es-AR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatElapsed(ms: number): string {
+  const totalMin = Math.max(0, Math.floor(ms / 60_000));
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return `${h}:${String(m).padStart(2, "0")}`;
+}
+
+function formatRemaining(ms: number): string {
+  return `${Math.max(0, Math.round(ms / 60_000))} min`;
+}
+
+/* ── Subcomponent: always-visible reactive day counters ── */
+function TimeCountersCard({
+  nowMs,
+  schedule,
+  resultStatusById,
+  matchMinutes,
+}: {
+  readonly nowMs: number;
+  readonly schedule: { id: string; manualStartAt?: string | null; manualEndAt?: string | null }[];
+  readonly resultStatusById: ReadonlyMap<string, string>;
+  readonly matchMinutes: number;
+}) {
+  const estimate = useMemo(() => {
+    const rows = schedule.map((row) => ({
+      manualStartAt: row.manualStartAt ?? null,
+      manualEndAt: row.manualEndAt ?? null,
+      resultStatus: resultStatusById.get(row.id) ?? "PENDING",
+    }));
+    return computeTimeEstimate(rows, nowMs, matchMinutes * 60_000);
+  }, [schedule, resultStatusById, nowMs, matchMinutes]);
+
+  return (
+    <div className="mx-auto w-full max-w-3xl px-6 py-4">
+      <div className="rounded-xl border border-sand-300 bg-sand-50 px-5 py-4 ring-1 ring-inset ring-sand-200">
+        {estimate ? (
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-stone-700">
+            <span>
+              <span className="font-semibold text-stone-900">Inicio:</span>{" "}
+              {formatClock(estimate.tournamentStart)}
+            </span>
+            <span>
+              <span className="font-semibold text-stone-900">Transcurrido:</span>{" "}
+              {formatElapsed(estimate.elapsedMs)}
+            </span>
+            <span>
+              <span className="font-semibold text-stone-900">Restante estimado:</span>{" "}
+              {formatRemaining(estimate.remainingMs)}
+            </span>
+            <span>
+              <span className="font-semibold text-stone-900">Finalización estimada:</span>{" "}
+              {formatClock(estimate.estimatedEndAt)}
+            </span>
+          </div>
+        ) : (
+          <p className="text-sm text-stone-500">
+            Sin horario definido — cargá el horario del primer partido
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ── Main panel ── */
 export function OrganizerPanel({
   email,
@@ -219,9 +292,25 @@ export function OrganizerPanel({
   >(null);
   const [view, setView] = useState<"panel" | "public">("panel");
 
+  // Reactive clock for the counters card (recomputes every 30s)
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
   const { state: liveState, loading } = useLiveState();
   const nextMatch = liveState?.nextMatch ?? null;
   const isCancelled = !!liveState?.etapa?.cancelledAt;
+
+  // resultStatus is not part of state.schedule rows; join it from brackets.
+  const resultStatusById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const m of liveState?.brackets ?? []) {
+      map.set(m.id, m.resultStatus);
+    }
+    return map;
+  }, [liveState?.brackets]);
 
   const sections = isCancelled ? SECTIONS_CANCELLED : SECTIONS_DEFAULT;
 
@@ -295,7 +384,14 @@ export function OrganizerPanel({
       </header>
 
       {view === "panel" ? (
-        activeSection === "resultados" ? (
+        <>
+          <TimeCountersCard
+            nowMs={nowMs}
+            schedule={liveState?.schedule ?? []}
+            resultStatusById={resultStatusById}
+            matchMinutes={liveState?.matchMinutes ?? 20}
+          />
+          {activeSection === "resultados" ? (
           <ResultadosSection onBack={() => setActiveSection(null)} />
         ) : activeSection === "circuitos" ? (
           <CircuitosSection onBack={() => setActiveSection(null)} />
@@ -329,7 +425,8 @@ export function OrganizerPanel({
               />
             </nav>
           </main>
-        )
+        )}
+        </>
       ) : (
         /* Public view — embedded iframe (same-origin, session preserved) */
         <div className="flex-1 flex flex-col">

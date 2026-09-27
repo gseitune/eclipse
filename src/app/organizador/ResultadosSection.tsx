@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { useLiveState } from "../../lib/front/use-live-state";
-import { recordResult } from "../../lib/front/api";
+import { recordResult, setMatchTimes } from "../../lib/front/api";
 import type { MatchPublic, DesempateInfo, ScheduleRow } from "../../lib/front/types";
 import { ApiError } from "../../lib/front/types";
 import { stageLabel } from "../../lib/front/phase";
@@ -62,6 +62,49 @@ function windowText(schedule: ScheduleRow[], matchId: string | null): string {
   return "";
 }
 
+/* ── Date helpers for manual times (datetime-local ↔ ISO) ── */
+function toDatetimeLocal(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours(),
+  )}:${pad(d.getMinutes())}`;
+}
+
+function formatTimeRange(
+  startIso: string | null,
+  endIso: string | null,
+): string | null {
+  if (!startIso) return null;
+  try {
+    const fmt = (iso: string) =>
+      new Date(iso).toLocaleTimeString("es-AR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    const s = fmt(startIso);
+    const e = endIso ? fmt(endIso) : s;
+    return `${s} – ${e}`;
+  } catch {
+    return null;
+  }
+}
+
+function classifyTimesError(err: unknown): string {
+  if (err instanceof ApiError) {
+    if (err.status === 401) return "Sesión vencida. Volvé a iniciar sesión.";
+    if (err.status === 400) {
+      if (err.message.includes("End time"))
+        return "El fin debe ser después del inicio.";
+      if (err.message.includes("Invalid date")) return "Fecha inválida.";
+      return err.message;
+    }
+    if (err.status === 404) return "Partido no encontrado.";
+    if (err.status === 409) return err.message;
+    return err.message;
+  }
+  return "Error al guardar el horario. Intentá de nuevo.";
+}
+
 /* ── Helper: count and list pending matches ── */
 function computePending(
   brackets: MatchPublic[],
@@ -110,13 +153,20 @@ export function ResultadosSection({ onBack }: ResultadosSectionProps) {
   const [submitting, setSubmitting] = useState(false);
   const [submitMsg, setSubmitMsg] = useState<string | null>(null);
 
+  // Manual-time modal state
+  const [timeOpen, setTimeOpen] = useState(false);
+  const [timeStart, setTimeStart] = useState("");
+  const [timeEnd, setTimeEnd] = useState("");
+  const [timeSaving, setTimeSaving] = useState(false);
+  const [timeError, setTimeError] = useState<string | null>(null);
+
   const brackets = useMemo(() => state?.brackets ?? [], [state?.brackets]);
   const desempate = useMemo(
     () => state?.desempate ?? { needed: false, pending: false, match: null },
     [state?.desempate],
   );
   const nextMatch = state?.nextMatch ?? null;
-  const schedule = state?.schedule ?? [];
+  const schedule = useMemo(() => state?.schedule ?? [], [state?.schedule]);
 
   const pendingInfo = useMemo(
     () => computePending(brackets, desempate),
@@ -191,6 +241,63 @@ export function ResultadosSection({ onBack }: ResultadosSectionProps) {
     },
     [nextMatch, handleRecord],
   );
+
+  // Manual-time ops
+  const manualRow = useMemo(
+    () => (nextMatch ? schedule.find((s) => s.id === nextMatch.id) ?? null : null),
+    [nextMatch, schedule],
+  );
+  const manualStart = manualRow?.manualStartAt ?? null;
+  const manualEnd = manualRow?.manualEndAt ?? null;
+  const hasManualTime = manualStart != null;
+  const manualRange = formatTimeRange(manualStart, manualEnd);
+
+  function openTimeModal() {
+    // Prefill with current manual values, otherwise empty
+    setTimeStart(manualStart ? toDatetimeLocal(new Date(manualStart)) : "");
+    setTimeEnd(manualEnd ? toDatetimeLocal(new Date(manualEnd)) : "");
+    setTimeError(null);
+    setTimeOpen(true);
+  }
+
+  function closeTimeModal() {
+    if (timeSaving) return;
+    setTimeOpen(false);
+    setTimeError(null);
+  }
+
+  async function handleSaveTimes() {
+    if (!nextMatch || timeSaving) return;
+    setTimeSaving(true);
+    setTimeError(null);
+    try {
+      // Partial update: only send fields the organizer set.
+      const startIso = timeStart ? new Date(timeStart).toISOString() : undefined;
+      const endIso = timeEnd ? new Date(timeEnd).toISOString() : undefined;
+      await setMatchTimes(nextMatch.id, { startAt: startIso, endAt: endIso });
+      setTimeOpen(false);
+      await refetch();
+    } catch (err) {
+      setTimeError(classifyTimesError(err));
+    } finally {
+      setTimeSaving(false);
+    }
+  }
+
+  async function handleRemoveTimes() {
+    if (!nextMatch || timeSaving) return;
+    setTimeSaving(true);
+    setTimeError(null);
+    try {
+      await setMatchTimes(nextMatch.id, { startAt: null, endAt: null });
+      setTimeOpen(false);
+      await refetch();
+    } catch (err) {
+      setTimeError(classifyTimesError(err));
+    } finally {
+      setTimeSaving(false);
+    }
+  }
 
   return (
     <div className="flex flex-col">
@@ -276,11 +383,24 @@ export function ResultadosSection({ onBack }: ResultadosSectionProps) {
                 <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">
                   {stageLabel(nextMatch.stage)}
                 </span>
-                {windowText(schedule, nextMatch.id) && (
+                {hasManualTime ? (
                   <p className="text-xs text-stone-400 mt-0.5">
-                    {windowText(schedule, nextMatch.id)}
+                    {manualRange}
                   </p>
+                ) : (
+                  windowText(schedule, nextMatch.id) && (
+                    <p className="text-xs text-stone-400 mt-0.5">
+                      {windowText(schedule, nextMatch.id)}
+                    </p>
+                  )
                 )}
+                <button
+                  type="button"
+                  onClick={openTimeModal}
+                  className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-sand-300 bg-white px-2 py-1 text-[11px] font-medium text-stone-600 ring-1 ring-inset ring-sand-200 hover:bg-sand-100 transition-colors min-h-[28px]"
+                >
+                  ⏰ {hasManualTime ? "Editar horario" : "Cargar horario"}
+                </button>
               </div>
 
               {/* Tab switch */}
@@ -439,6 +559,120 @@ export function ResultadosSection({ onBack }: ResultadosSectionProps) {
           </div>
         )}
       </section>
+
+      {/* ── Manual time modal ── */}
+      {timeOpen && nextMatch && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Cargar horario del partido"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-sand-300 bg-white p-6 shadow-xl">
+            <h3 className="text-base font-semibold text-stone-900">
+              Horario del partido
+            </h3>
+            <p className="mt-1 text-sm text-stone-500">
+              {nextMatch.teamA?.name ?? "Equipo A"} vs{" "}
+              {nextMatch.teamB?.name ?? "Equipo B"}
+            </p>
+
+            <div className="mt-4 space-y-4">
+              <div>
+                <label
+                  htmlFor="time-start"
+                  className="block text-xs font-medium text-stone-600 mb-1"
+                >
+                  Inicio
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="time-start"
+                    type="datetime-local"
+                    value={timeStart}
+                    onChange={(e) => setTimeStart(e.target.value)}
+                    disabled={timeSaving}
+                    className="flex-1 rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setTimeStart(toDatetimeLocal(new Date()))}
+                    disabled={timeSaving}
+                    className="shrink-0 rounded-lg border border-sand-300 bg-sand-50 px-3 py-2.5 text-sm font-medium text-stone-600 hover:bg-sand-100 disabled:opacity-50 transition-colors min-h-[44px]"
+                  >
+                    Ahora mismo
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="time-end"
+                  className="block text-xs font-medium text-stone-600 mb-1"
+                >
+                  Fin
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="time-end"
+                    type="datetime-local"
+                    value={timeEnd}
+                    onChange={(e) => setTimeEnd(e.target.value)}
+                    disabled={timeSaving}
+                    className="flex-1 rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setTimeEnd(toDatetimeLocal(new Date()))}
+                    disabled={timeSaving}
+                    className="shrink-0 rounded-lg border border-sand-300 bg-sand-50 px-3 py-2.5 text-sm font-medium text-stone-600 hover:bg-sand-100 disabled:opacity-50 transition-colors min-h-[44px]"
+                  >
+                    Ahora mismo
+                  </button>
+                </div>
+              </div>
+
+              {timeError && (
+                <p
+                  className="rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700 border border-red-200"
+                  role="alert"
+                >
+                  {timeError}
+                </p>
+              )}
+
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={handleRemoveTimes}
+                  disabled={timeSaving || (!hasManualTime && !timeStart && !timeEnd)}
+                  className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50 transition-colors min-h-[44px]"
+                >
+                  Quitar horario
+                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={closeTimeModal}
+                    disabled={timeSaving}
+                    className="rounded-lg border border-sand-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 hover:bg-sand-50 disabled:opacity-50 transition-colors min-h-[44px]"
+                  >
+                    Volver
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveTimes}
+                    disabled={timeSaving || (!timeStart && !timeEnd)}
+                    className="rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50 transition-colors min-h-[44px]"
+                  >
+                    {timeSaving ? "Guardando…" : "Guardar horario"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
