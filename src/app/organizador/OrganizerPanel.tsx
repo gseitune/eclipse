@@ -7,6 +7,7 @@ import { setWins } from "@/lib/front/types";
 import type { MatchPublic } from "@/lib/front/types";
 import { computeTimeEstimate } from "@/lib/time-estimate";
 import { ResultadosSection } from "./ResultadosSection";
+import { CargarResultadoCard } from "./CargarResultadoCard";
 import { CircuitosSection } from "./CircuitosSection";
 import { ReagendarSection } from "./ReagendarSection";
 
@@ -299,7 +300,7 @@ export function OrganizerPanel({
     return () => clearInterval(id);
   }, []);
 
-  const { state: liveState, loading } = useLiveState();
+  const { state: liveState, loading, error: liveStateError, refetch } = useLiveState();
   const nextMatch = liveState?.nextMatch ?? null;
   const isCancelled = !!liveState?.etapa?.cancelledAt;
 
@@ -383,15 +384,24 @@ export function OrganizerPanel({
         </div>
       </header>
 
-      {view === "panel" ? (
-        <>
-          <TimeCountersCard
-            nowMs={nowMs}
-            schedule={liveState?.schedule ?? []}
-            resultStatusById={resultStatusById}
-            matchMinutes={liveState?.matchMinutes ?? 20}
-          />
-          {activeSection === "resultados" ? (
+{view === "panel" ? (
+    <>
+      <TimeCountersCard
+        nowMs={nowMs}
+        schedule={liveState?.schedule ?? []}
+        resultStatusById={resultStatusById}
+        matchMinutes={liveState?.matchMinutes ?? 20}
+      />
+      {!isCancelled && nextMatch && (
+        <CargarResultadoCard
+          nextMatch={nextMatch}
+          schedule={liveState?.schedule ?? []}
+          loading={loading}
+          error={liveStateError ?? null}
+          refetch={refetch}
+      />
+    )}
+    {activeSection === "resultados" ? (
           <ResultadosSection onBack={() => setActiveSection(null)} />
         ) : activeSection === "circuitos" ? (
           <CircuitosSection onBack={() => setActiveSection(null)} />
