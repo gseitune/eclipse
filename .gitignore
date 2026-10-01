@@ -50,3 +50,6 @@ next-env.d.ts
 
 # dev server logs
 /dev-server.*.log
+
+# agent build output dumps
+summary*.txt

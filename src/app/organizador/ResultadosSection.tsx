@@ -6,7 +6,6 @@ import { recordResult, setMatchTimes, resolveBestThird } from "../../lib/front/a
 import type { MatchPublic, DesempateInfo, ScheduleRow } from "../../lib/front/types";
 import { ApiError } from "../../lib/front/types";
 import { stageLabel } from "../../lib/front/phase";
-import { CargarResultadoCard } from "./CargarResultadoCard";
 
 /* ── Check icon (inline SVG, no emoji) ── */
 function CheckIcon() {
