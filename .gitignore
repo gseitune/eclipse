@@ -53,3 +53,6 @@ next-env.d.ts
 
 # agent build output dumps
 summary*.txt
+
+# unused local asset (kept on disk, not committed)
+/public/sun.jpg
