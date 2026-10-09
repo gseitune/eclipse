@@ -19,9 +19,11 @@ import { RankingPanel } from "./RankingPanel";
 export function PublicHome({
   initial,
   isPreview = false,
+  version,
 }: {
   initial: StateSnapshot | null;
   isPreview?: boolean;
+  version: string;
 }) {
   const { state, loading, error } = useLiveState({ initial });
 
@@ -88,8 +90,8 @@ export function PublicHome({
       {/* Top bar — static, scrolls with the page */}
       <div className="flex items-start justify-between px-3 pt-3">
         <div className="pointer-events-none">
-          <div className="-ml-11 mt-4 w-40 rotate-[-45deg] bg-amber-600 py-1 text-center text-[11px] font-bold uppercase tracking-widest text-white shadow-md">
-            BETA TEST
+          <div className="-ml-11 mt-4 w-40 rotate-[-45deg] whitespace-nowrap bg-amber-600 py-1 text-center text-[11px] font-bold uppercase tracking-widest text-white shadow-md">
+            BETA TEST {version}
           </div>
         </div>
 

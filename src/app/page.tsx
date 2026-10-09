@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import type { StateSnapshot } from "@/lib/front/types";
 import { PublicHome } from "@/components/public/PublicHome";
+import { betaVersion } from "@/lib/version";
 
 export default async function Home({
   searchParams,
@@ -34,7 +35,7 @@ export default async function Home({
 
   return (
     <>
-      <PublicHome initial={initial} isPreview={isPreview} />
+      <PublicHome initial={initial} isPreview={isPreview} version={betaVersion()} />
       {fetchError && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
           <Link
