@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { useLiveState } from "../../lib/front/use-live-state";
-import { recordResult, setMatchTimes, resolveBestThird } from "../../lib/front/api";
-import type { MatchPublic, DesempateInfo, ScheduleRow } from "../../lib/front/types";
+import { fetchState, recordResult, setMatchTimes, resolveBestThird } from "../../lib/front/api";
+import type { ScheduleRow, StateSnapshot } from "../../lib/front/types";
 import { ApiError } from "../../lib/front/types";
 import { stageLabel } from "../../lib/front/phase";
 
@@ -46,8 +45,16 @@ function LockIcon() {
 }
 
 /* ── Props ── */
-export interface ResultadosSectionProps {
-  readonly onBack: () => void;
+export interface ResultadoEntryPanelProps {
+  readonly state: StateSnapshot | null;
+  readonly loading: boolean;
+  readonly error: string | null;
+  readonly refetch: () => Promise<void>;
+}
+
+export interface MejoresTercerosPanelProps {
+  readonly state: StateSnapshot | null;
+  readonly refetch: () => Promise<void>;
 }
 
 type EntryTab = "sets" | "winner";
@@ -105,48 +112,13 @@ function classifyTimesError(err: unknown): string {
   return "Error al guardar el horario. Intentá de nuevo.";
 }
 
-/* ── Helper: count and list pending matches ── */
-function computePending(
-  brackets: MatchPublic[],
-  desempate: DesempateInfo,
-): { count: number; list: Array<{ stage: string; teams: string }> } {
-  const bracketPending = brackets.filter((m) => m.resultStatus === "PENDING");
-  const desempatePending = desempate.pending && desempate.match ? 1 : 0;
-
-  // Build list without double-counting
-  const idsInList = new Set<string>();
-  const list: Array<{ stage: string; teams: string }> = [];
-
-  for (const m of bracketPending) {
-    if (idsInList.has(m.id)) continue;
-    idsInList.add(m.id);
-    const teams =
-      m.teamA && m.teamB
-        ? `${m.teamA.name} vs ${m.teamB.name}`
-        : m.teamA?.name ?? m.teamB?.name ?? "Desconocido";
-    list.push({ stage: stageLabel(m.stage), teams });
-  }
-
-  if (desempatePending && desempate.match) {
-    const dm = desempate.match;
-    const dmKey = `desempate-${dm.id}`;
-    if (!idsInList.has(dmKey)) {
-      idsInList.add(dmKey);
-      const teams =
-        dm.teamA && dm.teamB
-          ? `${dm.teamA.name} vs ${dm.teamB.name}`
-          : dm.teamA?.name ?? dm.teamB?.name ?? "Desconocido";
-      list.push({ stage: "Desempate", teams });
-    }
-  }
-
-  return { count: bracketPending.length + desempatePending, list };
-}
-
 /* ── Main component ── */
-export function ResultadosSection({ onBack }: ResultadosSectionProps) {
-  const { state, loading, error, refetch } = useLiveState();
-
+export function ResultadoEntryPanel({
+  state,
+  loading,
+  error,
+  refetch,
+}: ResultadoEntryPanelProps) {
   const [activeTab, setActiveTab] = useState<EntryTab>("sets");
   const [setAScore, setSetAScore] = useState("");
   const [setBScore, setSetBScore] = useState("");
@@ -160,50 +132,8 @@ export function ResultadosSection({ onBack }: ResultadosSectionProps) {
   const [timeSaving, setTimeSaving] = useState(false);
   const [timeError, setTimeError] = useState<string | null>(null);
 
-  const brackets = useMemo(() => state?.brackets ?? [], [state?.brackets]);
-  const desempate = useMemo(
-    () => state?.desempate ?? { needed: false, pending: false, match: null },
-    [state?.desempate],
-  );
   const nextMatch = state?.nextMatch ?? null;
   const schedule = useMemo(() => state?.schedule ?? [], [state?.schedule]);
-
-  // Best-third tie: the organizer names which tied third goes straight to
-  // CUARTOS_4; the repechage takes the other two.
-  const bestThirdTie = useMemo(() => {
-    const blocked = state?.bracketsBlocked;
-    if (blocked?.reason !== "best_third_tie") return null;
-    const names = new Map<string, string>();
-    for (const teams of Object.values(state?.zones ?? {})) {
-      for (const t of teams) names.set(t.id, t.name);
-    }
-    return blocked.teamIds.map((id) => ({ id, name: names.get(id) ?? "Equipo" }));
-  }, [state?.bracketsBlocked, state?.zones]);
-  const [tieTeamId, setTieTeamId] = useState<string | null>(null);
-  const [tieMsg, setTieMsg] = useState<string | null>(null);
-
-  async function handleResolveBestThird(teamId: string) {
-    if (!state?.etapaId || tieTeamId) return;
-    setTieTeamId(teamId);
-    setTieMsg(null);
-    try {
-      await resolveBestThird(state.etapaId, teamId);
-      setTieMsg("Listo — el repechage quedó armado.");
-      await refetch();
-    } catch (err) {
-      setTieMsg(err instanceof ApiError ? err.message : String(err));
-    } finally {
-      setTieTeamId(null);
-    }
-  }
-
-  const pendingInfo = useMemo(
-    () => computePending(brackets, desempate),
-    [brackets, desempate],
-  );
-
-  // Early-tournament case: no fixture data at all
-  const earlyTournament = brackets.length === 0 && !desempate.pending;
 
   // Handle record result with error classification
   const handleRecord = useCallback(
@@ -220,7 +150,22 @@ export function ResultadosSection({ onBack }: ResultadosSectionProps) {
         // Refetch state via live hook
         await refetch();
       } catch (err) {
-        if (err instanceof ApiError) {
+        // The POST can fail AFTER the server persisted the result (e.g. a
+        // gateway timeout on the shared deployment). Reconcile with the server
+        // so the UI never stays stale — and report success when it did land.
+        let saved = false;
+        try {
+          const snapshot = await fetchState();
+          saved = snapshot.nextMatch?.id !== input.matchId;
+        } catch {
+          // ignore; fall through to the error message
+        }
+        if (saved) {
+          setSubmitMsg("Resultado cargado");
+          setSetAScore("");
+          setSetBScore("");
+          setActiveTab("sets");
+        } else if (err instanceof ApiError) {
           switch (err.status) {
             case 401:
               setSubmitMsg("Sesión vencida. Volvé a iniciar sesión.");
@@ -234,6 +179,7 @@ export function ResultadosSection({ onBack }: ResultadosSectionProps) {
         } else {
           setSubmitMsg("Error al cargar el resultado. Intentá de nuevo.");
         }
+        await refetch();
       } finally {
         setSubmitting(false);
       }
@@ -329,110 +275,8 @@ export function ResultadosSection({ onBack }: ResultadosSectionProps) {
   }
 
   return (
-    <div className="flex flex-col">
-      {/* Back + title */}
-      <div className="flex items-center gap-3 mb-6">
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex items-center justify-center w-10 h-10 rounded-lg border border-sand-300 bg-sand-50 text-stone-600 hover:bg-sand-100 transition-colors min-w-[44px] min-h-[44px]"
-          aria-label="Volver"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              fillRule="evenodd"
-              d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
-              clipRule="evenodd"
-            />
-          </svg>
-        </button>
-        <h2 className="text-lg font-semibold text-stone-900">Resultados</h2>
-      </div>
-
-      {/* ── Best-third tie resolution ── */}
-      {bestThirdTie && (
-        <section
-          aria-label="Elegir mejor tercer puesto"
-          className="mb-8 rounded-xl border border-amber-300 bg-amber-50 p-5"
-        >
-          <h3 className="text-sm font-semibold text-stone-900 mb-1">
-            Empate en el mejor 3.º
-          </h3>
-          <p className="text-xs text-stone-600 mb-4">
-            Con un set por partido de zona, los terceros quedan empatados. Elegí
-            cuál entra directo a Cuartos 4; los otros dos juegan el repechage.
-          </p>
-          <div className="flex flex-col gap-2">
-            {bestThirdTie.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => handleResolveBestThird(t.id)}
-                disabled={tieTeamId !== null}
-                className="flex items-center justify-between rounded-lg border border-sand-300 bg-white px-4 py-3 text-left transition-colors hover:border-amber-soft-400 hover:bg-amber-50 disabled:opacity-50 min-h-[44px]"
-              >
-                <span className="text-sm font-semibold text-stone-900">
-                  {t.name}
-                </span>
-                <span className="text-xs font-medium text-stone-500">
-                  {tieTeamId === t.id ? "Guardando…" : "Es el mejor 3.º"}
-                </span>
-              </button>
-            ))}
-          </div>
-          {tieMsg && (
-            <p
-              className={`mt-3 text-xs font-medium ${tieMsg.startsWith("Listo") ? "text-green-700" : "text-red-700"}`}
-              role="alert"
-            >
-              {tieMsg}
-            </p>
-          )}
-        </section>
-      )}
-
-      {/* ── Part 1: Checklist ── */}
-      <section aria-label="Checklist de partidos pendientes" className="mb-8">
-        <h3 className="text-sm font-semibold text-stone-700 mb-2">
-          Faltan partidos
-        </h3>
-        {earlyTournament ? (
-          <div className="flex items-center gap-2 text-sm text-stone-400">
-            <span className="text-stone-300 text-lg">—</span>
-            <span>No hay datos suficientes</span>
-          </div>
-        ) : (
-          <>
-            <p className="text-sm text-stone-600 mb-2">
-              Faltan <span className="font-semibold text-stone-900">{pendingInfo.count}</span>{" "}
-              partido{pendingInfo.count !== 1 ? "s" : ""} por cargar
-            </p>
-            {pendingInfo.list.length > 0 && (
-              <ul className="space-y-1">
-                {pendingInfo.list.map((item, i) => (
-                  <li
-                    key={i}
-                    className="text-sm text-stone-500 flex items-center gap-2"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-sunset-400 flex-shrink-0" />
-                    <span>
-                      {item.stage} — {item.teams}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </>
-        )}
-      </section>
-
-      {/* ── Part 2: Match scoreboard ── */}
+    <div className="space-y-6">
+      {/* ── Match scoreboard ── */}
       <section aria-label="Cargar resultado" className="mb-6">
         <h3 className="text-sm font-semibold text-stone-700 mb-3">
           Cargar resultado
@@ -745,5 +589,108 @@ export function ResultadosSection({ onBack }: ResultadosSectionProps) {
         </div>
       )}
     </div>
+  );
+}
+
+/* ── Best-third tie resolution — own card, only rendered when needed ── */
+export function MejoresTercerosPanel({ state, refetch }: MejoresTercerosPanelProps) {
+  const bestThirdTie = useMemo(() => {
+    const blocked = state?.bracketsBlocked;
+    if (blocked?.reason !== "best_third_tie") return null;
+    const names = new Map<string, string>();
+    for (const teams of Object.values(state?.zones ?? {})) {
+      for (const t of teams) names.set(t.id, t.name);
+    }
+    return blocked.teamIds.map((id) => ({ id, name: names.get(id) ?? "Equipo" }));
+  }, [state?.bracketsBlocked, state?.zones]);
+
+  // The best-third choice is only valid once every zone match is loaded. While
+  // the next pending match is still a GROUP match, the zone stage is incomplete
+  // (the server may already report the tie from partial standings).
+  const zoneStageDone = useMemo(
+    () => !state?.nextMatch || state.nextMatch.stage !== "GROUPS",
+    [state?.nextMatch],
+  );
+
+  const [tieTeamId, setTieTeamId] = useState<string | null>(null);
+  const [tieMsg, setTieMsg] = useState<string | null>(null);
+
+  async function handleResolveBestThird(teamId: string) {
+    if (!state?.etapaId || tieTeamId) return;
+    setTieTeamId(teamId);
+    setTieMsg(null);
+    try {
+      await resolveBestThird(state.etapaId, teamId);
+      setTieMsg("Listo — el repechage quedó armado.");
+      await refetch();
+    } catch (err) {
+      setTieMsg(err instanceof ApiError ? err.message : String(err));
+    } finally {
+      setTieTeamId(null);
+    }
+  }
+
+  if (!bestThirdTie) return null;
+
+  // Zone stage still running — show a gray, disabled hint instead of the choice.
+  if (!zoneStageDone) {
+    return (
+      <section
+        aria-label="Empate en el mejor 3.º — pendiente de la fase de zonas"
+        className="rounded-xl border border-sand-200 bg-stone-100/70 p-5"
+      >
+        <div className="mb-1 flex items-center gap-2">
+          <LockIcon />
+          <h3 className="text-sm font-semibold text-stone-500">
+            Empate en el mejor 3.º
+          </h3>
+        </div>
+        <p className="text-xs text-stone-400">
+          Se habilita cuando estén cargados todos los resultados de la fase de
+          zonas.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section
+      aria-label="Elegir mejor tercer puesto"
+      className="rounded-xl border border-amber-300 bg-amber-50 p-5"
+    >
+      <h3 className="text-sm font-semibold text-stone-900 mb-1">
+        Empate en el mejor 3.º
+      </h3>
+      <p className="text-xs text-stone-600 mb-4">
+        Con un set por partido de zona, los terceros quedan empatados. Elegí
+        cuál entra directo a Cuartos 4; los otros dos juegan el repechage.
+      </p>
+      <div className="flex flex-col gap-2">
+        {bestThirdTie.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => handleResolveBestThird(t.id)}
+            disabled={tieTeamId !== null}
+            className="flex items-center justify-between rounded-lg border border-sand-300 bg-white px-4 py-3 text-left transition-colors hover:border-amber-soft-400 hover:bg-amber-50 disabled:opacity-50 min-h-[44px]"
+          >
+            <span className="text-sm font-semibold text-stone-900">
+              {t.name}
+            </span>
+            <span className="text-xs font-medium text-stone-500">
+              {tieTeamId === t.id ? "Guardando…" : "Es el mejor 3.º"}
+            </span>
+          </button>
+        ))}
+      </div>
+      {tieMsg && (
+        <p
+          className={`mt-3 text-xs font-medium ${tieMsg.startsWith("Listo") ? "text-green-700" : "text-red-700"}`}
+          role="alert"
+        >
+          {tieMsg}
+        </p>
+      )}
+    </section>
   );
 }

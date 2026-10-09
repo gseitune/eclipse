@@ -1,13 +1,13 @@
 "use client";
 
-import { logout } from "@/lib/front/api";
+import { logout, closeEtapa } from "@/lib/front/api";
 import { useState, useEffect, useMemo } from "react";
 import { useLiveState } from "@/lib/front/use-live-state";
-import { setWins } from "@/lib/front/types";
-import type { MatchPublic } from "@/lib/front/types";
+import { closeEtapaUi, type CloseEtapaUi } from "@/lib/etapa-close";
+import type { MatchPublic, StateSnapshot } from "@/lib/front/types";
 import { computeTimeEstimate } from "@/lib/time-estimate";
-import { ResultadosSection } from "./ResultadosSection";
-import { CargarResultadoCard } from "./CargarResultadoCard";
+import { stageLabel } from "@/lib/front/phase";
+import { ResultadoEntryPanel, MejoresTercerosPanel } from "./ResultadosSection";
 import { CircuitosSection } from "./CircuitosSection";
 import { ReagendarSection } from "./ReagendarSection";
 
@@ -27,6 +27,173 @@ function LockIcon() {
         clipRule="evenodd"
       />
     </svg>
+  );
+}
+
+/* ── Bell icon (inline SVG, no emoji) ── */
+function BellIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className="h-5 w-5 flex-shrink-0 text-amber-600"
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+    </svg>
+  );
+}
+
+/* ── Top notification: the next match is waiting for its result ── */
+function PendingNotice({ match }: { readonly match: MatchPublic | null }) {
+  if (!match) return null;
+  return (
+    <div className="mx-auto w-full max-w-3xl px-6 pt-4">
+      <button
+        type="button"
+        onClick={() => {
+          document
+            .getElementById("resultados-card")
+            ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }}
+        className="flex w-full items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-left transition-colors hover:bg-amber-100 min-h-[44px]"
+      >
+        <BellIcon />
+        <span className="flex-1 min-w-0">
+          <span className="block text-sm font-semibold text-stone-900">
+            Falta cargar un resultado
+          </span>
+          <span className="mt-0.5 block truncate text-xs text-stone-600">
+            {stageLabel(match.stage)} — {match.teamA?.name ?? "Equipo A"} vs{" "}
+            {match.teamB?.name ?? "Equipo B"}
+          </span>
+        </span>
+        <span className="flex-shrink-0 text-xs font-semibold text-amber-700">
+          Cargar →
+        </span>
+      </button>
+    </div>
+  );
+}
+
+/* ── Flag icon (inline SVG, no emoji) ── */
+function FlagIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className="h-6 w-6 flex-shrink-0"
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M4 2a1 1 0 011 1v14a1 1 0 11-2 0V3a1 1 0 011-1z" />
+      <path d="M6.5 3.5h8.2a.8.8 0 01.65 1.26L13.4 7.5l1.95 2.74a.8.8 0 01-.65 1.26H6.5v-8z" />
+    </svg>
+  );
+}
+
+/* ── Check icon (inline SVG, no emoji) ── */
+function CheckIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className="h-5 w-5 flex-shrink-0 text-emerald-700"
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path
+        fillRule="evenodd"
+        d="M16.7 5.3a1 1 0 010 1.4l-7.5 7.5a1 1 0 01-1.4 0L4.3 10.7a1 1 0 111.4-1.4l2.8 2.79 6.8-6.79a1 1 0 011.4 0z"
+        clipRule="evenodd"
+      />
+    </svg>
+  );
+}
+
+/* ── Close-etapa banner: unlocks only once the FINAL has a result ── */
+function CloseEtapaBanner({
+  uiState,
+  busy,
+  message,
+  onRequestClose,
+}: {
+  readonly uiState: CloseEtapaUi;
+  readonly busy: boolean;
+  readonly message: string | null;
+  readonly onRequestClose: () => void;
+}) {
+  if (uiState === "closed") {
+    return (
+      <div className="mx-auto w-full max-w-3xl px-6 pt-4">
+        <div className="flex w-full items-center gap-3 rounded-xl border border-emerald-300 bg-emerald-50 px-5 py-4">
+          <CheckIcon />
+          <span className="flex-1 min-w-0">
+            <span className="block text-sm font-bold text-emerald-900">
+              Etapa finalizada
+            </span>
+            <span className="mt-0.5 block text-xs text-emerald-800">
+              Circuito cerrado: ya no se pueden cargar ni editar resultados.
+            </span>
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (uiState === "locked") {
+    return (
+      <div className="mx-auto w-full max-w-3xl px-6 pt-4">
+        <div
+          role="group"
+          aria-disabled="true"
+          className="flex w-full cursor-not-allowed items-center gap-3 rounded-xl border border-sand-200 bg-sand-50/50 px-5 py-4 opacity-60"
+        >
+          <LockIcon />
+          <span className="flex-1 min-w-0">
+            <span className="block text-sm font-bold text-stone-400">
+              Finalizar etapa
+            </span>
+            <span className="mt-0.5 block text-xs text-stone-400">
+              Se habilita cuando esté cargado el resultado de la final
+            </span>
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-3xl px-6 pt-4">
+      <button
+        type="button"
+        onClick={onRequestClose}
+        disabled={busy}
+        className="flex w-full items-center gap-3 rounded-xl border border-amber-600 bg-amber-500 px-5 py-4 text-left text-white shadow-lg shadow-amber-500/30 transition-colors hover:bg-amber-600 disabled:opacity-60 min-h-[56px]"
+      >
+        <FlagIcon />
+        <span className="flex-1 min-w-0">
+          <span className="block text-base font-extrabold uppercase tracking-wide">
+            Finalizar etapa
+          </span>
+          <span className="mt-0.5 block text-xs text-white/90">
+            {busy
+              ? "Cerrando…"
+              : "Cierra el circuito con el resultado de la final"}
+          </span>
+        </span>
+        <span className="flex-shrink-0 text-sm font-bold">Finalizar →</span>
+      </button>
+      {message && (
+        <p
+          className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700"
+          role="alert"
+        >
+          {message}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -128,20 +295,20 @@ function DisabledSectionCard({
   );
 }
 
-/* ── Subcomponent: Results scoreboard card (live match, replaces block button) ── */
-function ResultsScoreboardCard({
-  match,
+/* ── Subcomponent: Results card (inline result entry, no navigation) ── */
+function ResultsCard({
+  state,
   loading,
-  onOpen,
+  error,
+  refetch,
   disabled = false,
 }: {
-  readonly match: MatchPublic | null;
+  readonly state: StateSnapshot | null;
   readonly loading: boolean;
-  readonly onOpen: () => void;
+  readonly error: string | null;
+  readonly refetch: () => Promise<void>;
   readonly disabled?: boolean;
 }) {
-  const wins = match ? setWins(match.sets) : { a: 0, b: 0 };
-
   if (disabled) {
     return (
       <div
@@ -163,51 +330,25 @@ function ResultsScoreboardCard({
   }
 
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="flex w-full items-center gap-4 rounded-xl border border-sand-300 bg-sand-50 px-5 py-5 text-left ring-1 ring-inset ring-sand-200 hover:bg-sand-100 hover:ring-sand-300 transition-colors min-h-[44px]"
+    <div
+      id="resultados-card"
+      className="scroll-mt-24 rounded-xl border border-sand-300 bg-sand-50 px-5 py-5 ring-1 ring-inset ring-sand-200"
     >
-      <span className="flex-1 min-w-0">
-        <span className="block text-base font-bold text-stone-900">
-          Resultados
-        </span>
-        <span className="mt-0.5 block text-xs text-stone-500">
-          Cargar o corregir resultados
-        </span>
-
-        {/* Live board */}
-        {match ? (
-          <span className="mt-4 flex items-center gap-4 rounded-lg border border-sand-300 bg-white px-5 py-5">
-            <span className="flex-1 truncate text-base font-semibold text-stone-900 text-right">
-              {match.teamA?.name ?? "?"}
-            </span>
-            <span className="flex items-baseline gap-2">
-              <span className="w-12 text-center text-4xl font-bold text-stone-900">
-                {wins.a}
-              </span>
-              <span className="text-xl font-bold text-stone-400">:</span>
-              <span className="w-12 text-center text-4xl font-bold text-stone-900">
-                {wins.b}
-              </span>
-            </span>
-            <span className="flex-1 truncate text-base font-semibold text-stone-900 text-left">
-              {match.teamB?.name ?? "?"}
-            </span>
-          </span>
-        ) : (
-          <span className="mt-4 flex items-center justify-center gap-2 rounded-lg border border-sand-200 bg-stone-100/70 px-4 py-6 text-stone-400">
-            <LockIcon />
-            <span className="text-sm font-medium">
-              {loading ? "Cargando…" : "Sin partido activo"}
-            </span>
-          </span>
-        )}
+      <span className="block text-base font-bold text-stone-900">
+        Resultados
       </span>
-      <span className="text-sunset-500 text-sm font-medium flex-shrink-0 self-center">
-        →
+      <span className="mt-0.5 block text-xs text-stone-500">
+        Cargar o corregir resultados
       </span>
-    </button>
+      <div className="mt-4">
+        <ResultadoEntryPanel
+          state={state}
+          loading={loading}
+          error={error}
+          refetch={refetch}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -289,7 +430,7 @@ export function OrganizerPanel({
 }: OrganizerPanelProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [activeSection, setActiveSection] = useState<
-    "resultados" | "circuitos" | "reagendar" | null
+    "circuitos" | "reagendar" | null
   >(null);
   const [view, setView] = useState<"panel" | "public">("panel");
 
@@ -303,6 +444,32 @@ export function OrganizerPanel({
   const { state: liveState, loading, error: liveStateError, refetch } = useLiveState();
   const nextMatch = liveState?.nextMatch ?? null;
   const isCancelled = !!liveState?.etapa?.cancelledAt;
+  // Bell notice: only a match whose teams are already defined can be loaded.
+  const pendingNotice =
+    nextMatch && nextMatch.teamA && nextMatch.teamB ? nextMatch : null;
+
+  // Closing is irreversible and only allowed once the FINAL has a result.
+  const closeState = closeEtapaUi(liveState?.etapa, liveState?.brackets);
+
+  const [closingEtapa, setClosingEtapa] = useState(false);
+  const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
+  const [closeMsg, setCloseMsg] = useState<string | null>(null);
+
+  async function handleCloseEtapa() {
+    const etapaId = liveState?.etapaId;
+    if (!etapaId) return;
+    setClosingEtapa(true);
+    setCloseMsg(null);
+    try {
+      await closeEtapa(etapaId);
+      await refetch();
+      setCloseConfirmOpen(false);
+    } catch (err) {
+      setCloseMsg(err instanceof Error ? err.message : String(err));
+    } finally {
+      setClosingEtapa(false);
+    }
+  }
 
   // resultStatus is not part of state.schedule rows; join it from brackets.
   const resultStatusById = useMemo(() => {
@@ -317,9 +484,6 @@ export function OrganizerPanel({
 
   function handleSectionClick(label: string) {
     switch (label) {
-      case "Resultados":
-        setActiveSection("resultados");
-        break;
       case "Equipos":
         setActiveSection("circuitos");
         break;
@@ -386,58 +550,110 @@ export function OrganizerPanel({
 
 {view === "panel" ? (
     <>
+      {!isCancelled && <PendingNotice match={pendingNotice} />}
+      {!isCancelled && (
+        <>
+          <CloseEtapaBanner
+            uiState={closeState}
+            busy={closingEtapa}
+            message={closeMsg}
+            onRequestClose={() => {
+              setCloseMsg(null);
+              setCloseConfirmOpen(true);
+            }}
+          />
+          {closeConfirmOpen && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Finalizar etapa"
+            >
+              <div className="w-full max-w-md rounded-2xl border border-sand-300 bg-white p-6 shadow-xl">
+                <h3 className="text-base font-semibold text-stone-900">
+                  Finalizar {liveState?.etapa?.name ?? "la etapa"}
+                </h3>
+                <p className="mt-2 text-sm text-stone-600">
+                  Se cierra el circuito con el resultado de la final.{" "}
+                  <strong>No se puede deshacer</strong>: después no vas a poder
+                  cargar ni editar más resultados.
+                </p>
+                {closeMsg && (
+                  <p
+                    className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700"
+                    role="alert"
+                  >
+                    {closeMsg}
+                  </p>
+                )}
+                <div className="mt-5 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setCloseConfirmOpen(false)}
+                    disabled={closingEtapa}
+                    className="rounded-lg border border-sand-300 bg-sand-50 px-4 py-2.5 text-xs font-semibold text-stone-700 ring-1 ring-inset ring-sand-200 hover:bg-sand-100 disabled:opacity-50 transition-colors min-h-[44px]"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCloseEtapa}
+                    disabled={closingEtapa}
+                    className="rounded-lg bg-amber-600 px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-white hover:bg-amber-700 disabled:opacity-50 transition-colors min-h-[44px]"
+                  >
+                    {closingEtapa ? "Cerrando…" : "Sí, finalizar etapa"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
       <TimeCountersCard
         nowMs={nowMs}
         schedule={liveState?.schedule ?? []}
         resultStatusById={resultStatusById}
         matchMinutes={liveState?.matchMinutes ?? 20}
       />
-      {!isCancelled && nextMatch && (
-        <CargarResultadoCard
-          nextMatch={nextMatch}
-          schedule={liveState?.schedule ?? []}
-          loading={loading}
-          error={liveStateError ?? null}
-          refetch={refetch}
-      />
-    )}
-    {activeSection === "resultados" ? (
-          <ResultadosSection onBack={() => setActiveSection(null)} />
-        ) : activeSection === "circuitos" ? (
-          <CircuitosSection onBack={() => setActiveSection(null)} />
-        ) : activeSection === "reagendar" ? (
-          <ReagendarSection onBack={() => setActiveSection(null)} />
-        ) : (
-          /* Sections list */
-          <main className="mx-auto w-full max-w-3xl px-6 py-8">
-            <nav aria-label="Secciones del panel" className="flex flex-col gap-3">
-              {sections.map((section) =>
-                section.kind === "actionable" ? (
-                  <SectionCard
-                    key={section.label}
-                    label={section.label}
-                    hint={section.hint}
-                    onClick={() => handleSectionClick(section.label)}
-                  />
-                ) : (
-                  <DisabledSectionCard
-                    key={section.label}
-                    label={section.label}
-                    hint={section.hint}
-                  />
-                )
-              )}
-              <ResultsScoreboardCard
-                match={nextMatch}
-                loading={loading}
-                onOpen={() => setActiveSection("resultados")}
-                disabled={isCancelled}
-              />
-            </nav>
-          </main>
-        )}
-        </>
+      {activeSection === "circuitos" ? (
+        <CircuitosSection onBack={() => setActiveSection(null)} />
+      ) : activeSection === "reagendar" ? (
+        <ReagendarSection onBack={() => setActiveSection(null)} />
       ) : (
+        /* Sections list */
+        <main className="mx-auto w-full max-w-3xl px-6 py-8">
+          <nav aria-label="Secciones del panel" className="flex flex-col gap-3">
+            {sections.map((section) =>
+              section.kind === "actionable" ? (
+                <SectionCard
+                  key={section.label}
+                  label={section.label}
+                  hint={section.hint}
+                  onClick={() => handleSectionClick(section.label)}
+                />
+              ) : (
+                <DisabledSectionCard
+                  key={section.label}
+                  label={section.label}
+                  hint={section.hint}
+                />
+              )
+            )}
+            <ResultsCard
+              state={liveState}
+              loading={loading}
+              error={liveStateError}
+              refetch={refetch}
+              disabled={isCancelled}
+            />
+            {!isCancelled && (
+              <MejoresTercerosPanel state={liveState} refetch={refetch} />
+            )}
+          </nav>
+        </main>
+      )}
+    </>
+  ) : (
         /* Public view — embedded iframe (same-origin, session preserved) */
         <div className="flex-1 flex flex-col">
           <div className="mx-auto w-full max-w-3xl px-6 py-3">
