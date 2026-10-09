@@ -9,7 +9,7 @@ import {
 } from "./schedule";
 import { buildBrackets, buildCuartosBrackets, nextRoundPairings, selectBestSecond, selectBestThird, type BestSecondSelection, type BestThirdSelection } from "./brackets";
 import { regenerateZones, swapZone, type ZoneId } from "./zonification";
-import { distributeTeams, MIN_TEAMS, roundRobinPairs } from "./tournament";
+import { distributeTeams, interleaveGroupPairs, MIN_TEAMS } from "./tournament";
 import {
   countSetWins,
   resolveResultPayload,
@@ -243,20 +243,24 @@ export async function createEtapa(input: CreateEtapaInput, _opts?: { rng?: () =>
 
     const idByName = new Map(created.teams.map((t) => [t.name, t.id]));
     let slot = 1;
-    const groupMatches = groups.flatMap((group) => {
-      const ids = group.teams.map((t) => idByName.get(t) as string);
-      return roundRobinPairs(ids).map(([teamAId, teamBId]) => ({
-        etapaId: created.id,
-        stage: "GROUPS" as Stage,
-        zone: group.group,
-        slot: slot++,
-        timeLabel: null,
-        teamAId,
-        teamBId,
-        setFormat: "SINGLE_21" as SetFormat,
-        resultStatus: "PENDING" as const,
-      }));
-    });
+    // Single court: rotate zones one match at a time (A, B, C, A, B, C, …) so
+    // players rest between matches instead of playing a whole zone back-to-back.
+    const groupMatches = interleaveGroupPairs(
+      groups.map((group) => ({
+        group: group.group,
+        teamIds: group.teams.map((t) => idByName.get(t) as string),
+      })),
+    ).map(({ group, teamAId, teamBId }) => ({
+      etapaId: created.id,
+      stage: "GROUPS" as Stage,
+      zone: group,
+      slot: slot++,
+      timeLabel: null,
+      teamAId,
+      teamBId,
+      setFormat: "SINGLE_21" as SetFormat,
+      resultStatus: "PENDING" as const,
+    }));
     const bracketSlots = isRepechaje
       ? [
           { stage: "REPECHAJE_1" as Stage, slot: slot++ },

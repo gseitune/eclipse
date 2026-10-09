@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { distributeTeams, groupCountFor, MIN_TEAMS, roundRobinPairs } from "./tournament";
+import { distributeTeams, groupCountFor, interleaveGroupPairs, MIN_TEAMS, roundRobinPairs } from "./tournament";
 
 const alwaysZero = () => 0;
 
@@ -168,6 +168,64 @@ describe("roundRobinPairs", () => {
   it("is deterministic", () => {
     const a = roundRobinPairs(names(6));
     const b = roundRobinPairs(names(6));
+    assert.deepEqual(a, b);
+  });
+});
+
+describe("interleaveGroupPairs", () => {
+  const zone = (group: "A" | "B" | "C", n: number) => ({
+    group,
+    teamIds: Array.from({ length: n }, (_, i) => `${group}${i + 1}`),
+  });
+
+  it("rotates one match per zone and skips exhausted zones (4/4/3 fixture)", () => {
+    const placed = interleaveGroupPairs([zone("A", 4), zone("B", 4), zone("C", 3)]);
+    assert.equal(placed.length, 15, "4/4/3 zones play 6+6+3 matches");
+    assert.equal(
+      placed.map((p) => p.group).join(""),
+      "ABCABCABCABABAB",
+      "one match per zone per turn; C drops out once exhausted",
+    );
+  });
+
+  it("alternates two zones (A,B,A,B…)", () => {
+    const placed = interleaveGroupPairs([zone("A", 4), zone("B", 4)]);
+    assert.equal(placed.map((p) => p.group).join(""), "ABABABABABAB");
+  });
+
+  it("keeps each zone's internal round-robin order", () => {
+    const placed = interleaveGroupPairs([zone("A", 4), zone("B", 4)]);
+    const zoneA = placed
+      .filter((p) => p.group === "A")
+      .map((p) => [p.teamAId, p.teamBId] as [string, string]);
+    assert.deepEqual(zoneA, roundRobinPairs(zone("A", 4).teamIds));
+  });
+
+  it("places every unordered pair exactly once across all zones", () => {
+    const placed = interleaveGroupPairs([zone("A", 4), zone("B", 4), zone("C", 3)]);
+    const seen = new Set<string>();
+    for (const p of placed) {
+      assert.notEqual(p.teamAId, p.teamBId, "nobody plays themselves");
+      const key = `${p.group}:${[p.teamAId, p.teamBId].sort().join("|")}`;
+      assert.ok(!seen.has(key), `duplicate pair ${key}`);
+      seen.add(key);
+    }
+    assert.equal(seen.size, 15);
+  });
+
+  it("never makes a team play two matches back-to-back", () => {
+    const placed = interleaveGroupPairs([zone("A", 4), zone("B", 4), zone("C", 3)]);
+    for (let i = 1; i < placed.length; i++) {
+      const prev = new Set([placed[i - 1].teamAId, placed[i - 1].teamBId]);
+      for (const team of [placed[i].teamAId, placed[i].teamBId]) {
+        assert.ok(!prev.has(team), `team ${team} plays back-to-back at position ${i}`);
+      }
+    }
+  });
+
+  it("is deterministic", () => {
+    const a = interleaveGroupPairs([zone("A", 4), zone("B", 4), zone("C", 3)]);
+    const b = interleaveGroupPairs([zone("A", 4), zone("B", 4), zone("C", 3)]);
     assert.deepEqual(a, b);
   });
 });

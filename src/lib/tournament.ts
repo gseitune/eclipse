@@ -99,3 +99,44 @@ export function roundRobinPairs(
   }
   return pairs;
 }
+
+export interface GroupPairing {
+  group: GroupId;
+  teamAId: string;
+  teamBId: string;
+}
+
+/**
+ * Interleaves the zones' round-robin fixtures one match at a time
+ * (A, B, C, A, B, C, …) and assigns the fixture order of a single court.
+ *
+ * Playing a whole zone back-to-back would make teams play consecutive
+ * matches; rotating zones lets each team rest while the other zones play.
+ * Zones that run out of pairs are skipped and the rotation continues until
+ * every pair is placed. Each zone's internal round-robin order is preserved.
+ */
+export function interleaveGroupPairs(
+  groups: ReadonlyArray<{ group: GroupId; teamIds: readonly string[] }>,
+): GroupPairing[] {
+  const queues = groups.map((g) => ({
+    group: g.group,
+    pairs: roundRobinPairs(g.teamIds),
+  }));
+  const placed: GroupPairing[] = [];
+  let progressed = true;
+  while (progressed) {
+    progressed = false;
+    for (const queue of queues) {
+      const next = queue.pairs.shift();
+      if (next) {
+        placed.push({
+          group: queue.group,
+          teamAId: next[0],
+          teamBId: next[1],
+        });
+        progressed = true;
+      }
+    }
+  }
+  return placed;
+}
