@@ -7,7 +7,7 @@ import { closeEtapaUi, type CloseEtapaUi } from "@/lib/etapa-close";
 import type { MatchPublic, StateSnapshot } from "@/lib/front/types";
 import { computeTimeEstimate } from "@/lib/time-estimate";
 import { stageLabel } from "@/lib/front/phase";
-import { ResultadoEntryPanel, MejoresTercerosPanel } from "./ResultadosSection";
+import { ResultadoEntryPanel, MejoresTercerosPanel, RotationPanel } from "./ResultadosSection";
 import { CircuitosSection } from "./CircuitosSection";
 import { ReagendarSection } from "./ReagendarSection";
 
@@ -648,6 +648,9 @@ export function OrganizerPanel({
             />
             {!isCancelled && (
               <MejoresTercerosPanel state={liveState} refetch={refetch} />
+            )}
+            {!isCancelled && (
+              <RotationPanel state={liveState} refetch={refetch} />
             )}
           </nav>
         </main>

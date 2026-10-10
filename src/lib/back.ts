@@ -1061,7 +1061,16 @@ async function fillDescendantMatches(
   return updated;
 }
 
-/** Determine CUARTOS semifinal pairings avoiding same-zone winners. Prefer (QF1,QF4)+(QF2,QF3). */
+/**
+ * Determine CUARTOS semifinal pairings avoiding same-zone winners.
+ *
+ * The bracket slots run C1..C4 then SEMIFINAL_1 and SEMIFINAL_2 back-to-back, so
+ * the CUARTOS_4 (repechage side) winner would play two consecutive matches if it
+ * landed in SEMIFINAL_1. Among the options with no same-zone clash, prefer the
+ * ones that send the last QF winner to SEMIFINAL_2 so it rests for one match.
+ * Fallback: the first option (fewest same-zone pairs) — a fully same-zone set is
+ * only reachable when three QF winners share a zone, where no order avoids it.
+ */
 function getCuartosSemifinalPairingsFromBack(
   q1w: string, q2w: string, q3w: string, q4w: string,
   standings: Partial<Record<Zone, StandingRow[]>>,
@@ -1077,32 +1086,30 @@ function getCuartosSemifinalPairingsFromBack(
   }
 
   const pairings = [
-    // Option 1: (QF1,QF4)+(QF2,QF3)
-    [
-      { stage: "SEMIFINAL_1", teamAId: q1w, teamBId: q4w },
-      { stage: "SEMIFINAL_2", teamAId: q2w, teamBId: q3w },
-    ],
-    // Option 2: (QF1,QF3)+(QF2,QF4)
+    // Option 1: (QF1,QF3)+(QF2,QF4) — QF4 winner rests in SEMIFINAL_2.
     [
       { stage: "SEMIFINAL_1", teamAId: q1w, teamBId: q3w },
       { stage: "SEMIFINAL_2", teamAId: q2w, teamBId: q4w },
     ],
-    // Option 3: (QF1,QF2)+(QF3,QF4)
+    // Option 2: (QF1,QF2)+(QF3,QF4) — QF4 winner rests in SEMIFINAL_2.
     [
       { stage: "SEMIFINAL_1", teamAId: q1w, teamBId: q2w },
       { stage: "SEMIFINAL_2", teamAId: q3w, teamBId: q4w },
     ],
+    // Option 3: (QF1,QF4)+(QF2,QF3) — QF4 winner in SEMIFINAL_1 (no rest).
+    [
+      { stage: "SEMIFINAL_1", teamAId: q1w, teamBId: q4w },
+      { stage: "SEMIFINAL_2", teamAId: q2w, teamBId: q3w },
+    ],
   ];
 
-  // Pick the first option with 0 same-zone pairs.
+  // Pick the first option with 0 same-zone pairs; options 1-2 also give the
+  // last-QF winner its rest slot.
   for (const p of pairings) {
     const s1 = winnerZone.get(p[0].teamAId) ?? winnerZone.get(p[0].teamBId);
     const s2 = winnerZone.get(p[1].teamAId) ?? winnerZone.get(p[1].teamBId);
     if (s1 !== s2) return p;
   }
-  // If zero same-zone is impossible, pick the first (fewest same-zone pairs).
-  // Code comment: this case is unlikely with proper zone distribution but
-  // we fall through to the first option as a safe default.
   return pairings[0];
 }
 
@@ -1145,7 +1152,161 @@ export async function resolveBestThird(
     );
   }
 
+  // The organizer already chose the desempate path: the pending match owns the
+  // tie now, and a draw pick on top of it would leave a dangling DESEMPATE.
+  const pendingDesempate = await prisma.match.findFirst({
+    where: { etapaId, stage: "DESEMPATE", resultStatus: "PENDING" },
+  });
+  if (pendingDesempate) {
+    throw new BackError(
+      "A desempate match is already pending; record its result instead.",
+      409,
+      "desempate_already_pending",
+    );
+  }
+
   return finalizeBrackets(standings, etapaId, undefined, "CUARTOS", teamId);
+}
+
+/**
+ * Organizer picks the "Desempate" path for a tied best third (CUARTOS).
+ *
+ * Only valid with exactly two tied thirds: the 1v1 desempate does not apply to
+ * three (there the draw — resolveBestThird — is the only path). Creates the
+ * DESEMPATE match between the two; when its result lands, reconcileAfterMatch
+ * routes the winner into CUARTOS_4 and the loser into REPECHAJE_1 against the
+ * remaining third, then finalizes the bracket.
+ */
+export async function createBestThirdDesempate(
+  etapaId: string,
+): Promise<{ ok: boolean }> {
+  const etapa = await prisma.etapa.findUnique({
+    where: { id: etapaId },
+    select: { bracketFormat: true },
+  });
+  if (etapa?.bracketFormat !== "CUARTOS") {
+    throw new BackError(
+      "Best third desempate is only available in the CUARTOS format.",
+      400,
+      "not_cuartos_format",
+    );
+  }
+
+  const state = await getState(etapaId);
+  if (state.phase !== "GROUPS") {
+    throw new BackError(
+      "The desempate can only be created while the group phase is open.",
+      409,
+      "phase_not_groups",
+    );
+  }
+
+  const standings = await getStandings(etapaId);
+  const selection = selectBestThird(standings);
+  if (
+    selection?.kind !== "blocked" ||
+    selection.reason !== "best_third_tie" ||
+    selection.teamIds.length !== 2
+  ) {
+    throw new BackError(
+      "The desempate needs exactly two tied thirds; use the draw otherwise.",
+      409,
+      "best_third_desempate_requires_two",
+    );
+  }
+
+  const created = await createDesempateMatch(
+    {
+      teamAId: selection.teamIds[0] as string,
+      teamBId: selection.teamIds[1] as string,
+    },
+    etapaId,
+  );
+  if (!created) {
+    throw new BackError(
+      "A desempate is already pending or the group phase is over.",
+      409,
+      "desempate_unavailable",
+    );
+  }
+  return { ok: true };
+}
+
+/**
+ * Re-assigns the GROUPS slots of an existing etapa to the interleaved rotation
+ * (A, B, C, A, B, C, …) that freshly created etapas use, so no team plays two
+ * group matches back-to-back. Only the group slots move; pairs, results and
+ * bracket slots stay untouched. Refused once any group match has a result, and
+ * off the group phase — this re-fits a fixture that never rotated, not a live one.
+ */
+export async function reslotGroupSchedule(
+  etapaId: string,
+): Promise<{ moved: number; total: number }> {
+  const state = await getState(etapaId);
+  if (state.phase !== "GROUPS") {
+    throw new BackError(
+      "The rotation can only be re-applied before the eliminatories.",
+      409,
+      "phase_not_groups",
+    );
+  }
+
+  const groupMatches = await prisma.match.findMany({
+    where: { etapaId, stage: "GROUPS" },
+    orderBy: { slot: "asc" },
+    select: { id: true, zone: true, slot: true, resultStatus: true },
+  });
+  if (groupMatches.length === 0) {
+    throw new BackError(
+      "The etapa has no group matches.",
+      409,
+      "no_group_matches",
+    );
+  }
+  if (groupMatches.some((m) => m.resultStatus !== "PENDING")) {
+    throw new BackError(
+      "There are played group matches; re-apply the rotation before recording results.",
+      409,
+      "groups_already_played",
+    );
+  }
+
+  // Per-zone queues in their current slot order already match the round-robin
+  // order createEtapa used, so interleaving by index reproduces the rotation.
+  const queues = new Map<string, typeof groupMatches>();
+  for (const m of groupMatches) {
+    if (m.zone === null) continue;
+    const key = String(m.zone);
+    const bucket = queues.get(key);
+    if (bucket) bucket.push(m);
+    else queues.set(key, [m]);
+  }
+  const zones = [...queues.keys()].sort();
+
+  const plan: { id: string; newSlot: number }[] = [];
+  let progressed = true;
+  while (progressed) {
+    progressed = false;
+    for (const z of zones) {
+      const next = queues.get(z)!.shift();
+      if (next) {
+        plan.push({ id: next.id, newSlot: plan.length + 1 });
+        progressed = true;
+      }
+    }
+  }
+
+  const oldSlotById = new Map(groupMatches.map((m) => [m.id, m.slot]));
+  const moved = plan.filter((p) => oldSlotById.get(p.id) !== p.newSlot).length;
+  if (moved > 0) {
+    await prisma.$transaction(
+      plan.map((p) =>
+        prisma.match.update({ where: { id: p.id }, data: { slot: p.newSlot } }),
+      ),
+    );
+    publishSse("schedule-changed", {});
+  }
+  return { moved, total: plan.length };
 }
 
 /**
@@ -1233,7 +1394,18 @@ async function reconcileAfterMatch(
     const state = await getState(etapaId);
     if (state.phase === "DESEMPATE") {
       const standings = await getStandings(etapaId);
-      const res = await finalizeBrackets(standings, etapaId, winnerId);
+      const etapa = await prisma.etapa.findUnique({
+        where: { id: etapaId },
+        select: { bracketFormat: true },
+      });
+      // CUARTOS: the desempate resolves the best THIRD (it advances to
+      // CUARTOS_4), not the best second. Route it through resolvedThirdId so
+      // the winner is not injected as a second-place team on a format that has
+      // no second-place slot.
+      const res =
+        etapa?.bracketFormat === "CUARTOS"
+          ? await finalizeBrackets(standings, etapaId, undefined, "CUARTOS", winnerId)
+          : await finalizeBrackets(standings, etapaId, winnerId);
       phaseChanged = res.ok;
       bracketsChanged = res.ok;
     }

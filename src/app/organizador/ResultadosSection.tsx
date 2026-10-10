@@ -1,8 +1,15 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { fetchState, recordResult, setMatchTimes, resolveBestThird } from "../../lib/front/api";
-import type { ScheduleRow, StateSnapshot } from "../../lib/front/types";
+import {
+  fetchState,
+  recordResult,
+  setMatchTimes,
+  resolveBestThird,
+  createBestThirdDesempate,
+  reslotEtapa,
+} from "../../lib/front/api";
+import type { ScheduleRow, StandingRow, StateSnapshot } from "../../lib/front/types";
 import { ApiError } from "../../lib/front/types";
 import { stageLabel } from "../../lib/front/phase";
 
@@ -594,15 +601,25 @@ export function ResultadoEntryPanel({
 
 /* ── Best-third tie resolution — own card, only rendered when needed ── */
 export function MejoresTercerosPanel({ state, refetch }: MejoresTercerosPanelProps) {
-  const bestThirdTie = useMemo(() => {
-    const blocked = state?.bracketsBlocked;
-    if (blocked?.reason !== "best_third_tie") return null;
-    const names = new Map<string, string>();
+  const blocked = state?.bracketsBlocked;
+
+  const names = useMemo(() => {
+    const map = new Map<string, string>();
     for (const teams of Object.values(state?.zones ?? {})) {
-      for (const t of teams) names.set(t.id, t.name);
+      for (const t of teams) map.set(t.id, t.name);
     }
+    return map;
+  }, [state?.zones]);
+
+  const bestThirdTie = useMemo(() => {
+    if (blocked?.reason !== "best_third_tie") return null;
     return blocked.teamIds.map((id) => ({ id, name: names.get(id) ?? "Equipo" }));
-  }, [state?.bracketsBlocked, state?.zones]);
+  }, [blocked, names]);
+
+  const needsScores = useMemo(() => {
+    if (blocked?.reason !== "best_third_needs_scores") return null;
+    return blocked.teamIds.map((id) => ({ id, name: names.get(id) ?? "Equipo" }));
+  }, [blocked, names]);
 
   // The best-third choice is only valid once every zone match is loaded. While
   // the next pending match is still a GROUP match, the zone stage is incomplete
@@ -612,11 +629,14 @@ export function MejoresTercerosPanel({ state, refetch }: MejoresTercerosPanelPro
     [state?.nextMatch],
   );
 
+  const desempatePending = Boolean(state?.desempate?.pending);
+
   const [tieTeamId, setTieTeamId] = useState<string | null>(null);
   const [tieMsg, setTieMsg] = useState<string | null>(null);
+  const [creatingDesempate, setCreatingDesempate] = useState(false);
 
   async function handleResolveBestThird(teamId: string) {
-    if (!state?.etapaId || tieTeamId) return;
+    if (!state?.etapaId || tieTeamId || creatingDesempate) return;
     setTieTeamId(teamId);
     setTieMsg(null);
     try {
@@ -628,6 +648,43 @@ export function MejoresTercerosPanel({ state, refetch }: MejoresTercerosPanelPro
     } finally {
       setTieTeamId(null);
     }
+  }
+
+  async function handleCreateDesempate() {
+    if (!state?.etapaId || creatingDesempate || tieTeamId) return;
+    setCreatingDesempate(true);
+    setTieMsg(null);
+    try {
+      await createBestThirdDesempate(state.etapaId);
+      setTieMsg("Desempate creado — cargá su resultado en el panel de partidos.");
+      await refetch();
+    } catch (err) {
+      setTieMsg(err instanceof ApiError ? err.message : String(err));
+    } finally {
+      setCreatingDesempate(false);
+    }
+  }
+
+  // Missing scores: the restricted comparison cannot run yet. Explain, no action.
+  if (needsScores) {
+    return (
+      <section
+        aria-label="Mejor 3.º — faltan marcadores"
+        className="rounded-xl border border-sand-200 bg-stone-100/70 p-5"
+      >
+        <div className="mb-1 flex items-center gap-2">
+          <LockIcon />
+          <h3 className="text-sm font-semibold text-stone-500">
+            Mejor 3.º — faltan marcadores
+          </h3>
+        </div>
+        <p className="text-xs text-stone-400">
+          Para comparar a los terceros hace falta el marcador de sus partidos
+          contra el 1.º y 2.º de su zona. Cargá esos resultados para desbloquear
+          Cuartos.
+        </p>
+      </section>
+    );
   }
 
   if (!bestThirdTie) return null;
@@ -653,6 +710,36 @@ export function MejoresTercerosPanel({ state, refetch }: MejoresTercerosPanelPro
     );
   }
 
+  // The organizer already chose the desempate path: the pending match owns the
+  // tie now, so hide the choices and point at the match.
+  if (desempatePending) {
+    const dTeamA = state?.desempate?.match?.teamA?.name ?? "—";
+    const dTeamB = state?.desempate?.match?.teamB?.name ?? "—";
+    return (
+      <section
+        aria-label="Desempate del mejor 3.º — pendiente"
+        className="rounded-xl border border-amber-300 bg-amber-50 p-5"
+      >
+        <h3 className="text-sm font-semibold text-stone-900 mb-1">
+          Desempate del mejor 3.º
+        </h3>
+        <p className="text-xs text-stone-600 mb-2">
+          Los terceros empatados juegan el desempate{" "}
+          <span className="font-semibold text-stone-900">
+            {dTeamA} vs {dTeamB}
+          </span>
+          . Cargá su resultado en el panel de partidos y Cuartos se arma solo.
+        </p>
+        <p className="text-xs text-stone-500">
+          El ganador entra directo a Cuartos 4; el perdedor juega el repechage
+          contra el tercero restante.
+        </p>
+      </section>
+    );
+  }
+
+  const twoWayTie = bestThirdTie.length === 2;
+
   return (
     <section
       aria-label="Elegir mejor tercer puesto"
@@ -662,33 +749,138 @@ export function MejoresTercerosPanel({ state, refetch }: MejoresTercerosPanelPro
         Empate en el mejor 3.º
       </h3>
       <p className="text-xs text-stone-600 mb-4">
-        Con un set por partido de zona, los terceros quedan empatados. Elegí
-        cuál entra directo a Cuartos 4; los otros dos juegan el repechage.
+        Con un set por partido de zona, los terceros quedan empatados.
       </p>
-      <div className="flex flex-col gap-2">
-        {bestThirdTie.map((t) => (
+
+      {twoWayTie && (
+        <div className="mb-4 rounded-lg border border-sand-300 bg-white p-4">
+          <p className="text-sm font-semibold text-stone-900 mb-1">Desempate</p>
+          <p className="text-xs text-stone-600 mb-3">
+            Los dos empatados juegan un partido extra. El ganador entra directo
+            a Cuartos 4; el perdedor va al repechage contra el tercero que
+            resta.
+          </p>
           <button
-            key={t.id}
             type="button"
-            onClick={() => handleResolveBestThird(t.id)}
-            disabled={tieTeamId !== null}
-            className="flex items-center justify-between rounded-lg border border-sand-300 bg-white px-4 py-3 text-left transition-colors hover:border-amber-soft-400 hover:bg-amber-50 disabled:opacity-50 min-h-[44px]"
+            onClick={handleCreateDesempate}
+            disabled={creatingDesempate || tieTeamId !== null}
+            className="w-full rounded-lg border border-amber-soft-400 bg-amber-50 px-4 py-3 text-sm font-semibold text-stone-900 transition-colors hover:bg-amber-100 disabled:opacity-50 min-h-[44px]"
           >
-            <span className="text-sm font-semibold text-stone-900">
-              {t.name}
-            </span>
-            <span className="text-xs font-medium text-stone-500">
-              {tieTeamId === t.id ? "Guardando…" : "Es el mejor 3.º"}
-            </span>
+            {creatingDesempate ? "Creando desempate…" : "Crear partido de desempate"}
           </button>
-        ))}
+        </div>
+      )}
+
+      <div className="rounded-lg border border-sand-300 bg-white p-4">
+        <p className="text-sm font-semibold text-stone-900 mb-1">Sorteo</p>
+        <p className="text-xs text-stone-600 mb-3">
+          {twoWayTie
+            ? "Elegí cuál entra directo a Cuartos 4; el otro juega el repechage contra el tercero que resta."
+            : "Elegí cuál entra directo a Cuartos 4; los otros dos juegan el repechage."}
+        </p>
+        <div className="flex flex-col gap-2">
+          {bestThirdTie.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => handleResolveBestThird(t.id)}
+              disabled={tieTeamId !== null || creatingDesempate}
+              className="flex items-center justify-between rounded-lg border border-sand-300 bg-white px-4 py-3 text-left transition-colors hover:border-amber-soft-400 hover:bg-amber-50 disabled:opacity-50 min-h-[44px]"
+            >
+              <span className="text-sm font-semibold text-stone-900">
+                {t.name}
+              </span>
+              <span className="text-xs font-medium text-stone-500">
+                {tieTeamId === t.id ? "Guardando…" : "Es el mejor 3.º"}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
+
       {tieMsg && (
         <p
-          className={`mt-3 text-xs font-medium ${tieMsg.startsWith("Listo") ? "text-green-700" : "text-red-700"}`}
+          className={`mt-3 text-xs font-medium ${tieMsg.startsWith("Listo") || tieMsg.startsWith("Desempate creado") ? "text-green-700" : "text-red-700"}`}
           role="alert"
         >
           {tieMsg}
+        </p>
+      )}
+    </section>
+  );
+}
+
+export interface RotationPanelProps {
+  readonly state: StateSnapshot | null;
+  readonly refetch: () => Promise<void>;
+}
+
+/**
+ * One-shot repair for an etapa created before the rotation fix: re-orders the
+ * group slots to the interleaved rotation (A, B, C, …) so no team plays two
+ * group matches back-to-back. Offered only while the group phase is open and no
+ * group result has been loaded (all standings at 0), so it can never disturb a
+ * fixture that is already under way.
+ */
+export function RotationPanel({ state, refetch }: RotationPanelProps) {
+  const untouched = useMemo(() => {
+    if (!state || state.phase !== "GROUPS") return false;
+    const rows = Object.values(state.standings ?? {})
+      .flat()
+      .filter((r): r is StandingRow => Boolean(r));
+    return rows.length > 0 && rows.every((r) => r.played === 0);
+  }, [state]);
+
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function handleReslot() {
+    if (!state?.etapaId || busy) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await reslotEtapa(state.etapaId);
+      setMsg(
+        res.moved > 0
+          ? `Listo — ${res.moved} de ${res.total} partidos reordenados.`
+          : "El fixture ya estaba en rotación; no hubo cambios.",
+      );
+      await refetch();
+    } catch (err) {
+      setMsg(err instanceof ApiError ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!untouched) return null;
+
+  return (
+    <section
+      aria-label="Rotación del fixture"
+      className="rounded-xl border border-sand-200 bg-stone-50 p-5"
+    >
+      <h3 className="text-sm font-semibold text-stone-900 mb-1">
+        Rotación del fixture
+      </h3>
+      <p className="text-xs text-stone-600 mb-3">
+        Reordena los partidos de zona en rotación (A, B, C, …) para que nadie
+        juegue dos seguidos. Disponible solo antes de cargar resultados.
+      </p>
+      <button
+        type="button"
+        onClick={handleReslot}
+        disabled={busy}
+        className="w-full rounded-lg border border-sand-300 bg-white px-4 py-3 text-sm font-semibold text-stone-900 transition-colors hover:bg-sand-100 disabled:opacity-50 min-h-[44px]"
+      >
+        {busy ? "Reordenando…" : "Reordenar rotación del fixture"}
+      </button>
+      {msg && (
+        <p
+          className={`mt-3 text-xs font-medium ${msg.startsWith("Listo") || msg.startsWith("El fixture") ? "text-green-700" : "text-red-700"}`}
+          role="alert"
+        >
+          {msg}
         </p>
       )}
     </section>

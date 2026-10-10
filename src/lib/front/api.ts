@@ -143,6 +143,19 @@ export async function closeEtapa(
   return handleResponse(res);
 }
 
+/** Re-orders the group slots of an etapa to the interleaved rotation (pre-play only). */
+export async function reslotEtapa(
+  etapaId: string,
+): Promise<{ moved: number; total: number }> {
+  const res = await fetch(`${BASE}/etapas/${etapaId}/reslot`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+  });
+  return handleResponse(res);
+}
+
 /** Organizer names the best third when the automatic selection ties. */
 export async function resolveBestThird(
   etapaId: string,
@@ -154,6 +167,20 @@ export async function resolveBestThird(
     headers: { "Content-Type": "application/json" },
     cache: "no-store",
     body: JSON.stringify({ etapaId, teamId }),
+  });
+  return handleResponse(res);
+}
+
+/** Organizer picks the "Desempate" path for a tied best third (2 teams). */
+export async function createBestThirdDesempate(
+  etapaId: string,
+): Promise<{ ok: boolean }> {
+  const res = await fetch(`${BASE}/best-third/desempate`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+    body: JSON.stringify({ etapaId }),
   });
   return handleResponse(res);
 }
