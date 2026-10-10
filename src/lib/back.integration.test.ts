@@ -786,8 +786,10 @@ describe("CUARTOS format (integration)", () => {
     // distributeTeams fails here instead of silently breaking the bracket.
     assert.deepEqual([zoneA.length, zoneB.length, zoneC.length], [4, 3, 4]);
 
-    // Record all 15 group results with differentiated scores so selectBestThird
-    // picks a clear best third (A3 has higher setDiff than C3).
+    // Record all 15 group results. Every zone third loses its two matches vs
+    // the top 2 by the same 19-21, so Andi's points rule (wins -> point
+    // difference -> points for, restricted to the zone's top 2) ties the three
+    // thirds and the bracket waits for the organizer to pick one.
     const allGroupMatches = await prisma.match.findMany({
       where: { etapaId: etapa.id, stage: "GROUPS" },
       orderBy: { slot: "asc" },
@@ -812,25 +814,25 @@ describe("CUARTOS format (integration)", () => {
       const isA3VsA4 = (teamAId === zoneA[2] && teamBId === zoneA[3]) || (teamAId === zoneA[3] && teamBId === zoneA[2]);
       const isC3VsC4 = (teamAId === zoneC[2] && teamBId === zoneC[3]) || (teamAId === zoneC[3] && teamBId === zoneC[2]);
       if (isA3VsA4) {
-        // A3 wins by a wide margin so its zone setDiff stays strictly above C3's.
+        // A3 vs A4 is NOT counted by the restricted rule (A4 is not top-2);
+        // any decided score keeps A3 in 3rd place.
         const aWins = zoneA[2] === teamAId;
         await recordResult({ matchId: m.id, setFormat: "SINGLE_21", sets: [{ teamA: aWins ? 21 : 5, teamB: aWins ? 5 : 21 }] });
       } else if (isC3VsC4) {
-        // C3 wins narrowly, so A3 is the unique best third.
-        const aWins = zoneC[2] === teamAId;
-        await recordResult({ matchId: m.id, setFormat: "SINGLE_21", sets: [{ teamA: aWins ? 21 : 19, teamB: aWins ? 19 : 21 }] });
+        const cWins = zoneC[2] === teamAId;
+        await recordResult({ matchId: m.id, setFormat: "SINGLE_21", sets: [{ teamA: cWins ? 21 : 19, teamB: cWins ? 19 : 21 }] });
       } else {
         const aWins = rankOf(teamAId) <= rankOf(teamBId);
         await recordResult({ matchId: m.id, setFormat: "SINGLE_21", sets: [{ teamA: aWins ? 21 : 19, teamB: aWins ? 19 : 21 }] });
       }
     }
 
-    // Single-set group stages leave the two 4-team zone thirds tied, so the
-    // bracket waits for the organizer instead of inventing a tiebreaker.
+    // The three zone thirds tie on the full points chain, so the bracket waits
+    // for the organizer instead of inventing a tiebreaker.
     const blockedState = await getStateSnapshot(etapa.id);
     assert.equal(blockedState.bracketsBlocked?.reason, "best_third_tie");
     const tiedIds = blockedState.bracketsBlocked?.teamIds ?? [];
-    assert.equal(tiedIds.length, 2, "exactly the two 4-team zone thirds tie");
+    assert.equal(tiedIds.length, 3, "all three zone thirds tie on the points chain");
 
     const emptyRepechage = await prisma.match.findFirst({
       where: { etapaId: etapa.id, stage: "REPECHAJE_1" },

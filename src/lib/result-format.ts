@@ -112,6 +112,17 @@ export function countSetWins(sets: SetScore[]): { a: number; b: number } {
   return { a, b };
 }
 
+/** Single-source point totals: the sum of every set's score per side. */
+export function countSetPoints(sets: SetScore[]): { a: number; b: number } {
+  let a = 0;
+  let b = 0;
+  for (const set of sets) {
+    a += set.teamA;
+    b += set.teamB;
+  }
+  return { a, b };
+}
+
 /**
  * Resolves one result payload into what back.ts persists. Throws
  * InvalidResultError (400) with a reason on any rule violation.

@@ -1,5 +1,5 @@
 import type { Zone } from "../generated/prisma/client";
-import type { StandingRow } from "./standings";
+import type { BestThirdStats, StandingRow } from "./standings";
 
 /**
  * Automatic eliminatories (ELIMINATORIAS AUTOMÁTICAS).
@@ -34,9 +34,10 @@ export interface BuildBracketsOptions {
   /** Best-second already resolved (e.g. the DESEMPATE winner). */
   resolvedSecondId?: string;
   /**
-   * Best third already resolved by the organizer. Single-set group stages make
-   * (won, setDiff) tie between the thirds of two 4-team zones by construction,
-   * so the organizer picks the best third instead of the engine inventing one.
+   * Best third already resolved by the organizer. Andi's points rule (wins ->
+   * point diff -> points for, restricted to each zone's top 2) can tie thirds
+   * to the end of the chain, so the organizer picks the best third instead of
+   * the engine inventing one.
    */
   resolvedThirdId?: string;
   /** Tournament bracket format. Defaults to STANDARD. */
@@ -50,7 +51,12 @@ export type BestSecondSelection =
 
 export type BestThirdSelection =
   | { kind: "direct"; teamId: string }
-  | { kind: "blocked"; teamIds: string[] };
+  | {
+      kind: "blocked";
+      /** Why the bracket waits: a real tie, or scores missing to compare. */
+      reason: "best_third_tie" | "best_third_needs_scores";
+      teamIds: string[];
+    };
 
 export function isGroupPhaseComplete(
   groupMatchCount: number,
@@ -230,8 +236,15 @@ function buildRepechajeBrackets(
 
 /**
  * Picks the best third-place team across zones for the CUARTOS format.
- * Compares thirds on (won, then setDiff). If tied, returns blocked
- * with reason "best_third_tie" — never invents a tiebreaker.
+ *
+ * Andi's rule (addendum 2026-10-10): each third is compared ONLY against its
+ * own zone's top 2 (the match vs the 4th is dropped — this normalizes 4-team
+ * vs 3-team zones). The restricted stats come precomputed from the standings
+ * layer; criterion, in order: wins, point difference, points for.
+ *  - A unique winner -> direct.
+ *  - A total tie to the end of the chain -> blocked best_third_tie; the
+ *    organizer resolves it (never invent a tiebreaker here).
+ *  - Any vs-top-2 match without scores -> blocked best_third_needs_scores.
  */
 export function selectBestThird(
   standings: StandingsByZone,
@@ -242,13 +255,35 @@ export function selectBestThird(
   if (zones.length < 3) return null;
   const thirds: StandingRow[] = zones.map((z) => standings[z]![2]);
 
-  const maxWon = Math.max(...thirds.map((r) => r.won));
-  const onWon = thirds.filter((r) => r.won === maxWon);
-  const maxDiff = Math.max(...onWon.map((r) => r.setDiff));
-  const top = onWon.filter((r) => r.setDiff === maxDiff);
+  const statsOf = (r: StandingRow): BestThirdStats => r.bestThirdStats!;
+  const missingScores = thirds.some(
+    (r) => !r.bestThirdStats || r.bestThirdStats.needsScores,
+  );
+  if (missingScores) {
+    return {
+      kind: "blocked",
+      reason: "best_third_needs_scores",
+      teamIds: thirds.map((r) => r.teamId),
+    };
+  }
+
+  const maxWon = Math.max(...thirds.map((r) => statsOf(r).won));
+  const onWon = thirds.filter((r) => statsOf(r).won === maxWon);
+  const maxDiff = Math.max(
+    ...onWon.map((r) => statsOf(r).pointsFor - statsOf(r).pointsAgainst),
+  );
+  const onDiff = onWon.filter(
+    (r) => statsOf(r).pointsFor - statsOf(r).pointsAgainst === maxDiff,
+  );
+  const maxFor = Math.max(...onDiff.map((r) => statsOf(r).pointsFor));
+  const top = onDiff.filter((r) => statsOf(r).pointsFor === maxFor);
 
   if (top.length === 1) return { kind: "direct", teamId: top[0].teamId };
-  return { kind: "blocked", teamIds: top.map((r) => r.teamId) };
+  return {
+    kind: "blocked",
+    reason: "best_third_tie",
+    teamIds: top.map((r) => r.teamId),
+  };
 }
 
 /** Build CUARTOS bracket pairings for a 3-zone tournament (11–12 teams). */
@@ -286,7 +321,14 @@ export function buildCuartosBrackets(
 
   const bestThird = selectBestThird(standings);
   if (!options.resolvedThirdId && bestThird?.kind === "blocked") {
-    return { pairings: [], missing: ["Best third (3+ tied)"] };
+    return {
+      pairings: [],
+      missing: [
+        bestThird.reason === "best_third_tie"
+          ? "Best third (tied)"
+          : "Best third (needs scores)",
+      ],
+    };
   }
 
   const bestThirdId =

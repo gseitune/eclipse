@@ -34,6 +34,9 @@ export interface StandingInputMatch {
   teamBId: string | null;
   setAScore: number | null;
   setBScore: number | null;
+  /** Actual point scores (sum of the sets), only for COMPLETE matches. */
+  pointsA?: number | null;
+  pointsB?: number | null;
   resultStatus: ResultStatus;
   winnerId: string | null;
 }
@@ -50,6 +53,24 @@ export interface StandingRow {
   femaleName: string | null;
   /** Kept for API compatibility; zone ties now resolve deterministically. */
   unresolvedTie: boolean;
+  /**
+   * CUARTOS best-third comparison (addendum 2026-10-10): the stats of the
+   * zone's 3rd place counted ONLY against its zone's top 2. This normalizes
+   * 4-team vs 3-team zones. Computed after sorting, so only the third row of
+   * a zone carries the value. Undefined for the other rows.
+   */
+  bestThirdStats?: BestThirdStats;
+}
+
+export interface BestThirdStats {
+  /** Wins in the third's own matches vs the zone's top 2. */
+  won: number;
+  /** Points for in COMPLETE matches vs the zone's top 2. */
+  pointsFor: number;
+  /** Points against in COMPLETE matches vs the zone's top 2. */
+  pointsAgainst: number;
+  /** True when a vs-top-2 match has no scores: the points cannot be computed. */
+  needsScores: boolean;
 }
 
 function isDecidedGroupMatch(
@@ -103,6 +124,46 @@ function resolveClique(
       x.teamId.localeCompare(y.teamId),
   );
   rows.splice(start, end - start + 1, ...slice);
+}
+
+/**
+ * Restricted stats of a zone's 3rd place against its zone's top 2 (CUARTOS
+ * best-third rule). Counts only decided zone matches against the two teams
+ * that finished above the third; wins come from winnerId, points only from
+ * COMPLETE matches, and a scoreless vs-top-2 match marks needsScores so the
+ * bracket blocks instead of inventing a metric.
+ */
+function bestThirdRestrictedStats(
+  thirdId: string,
+  topTwoIds: ReadonlySet<string>,
+  matches: StandingInputMatch[],
+  zoneIds: ReadonlySet<string>,
+): BestThirdStats {
+  const stats: BestThirdStats = {
+    won: 0,
+    pointsFor: 0,
+    pointsAgainst: 0,
+    needsScores: false,
+  };
+  for (const m of matches) {
+    if (!isDecidedGroupMatch(m, zoneIds)) continue;
+    const opponent =
+      m.teamAId === thirdId ? m.teamBId : m.teamBId === thirdId ? m.teamAId : null;
+    if (!opponent || !topTwoIds.has(opponent)) continue;
+    if (m.winnerId === thirdId) stats.won += 1;
+    if (m.resultStatus !== "COMPLETE" || m.pointsA == null || m.pointsB == null) {
+      stats.needsScores = true;
+      continue;
+    }
+    if (m.teamAId === thirdId) {
+      stats.pointsFor += m.pointsA;
+      stats.pointsAgainst += m.pointsB;
+    } else {
+      stats.pointsFor += m.pointsB;
+      stats.pointsAgainst += m.pointsA;
+    }
+  }
+  return stats;
 }
 
 /**
@@ -172,6 +233,19 @@ export function computeZoneStandings(
     }
     if (j > i) resolveClique(sorted, matches, i, j);
     i = j + 1;
+  }
+
+  // CUARTOS best third: the 3rd place is only ever compared against its own
+  // zone's top 2, and only post-sort positions define who those are.
+  if (sorted.length >= 3) {
+    const third = sorted[2];
+    const topTwo = new Set([sorted[0].teamId, sorted[1].teamId]);
+    third.bestThirdStats = bestThirdRestrictedStats(
+      third.teamId,
+      topTwo,
+      matches,
+      zoneIds,
+    );
   }
 
   return sorted;

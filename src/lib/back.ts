@@ -11,6 +11,7 @@ import { buildBrackets, buildCuartosBrackets, nextRoundPairings, selectBestSecon
 import { regenerateZones, swapZone, type ZoneId } from "./zonification";
 import { distributeTeams, interleaveGroupPairs, MIN_TEAMS } from "./tournament";
 import {
+  countSetPoints,
   countSetWins,
   resolveResultPayload,
   type SetFormatId,
@@ -467,6 +468,7 @@ export async function getStandings(etapaId?: string | null): Promise<Partial<Rec
       matches.map((m) => {
         const sets = (m.sets ?? null) as SetScore[] | null;
         const wins = sets ? countSetWins(sets) : { a: null, b: null };
+        const points = sets ? countSetPoints(sets) : { a: null, b: null };
         return {
           stage: m.stage,
           zone: m.zone,
@@ -474,6 +476,8 @@ export async function getStandings(etapaId?: string | null): Promise<Partial<Rec
           teamBId: m.teamBId,
           setAScore: wins.a,
           setBScore: wins.b,
+          pointsA: points.a,
+          pointsB: points.b,
           resultStatus: m.resultStatus,
           winnerId: m.winnerId,
         };
@@ -843,7 +847,7 @@ export async function getStateSnapshot(etapaId?: string | null) {
 
   const bracketsBlocked =
     bestThirdSelection?.kind === "blocked"
-      ? { reason: "best_third_tie", teamIds: bestThirdSelection.teamIds }
+      ? { reason: bestThirdSelection.reason, teamIds: bestThirdSelection.teamIds }
       : bestSecondSelection?.kind === "blocked"
       ? { reason: "three_seconds_tie", teamIds: bestSecondSelection.teamIds }
       : null;
@@ -1105,11 +1109,11 @@ function getCuartosSemifinalPairingsFromBack(
 /**
  * Organizer picks the best third when the automatic selection ties.
  *
- * With single-set group stages the third of a 4-team zone is always 1 win / -1
- * setDiff, so the thirds of two 4-team zones tie by construction and the engine
- * refuses to invent a tiebreaker. The organizer names the winner; the repechage
- * is then filled with the other two thirds. Only a team that is actually in the
- * tie is accepted.
+ * Andi's points rule compares each third ONLY against its own zone's top 2
+ * (wins -> point diff -> points for). The three thirds can tie to the end of
+ * the chain, and the engine refuses to invent a tiebreaker. The organizer
+ * names the winner; the repechage is then filled with the other two thirds.
+ * Only a team that is actually in the tie is accepted.
  */
 export async function resolveBestThird(
   etapaId: string,
@@ -1129,7 +1133,11 @@ export async function resolveBestThird(
 
   const standings = await getStandings(etapaId);
   const selection = selectBestThird(standings);
-  if (selection?.kind !== "blocked" || !selection.teamIds.includes(teamId)) {
+  if (
+    selection?.kind !== "blocked" ||
+    selection.reason !== "best_third_tie" ||
+    !selection.teamIds.includes(teamId)
+  ) {
     throw new BackError(
       "That team is not tied for best third.",
       400,
@@ -1183,7 +1191,7 @@ async function reconcileAfterMatch(
             const selection = selectBestThird(standings);
             if (selection?.kind === "blocked") {
               publishSse("brackets-blocked", {
-                reason: "best_third_tie",
+                reason: selection.reason,
                 teamIds: selection.teamIds,
               });
             } else {

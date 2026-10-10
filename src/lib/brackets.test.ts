@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import type { Zone } from "../generated/prisma/client";
-import type { StandingRow } from "./standings";
+import type { BestThirdStats, StandingRow } from "./standings";
 import { buildBrackets, buildCuartosBrackets, isGroupPhaseComplete, selectBestSecond, selectBestThird } from "./brackets";
 
 const A: Zone = "A";
@@ -177,6 +177,10 @@ describe("buildCuartosBrackets", () => {
       B: [row("b1", B, 5, 7), row("b2", B, 4, 3), row("b3", B, 2, 1), row("b4", B, 0, -6)],
       C: [row("c1", C, 5, 6), row("c2", C, 3, 2), row("c3", C, 1, -1)],
     };
+    // Andi's real numbers: A3 33+/42-, B3 25+/42-, C3 23+/43- -> A3 direct.
+    standings.A[2].bestThirdStats = { won: 0, pointsFor: 33, pointsAgainst: 42, needsScores: false };
+    standings.B[2].bestThirdStats = { won: 0, pointsFor: 25, pointsAgainst: 42, needsScores: false };
+    standings.C[2].bestThirdStats = { won: 0, pointsFor: 23, pointsAgainst: 43, needsScores: false };
     const { pairings, missing } = buildCuartosBrackets(standings);
     assert.deepEqual(missing, []);
     assert.deepEqual(pairings, [
@@ -187,12 +191,15 @@ describe("buildCuartosBrackets", () => {
     ]);
   });
 
-  it("best 3rd wins (higher won) advances directly to QF4 side", () => {
+  it("best 3rd wins (higher won vs top 2) advances directly to QF4 side", () => {
     const standings = {
       A: [row("a1", A, 5, 8), row("a2", A, 4, 5), row("a3", A, 4, 3), row("a4", A, 0, -5)],
       B: [row("b1", B, 5, 7), row("b2", B, 4, 3), row("b3", B, 2, 1), row("b4", B, 0, -6)],
       C: [row("c1", C, 5, 6), row("c2", C, 3, 2), row("c3", C, 2, -1)],
     };
+    standings.A[2].bestThirdStats = { won: 1, pointsFor: 42, pointsAgainst: 33, needsScores: false };
+    standings.B[2].bestThirdStats = { won: 0, pointsFor: 25, pointsAgainst: 42, needsScores: false };
+    standings.C[2].bestThirdStats = { won: 0, pointsFor: 23, pointsAgainst: 43, needsScores: false };
     const { pairings, missing } = buildCuartosBrackets(standings);
     assert.deepEqual(missing, []);
     const re1 = pairings.find((p) => p.stage === "REPECHAJE_1");
@@ -204,15 +211,18 @@ describe("buildCuartosBrackets", () => {
     );
   });
 
-  it("reports best_third_tie when two thirds are tied on won then setDiff", () => {
+  it("reports best_third_tie when two thirds tie to the end of the points chain", () => {
     const standings = {
       A: [row("a1", A, 5, 8), row("a2", A, 4, 5), row("a3", A, 3, 2), row("a4", A, 0, -5)],
       B: [row("b1", B, 5, 7), row("b2", B, 4, 5), row("b3", B, 3, 2), row("b4", B, 0, -6)],
       C: [row("c1", C, 5, 6), row("c2", C, 3, 1), row("c3", C, 2, -1)],
     };
+    standings.A[2].bestThirdStats = { won: 0, pointsFor: 38, pointsAgainst: 42, needsScores: false };
+    standings.B[2].bestThirdStats = { won: 0, pointsFor: 38, pointsAgainst: 42, needsScores: false };
+    standings.C[2].bestThirdStats = { won: 0, pointsFor: 40, pointsAgainst: 45, needsScores: false };
     const { pairings, missing } = buildCuartosBrackets(standings);
     assert.deepEqual(pairings, []);
-    assert.deepEqual(missing, ["Best third (3+ tied)"]);
+    assert.deepEqual(missing, ["Best third (tied)"]);
   });
 
   it("reports missing when fewer than 3 zones", () => {
@@ -235,44 +245,117 @@ describe("buildCuartosBrackets", () => {
   });
 });
 
-describe("selectBestThird", () => {
-  it("picks the strongest third by won then setDiff (direct)", () => {
+describe("selectBestThird (Andi's rule: restricted to the zone top 2, points)", () => {
+  function thirdStandings(stats: Record<"a3" | "b3" | "c3", BestThirdStats>) {
     const standings = {
-      A: [row("a1", A, 4), row("a2", A, 3), row("a3", A, 2, 1)],
-      B: [row("b1", B, 4), row("b2", B, 3), row("b3", B, 2, 0)],
-      C: [row("c1", C, 4), row("c2", C, 3), row("c3", C, 2, -1)],
+      A: [row("a1", A, 4), row("a2", A, 3), row("a3", A, 1)],
+      B: [row("b1", B, 4), row("b2", B, 3), row("b3", B, 1)],
+      C: [row("c1", C, 4), row("c2", C, 3), row("c3", C, 0)],
     };
+    standings.A[2].bestThirdStats = stats.a3;
+    standings.B[2].bestThirdStats = stats.b3;
+    standings.C[2].bestThirdStats = stats.c3;
+    return standings;
+  }
+
+  it("picks the best third by point difference vs the zone top 2 (real example)", () => {
+    const standings = thirdStandings({
+      a3: { won: 0, pointsFor: 33, pointsAgainst: 42, needsScores: false },
+      b3: { won: 0, pointsFor: 25, pointsAgainst: 42, needsScores: false },
+      c3: { won: 0, pointsFor: 23, pointsAgainst: 43, needsScores: false },
+    });
     const selection = selectBestThird(standings);
     assert.deepEqual(selection, { kind: "direct", teamId: "a3" });
   });
 
-  it("returns blocked when two thirds are tied on won then setDiff", () => {
+  it("prefers wins over point difference", () => {
+    const standings = thirdStandings({
+      a3: { won: 1, pointsFor: 25, pointsAgainst: 42, needsScores: false },
+      b3: { won: 0, pointsFor: 33, pointsAgainst: 42, needsScores: false },
+      c3: { won: 0, pointsFor: 23, pointsAgainst: 43, needsScores: false },
+    });
+    const selection = selectBestThird(standings);
+    assert.deepEqual(selection, { kind: "direct", teamId: "a3" });
+  });
+
+  it("breaks a point-difference tie with points for", () => {
+    const standings = thirdStandings({
+      a3: { won: 0, pointsFor: 40, pointsAgainst: 42, needsScores: false },
+      b3: { won: 0, pointsFor: 39, pointsAgainst: 41, needsScores: false },
+      c3: { won: 0, pointsFor: 23, pointsAgainst: 43, needsScores: false },
+    });
+    const selection = selectBestThird(standings);
+    assert.deepEqual(selection, { kind: "direct", teamId: "a3" });
+  });
+
+  it("reports best_third_tie when thirds tie to the end of the points chain", () => {
+    const standings = thirdStandings({
+      a3: { won: 0, pointsFor: 38, pointsAgainst: 42, needsScores: false },
+      b3: { won: 0, pointsFor: 38, pointsAgainst: 42, needsScores: false },
+      c3: { won: 0, pointsFor: 40, pointsAgainst: 45, needsScores: false },
+    });
+    const selection = selectBestThird(standings);
+    assert.deepEqual(selection, {
+      kind: "blocked",
+      reason: "best_third_tie",
+      teamIds: ["a3", "b3"],
+    });
+  });
+
+  it("reports best_third_needs_scores when a vs-top-2 match lacks a score", () => {
+    const standings = thirdStandings({
+      a3: { won: 0, pointsFor: 33, pointsAgainst: 42, needsScores: false },
+      b3: { won: 0, pointsFor: 25, pointsAgainst: 42, needsScores: true },
+      c3: { won: 0, pointsFor: 23, pointsAgainst: 43, needsScores: false },
+    });
+    const selection = selectBestThird(standings);
+    assert.deepEqual(selection, {
+      kind: "blocked",
+      reason: "best_third_needs_scores",
+      teamIds: ["a3", "b3", "c3"],
+    });
+  });
+
+  it("returns blocked when a third row lacks restricted stats (cannot compare)", () => {
     const standings = {
-      A: [row("a1", A, 4), row("a2", A, 3), row("a3", A, 2, 2)],
-      B: [row("b1", B, 4), row("b2", B, 3), row("b3", B, 2, 2)],
-      C: [row("c1", C, 4), row("c2", C, 3), row("c3", C, 1, 0)],
+      A: [row("a1", A, 4), row("a2", A, 3), row("a3", A, 1)],
+      B: [row("b1", B, 4), row("b2", B, 3), row("b3", B, 1)],
+      C: [row("c1", C, 4), row("c2", C, 3), row("c3", C, 0)],
     };
     const selection = selectBestThird(standings);
     assert.deepEqual(selection, {
       kind: "blocked",
-      teamIds: ["a3", "b3"],
+      reason: "best_third_needs_scores",
+      teamIds: ["a3", "b3", "c3"],
     });
+  });
+
+  it("returns null when fewer than 3 zones have a third", () => {
+    const standings = {
+      A: [row("a1", A, 4), row("a2", A, 3), row("a3", A, 1)],
+      B: [row("b1", B, 4), row("b2", B, 3), row("b3", B, 1)],
+    };
+    const selection = selectBestThird(standings);
+    assert.equal(selection, null);
   });
 });
 
 describe("buildCuartosBrackets with an organizer-resolved best third", () => {
-  // The single-set group format ties the thirds of two 4-team zones, so the
+  // Andi's points rule ties two thirds to the end of the chain, so the
   // organizer names the best third and the repechage takes the other two.
   const tied = {
     A: [row("a1", A, 3), row("a2", A, 2), row("a3", A, 1, -1), row("a4", A, 0, -3)],
     B: [row("b1", B, 3), row("b2", B, 2), row("b3", B, 1, -1), row("b4", B, 0, -3)],
     C: [row("c1", C, 2), row("c2", C, 1), row("c3", C, 0, -2)],
   };
+  tied.A[2].bestThirdStats = { won: 0, pointsFor: 38, pointsAgainst: 42, needsScores: false };
+  tied.B[2].bestThirdStats = { won: 0, pointsFor: 38, pointsAgainst: 42, needsScores: false };
+  tied.C[2].bestThirdStats = { won: 0, pointsFor: 40, pointsAgainst: 45, needsScores: false };
 
   it("stays blocked without a resolved third", () => {
     const result = buildCuartosBrackets(tied, { format: "CUARTOS" });
     assert.deepEqual(result.pairings, []);
-    assert.ok(result.missing.length > 0, "tie blocks the bracket");
+    assert.deepEqual(result.missing, ["Best third (tied)"]);
   });
 
   it("fills the repechage with the two thirds that lost the pick", () => {

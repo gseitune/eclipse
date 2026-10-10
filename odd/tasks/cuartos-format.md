@@ -14,6 +14,13 @@ y eliminatorias con repechaje de terceros → cuartos → semis → final + bron
 > los otros dos. El 3.º elegido entra en `CUARTOS_4` y se deriva del que NO está en el
 > repechage, así que la elección no necesita estado persistido.
 
+> DATO 10/10 (Andi vía Gabriel, CORRECCIÓN a los puntos 3 y al DATO 26/9): el mejor 3.º NO se
+> compara por `setDiff` sino por **puntos** (ganados → diferencia de puntos → puntos a favor),
+> SIEMPRE SOLO contra el 1.º y 2.º de su propia zona (se descarta el partido contra el 4.º).
+> Ejemplo real: A3 33+/42− = −9 → directo; B3 25+/42− = −17 y C3 23+/43− = −20 → repechaje.
+> Implementado como `bestThirdStats` (standings.ts) + `selectBestThird` (brackets.ts),
+> feature `odd/tasks/mejor-tercero-puntos.md` Etapa A.
+
 ## Problem / Why
 La Etapa 6 (27/09) usa un formato nuevo que el bracket engine actual (STANDARD/REPECHAJE) no soporta:
 8 clasificados a cuartos (6 directos + mejor 3.º + ganador del repechaje de los otros dos terceros).
@@ -35,10 +42,11 @@ La Etapa 6 (27/09) usa un formato nuevo que el bracket engine actual (STANDARD/R
    `REPECHAJE_1` (playoff de terceros), `CUARTOS_1..4`, `SEMIFINAL_1`, `SEMIFINAL_2`, `BRONZE`, `FINAL`.
 3. `brackets.ts`: `buildCuartosBrackets` — 1.º y 2.º de A/B/C directos a cuartos; mejor 3.º directo;
    los otros dos terceros → `REPECHAJE_1`; ganador → `CUARTOS_4`.
-   - Mejor 3.º: comparar (won, luego setDiff) SOLO contra 1.º y 2.º de cada zona (regla Sheets:
-     C jugó 2 partidos, A/B 3 — no se cuentan los partidos contra el 4.º). Empate en la punta
-     del tercero → blocked (mismo patrón que `three_seconds_tie`), reason nuevo `best_third_tie`
-     (agregarlo al union de reasons en front/types.ts, type-only), sin inventar desempate.
+- Mejor 3.º: comparar (ganados → diff de puntos → puntos a favor) SOLO contra 1.º y 2.º de
+      cada zona (regla Andi 10/10; los partidos contra el 4.º NO cuentan). Empate total en la
+      punta del tercero → blocked (mismo patrón que `three_seconds_tie`), reason `best_third_tie`;
+      si falta marcador vs top-2 (WINNER_ONLY) → reason nuevo `best_third_needs_scores`
+      (agregar al union de reasons en front/types.ts, type-only), sin inventar desempate.
    - Cruces de cuartos concretos: `CUARTOS_1`: C1 vs A2; `CUARTOS_2`: A1 vs B2; `CUARTOS_3`: B1 vs C2;
      `CUARTOS_4`: mejor 3.º vs ganador de `REPECHAJE_1`. Ningún cruce repite zona.
 4. Cadena de llenado (`fillDescendantMatches`/`nextRoundPairings`/`finalizeBrackets` en back.ts):
