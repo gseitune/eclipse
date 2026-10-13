@@ -21,6 +21,16 @@ y eliminatorias con repechaje de terceros → cuartos → semis → final + bron
 > Implementado como `bestThirdStats` (standings.ts) + `selectBestThird` (brackets.ts),
 > feature `odd/tasks/mejor-tercero-puntos.md` Etapa A.
 
+> DATO 13/10 (Gabriel, CORRECCIÓN a los cruces de cuartos): la planilla real de Andi usa
+> **siembra clásica 1v8 / 2v7 / 3v6 / 4v5** sobre el orden de clasificados
+> `[A1, B1, C1, A2, B2, C2, mejor3.º, ganadorRE]`, no el esquema por zona. Cruces reales:
+> `CUARTOS_1` = A1 vs ganador de `REPECHAJE_1` · `CUARTOS_2` = B1 vs mejor 3.º ·
+> `CUARTOS_3` = A2 vs B2 · `CUARTOS_4` = C1 vs C2. Semis FIJAS
+> (`SEMIFINAL_1` = Q1 vs Q4, `SEMIFINAL_2` = Q2 vs Q3) y **sin** la regla de "evitar misma
+> zona": Andi tiene una semi de misma zona (RG vs LM, ambas de B). Esto supersede los cruces
+> y la cadena de llenado descritos en los puntos 3 y 4 de abajo.
+> Implementado en la feature `odd/tasks/cuartos-siembra-mejor-vs-peor.md`.
+
 ## Problem / Why
 La Etapa 6 (27/09) usa un formato nuevo que el bracket engine actual (STANDARD/REPECHAJE) no soporta:
 8 clasificados a cuartos (6 directos + mejor 3.º + ganador del repechaje de los otros dos terceros).

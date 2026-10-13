@@ -893,12 +893,11 @@ interface ReconcileOutcome {
 
 /**
  * Fills descendant bracket slots when a feeder match records a result.
- * - CUARTOS_1 result → when all 4 QFs done, fill SEMIFINAL_1/2
- * - CUARTOS REPECHAJE_1 result → fill CUARTOS_4 (best 3rd vs RE1 winner)
- * - Semis → only FINAL (CUARTOS has no BRONZE)
+ * - CUARTOS REPECHAJE_1 result → fill CUARTOS_1 (A1 vs RE1 winner)
+ * - CUARTOS_1..4 results → when all 4 QFs done, fill SEMIFINAL_1/2 (QF1vQF4, QF2vQF3)
  * - REPECHAJE_1 → fill SEMIFINAL_2 (1°B vs winner RE1) [REPECHAJE format]
  * - REPECHAJE_2 → fill SEMIFINAL_1 (1°A vs winner RE2) [REPECHAJE format]
- * - Both semis → fill FINAL and BRONZE [REPECHAJE/STANDARD format]
+ * - Both semis → fill FINAL and BRONZE
  *
  * Returns true if any slot was updated.
  */
@@ -917,37 +916,33 @@ async function fillDescendantMatches(
     const fmt = etapa?.bracketFormat ?? "STANDARD";
 
     if (fmt === "CUARTOS" && stage === "REPECHAJE_1") {
-      const standings = await getStandings(etapaId);
-
+      // Any non-PENDING status counts: a WINNER_ONLY quick-capture also knows the
+      // winner, and CUARTOS_1 stays unplayable until that side is filled.
       const re1Match = await tx.match.findFirst({
-        where: { etapaId, stage: "REPECHAJE_1" as Stage, resultStatus: "COMPLETE" },
+        where: {
+          etapaId,
+          stage: "REPECHAJE_1" as Stage,
+          resultStatus: { not: "PENDING" },
+        },
       });
       const re1Winner = re1Match?.winnerId ?? null;
-      if (!re1Winner || !re1Match) return false;
+      if (!re1Match || !re1Winner) return false;
 
-      // The best third is the zone third that is NOT in the repechage. It was
-      // either the direct selection or the organizer's manual pick — both leave
-      // the repechage holding the other two thirds, so no stored flag is needed
-      // (and a tied selection must not be recomputed here: it stays blocked).
-      const inRepechaje = new Set(
-        [re1Match.teamAId, re1Match.teamBId].filter((id): id is string => !!id),
-      );
-      const thirds = (["A", "B", "C"] as Zone[])
-        .map((z) => standings[z]?.[2]?.teamId)
-        .filter((id): id is string => !!id);
-      const bestThirdId = thirds.find((id) => !inRepechaje.has(id));
-      if (!bestThirdId) return false;
-
-      const cuartos4 = await tx.match.findFirst({
-        where: { etapaId, stage: "CUARTOS_4" as Stage },
+      // Seeding 1v8: the RE1 winner is seed 8 and lands in CUARTOS_1 next to A1
+      // (seed 1). The best 3rd (seed 7) is already placed in CUARTOS_2 by
+      // finalizeBrackets, so only CUARTOS_1's open side is filled here.
+      const cuartos1 = await tx.match.findFirst({
+        where: { etapaId, stage: "CUARTOS_1" as Stage },
       });
-      if (!cuartos4) return false;
+      if (!cuartos1) return false;
 
+      // Prefer the open B side (seed 8 sits next to seed 1) and fall back to A
+      // only when B is taken, so the same team is never written into both sides.
       const updateData: Record<string, string | null> = {};
-      if (cuartos4.teamAId === null) updateData.teamAId = bestThirdId;
-      if (cuartos4.teamBId === null) updateData.teamBId = re1Winner;
+      if (cuartos1.teamBId === null) updateData.teamBId = re1Winner;
+      else if (cuartos1.teamAId === null) updateData.teamAId = re1Winner;
       if (Object.keys(updateData).length > 0) {
-        await tx.match.update({ where: { id: cuartos4.id }, data: updateData });
+        await tx.match.update({ where: { id: cuartos1.id }, data: updateData });
         changed = true;
       }
     } else if (stage === "REPECHAJE_1" || stage === "REPECHAJE_2") {
@@ -1041,8 +1036,7 @@ async function fillDescendantMatches(
         const q2w = qfWinners["CUARTOS_2"]!;
         const q3w = qfWinners["CUARTOS_3"]!;
         const q4w = qfWinners["CUARTOS_4"]!;
-        const standings = await getStandings(etapaId);
-        const pairings = getCuartosSemifinalPairingsFromBack(q1w, q2w, q3w, q4w, standings);
+        const pairings = getCuartosSemifinalPairingsFromBack(q1w, q2w, q3w, q4w);
         for (const p of pairings) {
           const targetMatch = p.stage === "SEMIFINAL_1" ? semi1Match : semi2Match;
           if (targetMatch) {
@@ -1062,55 +1056,19 @@ async function fillDescendantMatches(
 }
 
 /**
- * Determine CUARTOS semifinal pairings avoiding same-zone winners.
+ * CUARTOS semifinal pairings — fixed bracket, no same-zone avoidance.
  *
- * The bracket slots run C1..C4 then SEMIFINAL_1 and SEMIFINAL_2 back-to-back, so
- * the CUARTOS_4 (repechage side) winner would play two consecutive matches if it
- * landed in SEMIFINAL_1. Among the options with no same-zone clash, prefer the
- * ones that send the last QF winner to SEMIFINAL_2 so it rests for one match.
- * Fallback: the first option (fewest same-zone pairs) — a fully same-zone set is
- * only reachable when three QF winners share a zone, where no order avoids it.
+ * Seeding 1v8/2v7/3v6/4v5: SEMIFINAL_1 = QF1 winner vs QF4 winner,
+ * SEMIFINAL_2 = QF2 winner vs QF3 winner. This is Andi's real bracket, which
+ * pairs two zone-B winners in SEMIFINAL_2 (RG vs LM), so no avoidance is applied.
  */
 function getCuartosSemifinalPairingsFromBack(
   q1w: string, q2w: string, q3w: string, q4w: string,
-  standings: Partial<Record<Zone, StandingRow[]>>,
 ): Array<{ stage: string; teamAId: string; teamBId: string }> {
-  // Map winnerId → zone
-  const winnerZone = new Map<string, Zone>();
-  for (const z of ["A", "B", "C"] as const) {
-    const rows = standings[z];
-    if (!rows) continue;
-    for (const r of rows) {
-      winnerZone.set(r.teamId, z as Zone);
-    }
-  }
-
-  const pairings = [
-    // Option 1: (QF1,QF3)+(QF2,QF4) — QF4 winner rests in SEMIFINAL_2.
-    [
-      { stage: "SEMIFINAL_1", teamAId: q1w, teamBId: q3w },
-      { stage: "SEMIFINAL_2", teamAId: q2w, teamBId: q4w },
-    ],
-    // Option 2: (QF1,QF2)+(QF3,QF4) — QF4 winner rests in SEMIFINAL_2.
-    [
-      { stage: "SEMIFINAL_1", teamAId: q1w, teamBId: q2w },
-      { stage: "SEMIFINAL_2", teamAId: q3w, teamBId: q4w },
-    ],
-    // Option 3: (QF1,QF4)+(QF2,QF3) — QF4 winner in SEMIFINAL_1 (no rest).
-    [
-      { stage: "SEMIFINAL_1", teamAId: q1w, teamBId: q4w },
-      { stage: "SEMIFINAL_2", teamAId: q2w, teamBId: q3w },
-    ],
+  return [
+    { stage: "SEMIFINAL_1", teamAId: q1w, teamBId: q4w },
+    { stage: "SEMIFINAL_2", teamAId: q2w, teamBId: q3w },
   ];
-
-  // Pick the first option with 0 same-zone pairs; options 1-2 also give the
-  // last-QF winner its rest slot.
-  for (const p of pairings) {
-    const s1 = winnerZone.get(p[0].teamAId) ?? winnerZone.get(p[0].teamBId);
-    const s2 = winnerZone.get(p[1].teamAId) ?? winnerZone.get(p[1].teamBId);
-    if (s1 !== s2) return p;
-  }
-  return pairings[0];
 }
 
 /**
@@ -1174,8 +1132,8 @@ export async function resolveBestThird(
  * Only valid with exactly two tied thirds: the 1v1 desempate does not apply to
  * three (there the draw — resolveBestThird — is the only path). Creates the
  * DESEMPATE match between the two; when its result lands, reconcileAfterMatch
- * routes the winner into CUARTOS_4 and the loser into REPECHAJE_1 against the
- * remaining third, then finalizes the bracket.
+ * routes the winner into CUARTOS_2 (seed 7 vs B1) and the loser into REPECHAJE_1
+ * against the remaining third, then finalizes the bracket.
  */
 export async function createBestThirdDesempate(
   etapaId: string,
@@ -1399,9 +1357,9 @@ async function reconcileAfterMatch(
         select: { bracketFormat: true },
       });
       // CUARTOS: the desempate resolves the best THIRD (it advances to
-      // CUARTOS_4), not the best second. Route it through resolvedThirdId so
-      // the winner is not injected as a second-place team on a format that has
-      // no second-place slot.
+      // CUARTOS_2 as seed 7), not the best second. Route it through
+      // resolvedThirdId so the winner is not injected as a second-place team on
+      // a format that has no second-place slot.
       const res =
         etapa?.bracketFormat === "CUARTOS"
           ? await finalizeBrackets(standings, etapaId, undefined, "CUARTOS", winnerId)

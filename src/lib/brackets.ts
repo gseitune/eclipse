@@ -27,7 +27,12 @@ export type BracketFormat = "STANDARD" | "REPECHAJE" | "CUARTOS";
 export interface BracketPairing {
   stage: string;
   teamAId: string;
-  teamBId: string;
+  /**
+   * Nullable because CUARTOS_1 (A1 vs the repechage winner) is published with
+   * only its top-seed side known; fillDescendantMatches completes the other
+   * side once REPECHAJE_1 is played.
+   */
+  teamBId: string | null;
 }
 
 export interface BuildBracketsOptions {
@@ -339,14 +344,19 @@ export function buildCuartosBrackets(
   const allThirds = [a3!, b3!, c3!].filter((r): r is StandingRow => r !== undefined);
   const losingThirds = allThirds.filter((r) => r.teamId !== bestThirdId);
 
-  // CUARTOS_4 slot stays empty: it will be filled when REPECHAJE_1 is played.
-  // Best 3rd advances directly to QF4; RE1 winner takes the other side.
+  // Andi's seeding (1v8 / 2v7 / 3v6 / 4v5) over the qualifier order
+  // [A1, B1, C1, A2, B2, C2, best 3rd, RE1 winner]:
+  //   CUARTOS_1 = seed1 vs seed8 = A1 vs RE1 winner (teamB filled later)
+  //   CUARTOS_2 = seed2 vs seed7 = B1 vs best 3rd
+  //   CUARTOS_3 = seed4 vs seed5 = A2 vs B2
+  //   CUARTOS_4 = seed3 vs seed6 = C1 vs C2
   return {
     pairings: [
       { stage: "REPECHAJE_1", teamAId: losingThirds[0]!.teamId, teamBId: losingThirds[1]!.teamId },
-      { stage: "CUARTOS_1", teamAId: c1!.teamId, teamBId: a2!.teamId },
-      { stage: "CUARTOS_2", teamAId: a1!.teamId, teamBId: b2!.teamId },
-      { stage: "CUARTOS_3", teamAId: b1!.teamId, teamBId: c2!.teamId },
+      { stage: "CUARTOS_1", teamAId: a1!.teamId, teamBId: null },
+      { stage: "CUARTOS_2", teamAId: b1!.teamId, teamBId: bestThirdId! },
+      { stage: "CUARTOS_3", teamAId: a2!.teamId, teamBId: b2!.teamId },
+      { stage: "CUARTOS_4", teamAId: c1!.teamId, teamBId: c2!.teamId },
     ],
     missing: [],
   };
@@ -358,7 +368,7 @@ export function buildCuartosBrackets(
  *
  * After RE results → SEMIFINAL_1 (1°A winner of RE2) / SEMIFINAL_2 (1°B winner of RE1).
  * After both semis → BRONZE (losers) and FINAL (winners).
- * For CUARTOS format: RE1 → CUARTOS_4; 4 QFs → SEMIFINAL_1/2; both semis → FINAL only.
+ * For CUARTOS format: RE1 → CUARTOS_1; 4 QFs → SEMIFINAL_1/2; both semis → FINAL only.
  *
  * `completed` maps stage → winnerId (only for non-PENDING matches).
  */
@@ -417,18 +427,17 @@ function nextRoundPairingsCuartos(
   const semi1Winner = completed["SEMIFINAL_1"];
   const semi2Winner = completed["SEMIFINAL_2"];
 
-  // RE1 result → fill CUARTOS_4 (best 3rd vs RE1 winner)
-  if (re1Winner && !q4Winner) {
-    // Best 3rd is determined from standings; find it via CUARTOS_4 match data
-    // The best 3rd is already assigned to the CUARTOS_4 match; we just set the RE1 winner side.
-    return []; // Handled in fillDescendantMatches which looks up the best 3rd
+  // RE1 result → fill CUARTOS_1 (A1 vs RE1 winner). The A1 side is already set
+  // at finalize; here only the RE1 winner side is missing, so this is completed
+  // in fillDescendantMatches (which owns the CUARTOS_1 lookup).
+  if (re1Winner && !q1Winner) {
+    return [];
   }
 
-  // All 4 QFs have winners → fill SEMIFINAL_1/SEMIFINAL_2 avoiding same-zone pairs
+  // All 4 QFs have winners → fill SEMIFINAL_1/SEMIFINAL_2 (fixed bracket:
+  // QF1 vs QF4, QF2 vs QF3 — Andi's bracket, no same-zone avoidance).
   if (q1Winner && q2Winner && q3Winner && q4Winner && !semi1Winner && !semi2Winner) {
-    // Pairing preference: (QF1,QF4)+(QF2,QF3); try alternatives if same-zone
-    const semifinalPairings = getCuartosSemifinalPairings(q1Winner, q2Winner, q3Winner, q4Winner);
-    return semifinalPairings;
+    return getCuartosSemifinalPairings(q1Winner, q2Winner, q3Winner, q4Winner);
   }
 
   // Both semis have winners → fill FINAL only (no BRONZE)
@@ -439,37 +448,20 @@ function nextRoundPairingsCuartos(
   return [];
 }
 
-/** Get semifinal pairings for CUARTOS avoiding same-zone pairs. */
+/**
+ * Fixed CUARTOS semifinal pairings (Andi's bracket): seed1v8 winner vs seed4v5
+ * winner in SEMIFINAL_1, seed2v7 winner vs seed3v6 winner in SEMIFINAL_2.
+ *
+ * No same-zone avoidance: with the 1v8 seeding a B1-vs-B2 semi is not just
+ * possible but expected (Andi's semifinal_2 was RG vs LM, both zone B).
+ */
 function getCuartosSemifinalPairings(
   q1w: string, q2w: string, q3w: string, q4w: string,
 ): Array<{ stage: string; teamAId: string; teamBId: string }> {
-  // Preferred: (QF1,QF4)+(QF2,QF3)
-  const options = [
-    // Option 1: (QF1,QF4)+(QF2,QF3)
-    [
-      { stage: "SEMIFINAL_1", teamAId: q1w, teamBId: q4w },
-      { stage: "SEMIFINAL_2", teamAId: q2w, teamBId: q3w },
-    ],
-    // Option 2: (QF1,QF3)+(QF2,QF4)
-    [
-      { stage: "SEMIFINAL_1", teamAId: q1w, teamBId: q3w },
-      { stage: "SEMIFINAL_2", teamAId: q2w, teamBId: q4w },
-    ],
-    // Option 3: (QF1,QF2)+(QF3,QF4)
-    [
-      { stage: "SEMIFINAL_1", teamAId: q1w, teamBId: q2w },
-      { stage: "SEMIFINAL_2", teamAId: q3w, teamBId: q4w },
-    ],
+  return [
+    { stage: "SEMIFINAL_1", teamAId: q1w, teamBId: q4w },
+    { stage: "SEMIFINAL_2", teamAId: q2w, teamBId: q3w },
   ];
-
-  // Pick the first option with 0 same-zone pairs
-  for (const pairings of options) {
-    // We can't determine zone from winnerId alone here;
-    // the actual zone check happens in fillDescendantMatches.
-    // Return the first option; fillDescendantMaps will validate.
-    return pairings;
-  }
-  return options[0] ?? [];
 }
 
 function getOtherTeam(winnerId: string | null, otherTeamId: string | null): string | null {

@@ -19,6 +19,14 @@ const dir = mkdtempSync(join(tmpdir(), "selvarena-edit-"));
 const dbPath = join(dir, "test.db").replace(/\\/g, "/");
 const dbUrl = `file:${dbPath}`;
 
+// The integration suite MUST never touch a real database. Force the
+// throwaway URL at module scope so ANY import of ./prisma (the before hook
+// included, even under unusual test invocations) binds to the temp file and
+// never to DATABASE_URL/TURSO_DATABASE_URL inherited from the parent shell.
+process.env.DATABASE_URL = dbUrl;
+process.env.TURSO_DATABASE_URL = "";
+process.env.DATABASE_AUTH_TOKEN = "";
+
 // Loaded inside before(): the prisma/back modules read DATABASE_URL at import,
 // so the env override must be in place before the first dynamic import.
 type PrismaModule = typeof import("./prisma");
@@ -880,14 +888,15 @@ describe("CUARTOS format (integration)", () => {
     for (const qf of qfMatches) {
       assert.ok(qf.teamAId && qf.teamBId, `${qf.stage} has both teams`);
     }
-    const qf4 = qfMatches.find((m) => m.stage === "CUARTOS_4")!;
+    const qf2 = qfMatches.find((m) => m.stage === "CUARTOS_2")!;
     assert.ok(
-      qf4.teamAId === picked || qf4.teamBId === picked,
-      "the picked third is in CUARTOS_4",
+      qf2.teamAId === picked || qf2.teamBId === picked,
+      "the picked third (seed 7) is in CUARTOS_2",
     );
+    const qf1 = qfMatches.find((m) => m.stage === "CUARTOS_1")!;
     assert.ok(
-      qf4.teamAId === re1Winner || qf4.teamBId === re1Winner,
-      "the repechage winner is in CUARTOS_4",
+      qf1.teamAId === re1Winner || qf1.teamBId === re1Winner,
+      "the repechage winner (seed 8) is in CUARTOS_1",
     );
 
     // Play all 4 QFs
@@ -905,23 +914,30 @@ describe("CUARTOS format (integration)", () => {
       assert.ok(semi.teamAId && semi.teamBId, `${semi.stage} has both teams`);
     }
 
-    // Rest rule (T7): bracket slots run C1..C4 then SEMIFINAL_1 back-to-back, so
-    // the CUARTOS_4 winner must rest into SEMIFINAL_2, never the adjacent SF1.
-    const qf4Played = await prisma.match.findUnique({
-      where: { id: qf4.id },
-      select: { winnerId: true },
-    });
-    const qf4Winner = qf4Played?.winnerId;
-    assert.ok(qf4Winner, "CUARTOS_4 has a winner");
+    // Fixed bracket (Andi's seeding): SEMIFINAL_1 = QF1 winner vs QF4 winner,
+    // SEMIFINAL_2 = QF2 winner vs QF3 winner. Same-zone semis are allowed —
+    // Andi's SEMIFINAL_2 was RG vs LM, both zone B.
+    const qfWinners: Record<string, string> = {};
+    for (const qf of qfMatches) {
+      const played = await prisma.match.findUnique({
+        where: { id: qf.id },
+        select: { winnerId: true },
+      });
+      const w = played?.winnerId;
+      assert.ok(w, `${qf.stage} has a winner`);
+      qfWinners[qf.stage] = w!;
+    }
     const semi1 = semiMatches.find((m) => m.stage === "SEMIFINAL_1")!;
-    assert.ok(
-      semi1.teamAId !== qf4Winner && semi1.teamBId !== qf4Winner,
-      "the CUARTOS_4 winner must not play the adjacent SEMIFINAL_1 (rest)",
+    assert.deepEqual(
+      [semi1.teamAId, semi1.teamBId].sort(),
+      [qfWinners["CUARTOS_1"], qfWinners["CUARTOS_4"]].sort(),
+      "SEMIFINAL_1 = QF1 winner vs QF4 winner",
     );
     const semi2 = semiMatches.find((m) => m.stage === "SEMIFINAL_2")!;
-    assert.ok(
-      semi2.teamAId === qf4Winner || semi2.teamBId === qf4Winner,
-      "the CUARTOS_4 winner rests into SEMIFINAL_2",
+    assert.deepEqual(
+      [semi2.teamAId, semi2.teamBId].sort(),
+      [qfWinners["CUARTOS_2"], qfWinners["CUARTOS_3"]].sort(),
+      "SEMIFINAL_2 = QF2 winner vs QF3 winner",
     );
 
     // Play both semis (teamA always wins 21-18, so read the winner back)
@@ -985,7 +1001,41 @@ describe("CUARTOS format (integration)", () => {
     assert.equal(finalPlayed?.winnerId, finalMatch!.teamAId, "teamA won 2-1");
   });
 
-  it("CUARTOS desempate path: two tied thirds play off; winner to CUARTOS_4, loser to RE1 vs the C-zone third", async () => {
+  it("CUARTOS: a WINNER_ONLY REPECHAJE_1 result fills CUARTOS_1's open side", async () => {
+    const teamNames = Array.from({ length: 11 }, (_, i) => `Eq${i + 1}`);
+    const teams = teamNames.map((name, i) => ({
+      name,
+      maleName: `Male${i + 1}`,
+      femaleName: `Female${i + 1}`,
+    }));
+    let counter = 0;
+    const rng = () => { counter += 1; return (counter * 0.5) % 1; };
+    const etapa = await createEtapa({ name: "Cuartos WinnerOnly", teams, bracketFormat: "CUARTOS" }, { rng });
+
+    // Build the eliminatories state directly: RE1 with both sides, CUARTOS_1
+    // with seed 1 (A1) and the B side open, phase already ELIMINATORIES.
+    const zoneA = (await getTeamsByZone(etapa.id)).A.map((t) => t.id);
+    assert.equal(zoneA.length, 4, "zone A has 4 teams for the seeded fixture");
+    const [a1Id, reA, reB] = zoneA;
+    const re1 = await prisma.match.findFirst({ where: { etapaId: etapa.id, stage: "REPECHAJE_1" } });
+    const cuartos1 = await prisma.match.findFirst({ where: { etapaId: etapa.id, stage: "CUARTOS_1" } });
+    assert.ok(re1 && cuartos1, "RE1 and CUARTOS_1 slots exist");
+    await prisma.$transaction([
+      prisma.match.update({ where: { id: re1!.id }, data: { teamAId: reA, teamBId: reB } }),
+      prisma.match.update({ where: { id: cuartos1!.id }, data: { teamAId: a1Id } }),
+      prisma.tournamentState.update({ where: { etapaId: etapa.id }, data: { phase: "ELIMINATORIES" } }),
+    ]);
+
+    // Quick capture from the phone: only the winner, no sets.
+    await recordResult({ matchId: re1!.id, winnerId: reA });
+
+    const filled = await prisma.match.findUnique({ where: { id: cuartos1!.id } });
+    assert.equal(filled?.teamAId, a1Id, "CUARTOS_1 keeps seed 1 on side A");
+    assert.equal(filled?.teamBId, reA, "WINNER_ONLY RE1 winner fills CUARTOS_1 side B");
+    assert.equal(filled?.resultStatus, "PENDING", "CUARTOS_1 stays unplayed");
+  });
+
+  it("CUARTOS desempate path: two tied thirds play off; winner to CUARTOS_2, loser to RE1 vs the C-zone third", async () => {
     const teamNames = Array.from({ length: 11 }, (_, i) => `Eq${i + 1}`);
     const teams = teamNames.map((name, i) => ({
       name,
@@ -1101,7 +1151,9 @@ describe("CUARTOS format (integration)", () => {
     const afterPlay = await getStateSnapshot(etapa.id);
     assert.equal(afterPlay.phase, "ELIMINATORIES");
 
-    // RE1 = desempate loser vs the C-zone third; CUARTOS_4 waits for RE1.
+    // RE1 = desempate loser vs the C-zone third; CUARTOS_1 waits for RE1,
+    // while CUARTOS_2 already holds the desempate winner as the best third
+    // (seed 7) and CUARTOS_4 is C1 vs C2 straight from the standings.
     const re1 = await prisma.match.findFirst({
       where: { etapaId: etapa.id, stage: "REPECHAJE_1" },
     });
@@ -1111,15 +1163,29 @@ describe("CUARTOS format (integration)", () => {
       [loserId, cThird].sort(),
       "RE1 is the desempate loser against the C-zone third",
     );
+    const cuartos1Before = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "CUARTOS_1" },
+    });
+    assert.ok(
+      cuartos1Before!.teamAId && !cuartos1Before!.teamBId,
+      "CUARTOS_1 has A1 and waits for the REPECHAJE_1 winner",
+    );
+    const cuartos2Before = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "CUARTOS_2" },
+    });
+    assert.ok(
+      cuartos2Before!.teamAId === winnerId || cuartos2Before!.teamBId === winnerId,
+      "the desempate winner (best third, seed 7) is already in CUARTOS_2",
+    );
     const cuartos4Before = await prisma.match.findFirst({
       where: { etapaId: etapa.id, stage: "CUARTOS_4" },
     });
     assert.ok(
-      !cuartos4Before!.teamAId && !cuartos4Before!.teamBId,
-      "CUARTOS_4 stays empty until REPECHAJE_1 is played",
+      cuartos4Before!.teamAId && cuartos4Before!.teamBId,
+      "CUARTOS_4 is C1 vs C2 straight from the standings",
     );
 
-    // Play RE1 → the desempate winner (best third) completes CUARTOS_4.
+    // Play RE1 → its winner (seed 8) completes CUARTOS_1 next to A1.
     await recordResult({
       matchId: re1!.id,
       setFormat: "SINGLE_21",
@@ -1130,16 +1196,12 @@ describe("CUARTOS format (integration)", () => {
       select: { winnerId: true },
     });
     const re1Winner = re1Played!.winnerId!;
-    const cuartos4 = await prisma.match.findFirst({
-      where: { etapaId: etapa.id, stage: "CUARTOS_4" },
+    const cuartos1 = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "CUARTOS_1" },
     });
     assert.ok(
-      cuartos4!.teamAId === winnerId || cuartos4!.teamBId === winnerId,
-      "the desempate winner is the best third in CUARTOS_4",
-    );
-    assert.ok(
-      cuartos4!.teamAId === re1Winner || cuartos4!.teamBId === re1Winner,
-      "the REPECHAJE_1 winner completes CUARTOS_4",
+      cuartos1!.teamAId === re1Winner || cuartos1!.teamBId === re1Winner,
+      "the REPECHAJE_1 winner (seed 8) completes CUARTOS_1",
     );
   });
 });

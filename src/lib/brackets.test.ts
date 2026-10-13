@@ -171,7 +171,7 @@ describe("buildBrackets - REPECHAJE format (2 zones)", () => {
 });
 
 describe("buildCuartosBrackets", () => {
-  it("11 teams (4/4/3): 6 direct QF entrants + RE1 with two losing thirds + best 3rd in QF4", () => {
+  it("11 teams (4/4/3): seeding 1v8/2v7/3v6/4v5 — A1 waits for RE1 in QF1, best 3rd vs B1 in QF2", () => {
     const standings = {
       A: [row("a1", A, 5, 8), row("a2", A, 4, 5), row("a3", A, 3, 2), row("a4", A, 0, -5)],
       B: [row("b1", B, 5, 7), row("b2", B, 4, 3), row("b3", B, 2, 1), row("b4", B, 0, -6)],
@@ -185,13 +185,14 @@ describe("buildCuartosBrackets", () => {
     assert.deepEqual(missing, []);
     assert.deepEqual(pairings, [
       { stage: "REPECHAJE_1", teamAId: "b3", teamBId: "c3" },
-      { stage: "CUARTOS_1", teamAId: "c1", teamBId: "a2" },
-      { stage: "CUARTOS_2", teamAId: "a1", teamBId: "b2" },
-      { stage: "CUARTOS_3", teamAId: "b1", teamBId: "c2" },
+      { stage: "CUARTOS_1", teamAId: "a1", teamBId: null },
+      { stage: "CUARTOS_2", teamAId: "b1", teamBId: "a3" },
+      { stage: "CUARTOS_3", teamAId: "a2", teamBId: "b2" },
+      { stage: "CUARTOS_4", teamAId: "c1", teamBId: "c2" },
     ]);
   });
 
-  it("best 3rd wins (higher won vs top 2) advances directly to QF4 side", () => {
+  it("best 3rd wins (higher won vs top 2) advances directly to QF2 (seed 7 vs B1)", () => {
     const standings = {
       A: [row("a1", A, 5, 8), row("a2", A, 4, 5), row("a3", A, 4, 3), row("a4", A, 0, -5)],
       B: [row("b1", B, 5, 7), row("b2", B, 4, 3), row("b3", B, 2, 1), row("b4", B, 0, -6)],
@@ -208,6 +209,13 @@ describe("buildCuartosBrackets", () => {
       (re1.teamAId === "b3" && re1.teamBId === "c3") ||
       (re1.teamAId === "c3" && re1.teamBId === "b3"),
       "RE1 has the two losing thirds (b3 and c3)",
+    );
+    const qf2 = pairings.find((p) => p.stage === "CUARTOS_2");
+    assert.ok(qf2 && qf2.teamBId === "a3", "the best 3rd (a3) is seed 7 in CUARTOS_2 vs B1");
+    const qf1 = pairings.find((p) => p.stage === "CUARTOS_1");
+    assert.ok(
+      qf1 && qf1.teamAId === "a1" && qf1.teamBId === null,
+      "CUARTOS_1 is A1 vs the still-open RE1 winner",
     );
   });
 
@@ -373,12 +381,14 @@ describe("buildCuartosBrackets with an organizer-resolved best third", () => {
     );
     assert.ok(
       result.pairings.every((p) => {
-        if (p.stage !== "CUARTOS_1" && p.stage !== "CUARTOS_2" && p.stage !== "CUARTOS_3") {
+        if (p.stage !== "CUARTOS_1" && p.stage !== "CUARTOS_3" && p.stage !== "CUARTOS_4") {
           return true;
         }
         return p.teamAId !== "b3" && p.teamBId !== "b3";
       }),
-      "the picked third only enters at CUARTOS_4, which stays empty here",
+      "the picked third only enters at CUARTOS_2 (seed 7)",
     );
+    const qf2 = result.pairings.find((p) => p.stage === "CUARTOS_2");
+    assert.ok(qf2 && qf2.teamBId === "b3", "the picked third is seed 7 in CUARTOS_2 vs B1");
   });
 });
