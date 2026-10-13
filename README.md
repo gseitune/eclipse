@@ -35,6 +35,32 @@ Enable the hook once per clone:
 git config core.hooksPath .githooks
 ```
 
+## One-shot scripts
+
+Scripts under `scripts/` read the same `DATABASE_URL` / `TURSO_DATABASE_URL` the
+app uses, so a helper written for a local file database can hit production when
+the production credentials happen to be exported in that shell. A loaded
+tournament was wiped that way once, so every script under `scripts/` that writes
+must clear the guard before its first write:
+
+```ts
+assertRemoteWriteAllowed({
+  script: "my-script.ts",
+  action: "what it is about to write, in one line",
+});
+```
+
+`scripts/lib/remote-write-guard.ts` lets a local `file:` database pass silently,
+refuses an unset URL, and refuses a remote database unless `--allow-remote` (or
+`ALLOW_REMOTE_WRITE=1`) is passed explicitly. Tokens and credentials are masked
+in every message. Two rules follow:
+
+- One-shot migration/reset helpers do not stay in the repo: they are run once
+  and deleted, because a script that wipes data and lives forever in the tree is
+  a foot-gun on tournament day, not a tool (`git log -- scripts/<name>` still
+  has any deleted one).
+- Never export production credentials in a shell that also runs local helpers.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

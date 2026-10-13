@@ -126,6 +126,12 @@ Phases: `GROUPS` → `DESEMPATE` (only when needed) → `ELIMINATORIES`.
   Every device keeps its own cookie: no cross-invalidation.
 - `POST /api/auth/logout` clears it.
 - Organizer account is created with
-  `npx tsx scripts/create-organizer.ts <email> <password>` (no public signup).
+  `npx tsx scripts/create-organizer.ts <email> <username> <password>` (no public
+  signup). Contra una base remota (Turso de producción) el script se niega salvo
+  que se pase `--allow-remote`.
+- Los scripts de `scripts/` que escriben pasan por el guard
+  (`scripts/lib/remote-write-guard.ts`): una base local `file:` corre sin
+  ceremonia; una base remota se rechaza salvo `--allow-remote`. Es la barrera
+  contra correr un one-shot con las credenciales de producción exportadas.
 - `AUTH_SECRET` is required in production; outside production it falls back to
   a dev-only value (set it before deploying).
