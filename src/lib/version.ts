@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { BETA_COMMITS } from "./beta-commits";
 
 /**
  * Number of git commits at the moment the public "BETA TEST" counter was
@@ -7,27 +7,19 @@ import { execSync } from "node:child_process";
  */
 export const BETA_BASE_COMMITS = 151;
 
-/** Pure formatter: maps a git commit count to the public beta label. */
+/** Pure formatter: maps a commit count to the public beta label. */
 export function formatBetaVersion(commitCount: number): string {
   const count = Number.isFinite(commitCount) ? Math.trunc(commitCount) : BETA_BASE_COMMITS;
   return `1.${Math.max(1, count - BETA_BASE_COMMITS + 1)}`;
 }
 
 /**
- * Server-only: reads the current commit count from git. Falls back to the
- * baseline label when git is unavailable (e.g. a deploy without a .git dir).
- * Do not import this from a "use client" component.
+ * Public beta label. The commit count comes from the committed counter in
+ * ./beta-commits.ts, which .githooks/pre-commit advances on every commit.
+ * Counting git history here was the previous approach and could not work in a
+ * deploy: without a .git directory (or with a shallow clone) it always fell back
+ * to the baseline label.
  */
 export function betaVersion(): string {
-  try {
-    const out = execSync("git rev-list --count HEAD", {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    });
-    const count = Number.parseInt(out.trim(), 10);
-    if (Number.isFinite(count) && count > 0) return formatBetaVersion(count);
-  } catch {
-    // git not available — fall through to the baseline
-  }
-  return formatBetaVersion(BETA_BASE_COMMITS);
+  return formatBetaVersion(BETA_COMMITS);
 }

@@ -1,0 +1,17 @@
+#!/bin/sh
+# Keeps the public "BETA TEST" badge moving: bumps src/lib/beta-commits.ts by one
+# and stages it, so the new value ships with the commit it labels.
+# A failure here must never block a commit.
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "pre-commit: node not found, skipping the beta counter bump" >&2
+  exit 0
+fi
+
+if node scripts/bump-beta.mjs; then
+  git add src/lib/beta-commits.ts
+else
+  echo "pre-commit: beta counter bump failed, committing without it" >&2
+fi
+
+exit 0

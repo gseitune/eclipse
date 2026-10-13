@@ -20,6 +20,21 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Public beta version badge
+
+The home shows a `BETA TEST 1.<n>` ribbon. The number comes from
+`src/lib/beta-commits.ts`, a committed counter that `.githooks/pre-commit` bumps
+by one on every commit and stages, so the value ships with the commit it labels.
+
+Counting git history at build time does not work: a Vercel build has no usable
+history, so the count collapsed to the `1.1` baseline on every deploy.
+
+Enable the hook once per clone:
+
+```bash
+git config core.hooksPath .githooks
+```
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
