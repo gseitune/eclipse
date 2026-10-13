@@ -241,6 +241,8 @@ export function PublicHome({
               schedule={state?.schedule ?? []}
               matchMinutes={state?.matchMinutes ?? 20}
               ranking={ranking}
+              etapaId={state?.etapaId ?? ""}
+              etapaClosed={state?.etapa?.closedAt != null}
             />
 
             {/* Combined points panel (S3) */}

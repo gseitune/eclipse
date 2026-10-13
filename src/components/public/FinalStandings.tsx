@@ -1,18 +1,22 @@
 "use client";
 
 import { useState } from "react";
+import { pickDefaultEtapa } from "@/lib/front/tabs";
 import type { RankingResponse } from "@/lib/front/types";
 import { Podium } from "./Podium";
 
 /**
  * Final standings of a single etapa: podium with the top three only, rendered
  * as bare content inside the TournamentTabs card. The etapa is chosen from the
- * ranking (defaults to the last one with results).
+ * ranking and defaults to the one the viewer is on; the tab itself stays
+ * locked until that fecha is closed.
  */
 export function FinalStandings({
   ranking,
+  etapaId,
 }: {
   ranking: RankingResponse | null;
+  etapaId: string | null;
 }) {
   const [selectedEtapaId, setSelectedEtapaId] = useState<string | null>(null);
 
@@ -20,14 +24,14 @@ export function FinalStandings({
     return <p className="text-sm text-stone-400">Cargando posiciones…</p>;
   }
 
-  if (ranking.etapas.length === 0) {
+  const defaultEtapa = pickDefaultEtapa(ranking.etapas, etapaId);
+
+  if (!defaultEtapa) {
     return <p className="text-sm text-stone-400">Aún no hay etapas cargadas</p>;
   }
 
   const selectedEtapa =
-    ranking.etapas.find((e) => e.id === selectedEtapaId) ??
-    ranking.etapas.find((e) => e.positions.length > 0) ??
-    ranking.etapas[0];
+    ranking.etapas.find((e) => e.id === selectedEtapaId) ?? defaultEtapa;
 
   const hasResults = selectedEtapa.finished && selectedEtapa.positions.length > 0;
 
