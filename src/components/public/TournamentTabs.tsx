@@ -81,7 +81,7 @@ export function TournamentTabs({
               onClick={() => setPicked(t.id)}
               className={`min-h-[44px] flex-1 rounded-lg px-2 text-xs font-semibold transition-colors sm:text-sm ${
                 active
-                  ? "bg-amber-700 text-white"
+                  ? "bg-sun-500/90 text-stone-900"
                   : "bg-sand-100 text-stone-700 hover:bg-sand-200"
               }`}
             >

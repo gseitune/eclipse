@@ -36,7 +36,7 @@ export function TournamentSwitch({
             onClick={() => onChange(option.id)}
             className={`inline-flex min-h-[40px] items-center gap-1.5 rounded-full px-4 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 ${
               active
-                ? "bg-amber-700 text-white shadow"
+                ? "bg-sun-500/90 text-stone-900 shadow"
                 : "text-stone-600 hover:bg-sand-100"
             }`}
           >

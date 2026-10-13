@@ -11,6 +11,8 @@
   --color-sunset-500: #f97316;
   --color-sunset-600: #ea580c;
   --color-ember-500: #f43f5e;
+  /* sun: sampled from public/sun-transparent.png (dominant color of the hero sun) */
+  --color-sun-500: #fdaa42;
   /* 90% lighter amber tones for card outlines (selection highlight, banners) */
   --color-amber-soft-100: #fefdf9;
   --color-amber-soft-200: #fefcf3;
