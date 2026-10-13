@@ -63,11 +63,14 @@ function RankBadge({
   );
 }
 
+/**
+ * Annual circuit ranking by player. The per-etapa final standings now live in
+ * the home's "Posiciones finales" tab (see FinalStandings).
+ */
 export function RankingPanel() {
   const [data, setData] = useState<RankingResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedEtapaId, setSelectedEtapaId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -89,13 +92,6 @@ export function RankingPanel() {
       cancelled = true;
     };
   }, []);
-
-  // Default selection: first etapa with registered positions, else first one
-  const selectedEtapa =
-    data?.etapas.find((e) => e.id === selectedEtapaId) ??
-    data?.etapas.find((e) => e.positions.length > 0) ??
-    data?.etapas[0] ??
-    null;
 
   if (loading) {
     return (
@@ -125,146 +121,70 @@ export function RankingPanel() {
   if (!data) return null;
 
   return (
-    <div className="space-y-6">
-      {/* POSITIONS PER ETAPA — above the circuit points */}
-      <section
-        aria-label="Posiciones por etapa"
-        className="rounded-2xl border border-sand-300 bg-white/40 p-6 backdrop-blur ring-1 ring-inset ring-sand-200"
-      >
-        <h2 className="text-lg font-semibold text-stone-900">
-          Posiciones por etapa
-        </h2>
-        <p className="text-xs text-stone-400 mt-1">
-          Posiciones finales de cada fecha
-        </p>
+    <section
+      aria-label="Puntos del circuito"
+      className="rounded-2xl border border-sand-300 bg-white/40 p-6 backdrop-blur ring-1 ring-inset ring-sand-200"
+    >
+      <h2 className="text-lg font-semibold text-stone-900">
+        Puntos del circuito
+      </h2>
+      <p className="text-xs text-stone-400 mt-1">Ranking anual por jugador</p>
 
-        {data.etapas.length === 0 ? (
-          <p className="mt-4 text-sm text-stone-400">
-            Aún no hay etapas cargadas
-          </p>
-        ) : (
-          <div className="mt-4 space-y-3">
-            <label className="block">
-              <span className="sr-only">Elegir etapa</span>
-              <select
-                value={selectedEtapa?.id ?? ""}
-                onChange={(e) => setSelectedEtapaId(e.target.value)}
-                className="w-48 rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[44px]"
-              >
-                {data.etapas.map((etapa) => (
-                  <option key={etapa.id} value={etapa.id}>
-                    {etapa.name}
-                    {!etapa.finished ? " (en curso)" : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            {selectedEtapa ? (
-              <div className="rounded-lg border border-sand-200 bg-white/40 p-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-stone-800">
-                    {selectedEtapa.name}
+      <div className="mt-4 grid grid-cols-2 gap-6">
+        {/* Femenino */}
+        <div>
+          <h3 className="text-sm font-semibold text-stone-700 mb-2">
+            Femenino
+          </h3>
+          {data.female.length === 0 ? (
+            <p className="text-sm text-stone-400">
+              Aún no hay puntos acumulados
+            </p>
+          ) : (
+            <ol className="space-y-1">
+              {data.female.map((player, idx) => (
+                <li
+                  key={player.name}
+                  className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm"
+                >
+                  <RankBadge index={idx} />
+                  <span className="flex-1 truncate">{player.name}</span>
+                  <span className="font-semibold text-stone-900">
+                    {player.points}
                   </span>
-                  {!selectedEtapa.finished && (
-                    <span className="text-[10px] font-semibold text-stone-400">
-                      Episodio en curso — aún no suma puntos
-                    </span>
-                  )}
-                </div>
-                {selectedEtapa.finished &&
-                selectedEtapa.positions.length > 0 ? (
-                  <ol className="mt-1.5 space-y-0.5">
-                    {selectedEtapa.positions.map((pos) => (
-                      <li
-                        key={pos.teamId}
-                        className="flex items-center gap-1.5 text-xs text-stone-600"
-                      >
-                        <RankBadge index={pos.position - 1} compact />
-                        <span className="flex-1 truncate">{pos.teamName}</span>
-                        <span className="text-stone-900">{pos.points}</span>
-                      </li>
-                    ))}
-                  </ol>
-                ) : (
-                  <p className="mt-1 text-xs text-stone-400">
-                    Sin posiciones registradas
-                  </p>
-                )}
-              </div>
-            ) : null}
-          </div>
-        )}
-      </section>
-
-      {/* CIRCUIT POINTS — annual ranking below */}
-      <section
-        aria-label="Puntos del circuito"
-        className="rounded-2xl border border-sand-300 bg-white/40 p-6 backdrop-blur ring-1 ring-inset ring-sand-200"
-      >
-        <h2 className="text-lg font-semibold text-stone-900">
-          Puntos del circuito
-        </h2>
-        <p className="text-xs text-stone-400 mt-1">
-          Ranking anual por jugador
-        </p>
-
-        <div className="mt-4 grid grid-cols-2 gap-6">
-          {/* Femenino */}
-          <div>
-            <h3 className="text-sm font-semibold text-stone-700 mb-2">
-              Femenino
-            </h3>
-            {data.female.length === 0 ? (
-              <p className="text-sm text-stone-400">
-                Aún no hay puntos acumulados
-              </p>
-            ) : (
-              <ol className="space-y-1">
-                {data.female.map((player, idx) => (
-                  <li
-                    key={player.name}
-                    className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm`}
-                  >
-                    <RankBadge index={idx} />
-                    <span className="flex-1 truncate">{player.name}</span>
-                    <span className="font-semibold text-stone-900">
-                      {player.points}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </div>
-
-          {/* Masculino */}
-          <div>
-            <h3 className="text-sm font-semibold text-stone-700 mb-2">
-              Masculino
-            </h3>
-            {data.male.length === 0 ? (
-              <p className="text-sm text-stone-400">
-                Aún no hay puntos acumulados
-              </p>
-            ) : (
-              <ol className="space-y-1">
-                {data.male.map((player, idx) => (
-                  <li
-                    key={player.name}
-                    className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm`}
-                  >
-                    <RankBadge index={idx} />
-                    <span className="flex-1 truncate">{player.name}</span>
-                    <span className="font-semibold text-stone-900">
-                      {player.points}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </div>
+                </li>
+              ))}
+            </ol>
+          )}
         </div>
-      </section>
-    </div>
+
+        {/* Masculino */}
+        <div>
+          <h3 className="text-sm font-semibold text-stone-700 mb-2">
+            Masculino
+          </h3>
+          {data.male.length === 0 ? (
+            <p className="text-sm text-stone-400">
+              Aún no hay puntos acumulados
+            </p>
+          ) : (
+            <ol className="space-y-1">
+              {data.male.map((player, idx) => (
+                <li
+                  key={player.name}
+                  className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm"
+                >
+                  <RankBadge index={idx} />
+                  <span className="flex-1 truncate">{player.name}</span>
+                  <span className="font-semibold text-stone-900">
+                    {player.points}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }

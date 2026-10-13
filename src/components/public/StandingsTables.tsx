@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { zoneName, phaseLabel } from "@/lib/front/phase";
+import { zoneName } from "@/lib/front/phase";
 import type { ZoneId, StandingRow, TeamPublic } from "@/lib/front/types";
 
 const ZONES: ZoneId[] = ["A", "B", "C"];
@@ -9,20 +9,20 @@ const ZONES: ZoneId[] = ["A", "B", "C"];
 interface StandingsTablesProps {
   standings: Partial<Record<ZoneId, StandingRow[]>>;
   zones: Record<ZoneId, TeamPublic[]>;
-  liveIds: Set<string>;
   liveTeamIds: Set<string>;
   initialZone: ZoneId;
-  phase: string;
   onOpenTeam: (team: { id: string; name: string; zone: string }) => void;
 }
 
+/**
+ * Group-phase standings. Rendered as bare content: the surrounding card, the
+ * title and the live badge live in TournamentTabs.
+ */
 export function StandingsTables({
   standings,
   zones,
-  liveIds,
   liveTeamIds,
   initialZone,
-  phase,
   onOpenTeam,
 }: StandingsTablesProps) {
   const [activeZone, setActiveZone] = useState<ZoneId>(initialZone);
@@ -42,20 +42,9 @@ export function StandingsTables({
   }
 
   return (
-    <section aria-label="Posiciones" className="rounded-2xl border border-sand-300 bg-white/40 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-stone-900">Posiciones</h2>
-        {liveIds.size > 0 && (
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-ember-500">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ember-500" />
-            EN VIVO
-          </span>
-        )}
-      </div>
-      <p className="text-xs text-stone-400 mt-1">{phaseLabel(phase)}</p>
-
+    <div>
       {/* Mobile tabs */}
-      <div className="mt-4 flex gap-2 sm:hidden">
+      <div className="flex gap-2 sm:hidden">
         {displayZones.map((z) => {
           const isActive = z === shownZone;
           return (
@@ -76,7 +65,7 @@ export function StandingsTables({
 
       {/* Tables grid */}
       <div
-        className={`mt-4 grid grid-cols-1 gap-4 sm:gap-4 ${
+        className={`mt-4 grid grid-cols-1 gap-4 sm:mt-0 sm:gap-4 ${
           displayZones.length === 3
             ? "sm:grid-cols-3"
             : displayZones.length === 2
@@ -184,6 +173,6 @@ export function StandingsTables({
           );
         })}
       </div>
-    </section>
+    </div>
   );
 }

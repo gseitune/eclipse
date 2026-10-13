@@ -6,6 +6,7 @@ import {
   phaseLabel,
   isEliminatories,
   needsBrackets,
+  hasBracketResult,
   stageLabel,
   zoneName,
   isKnownZone,
@@ -62,6 +63,36 @@ describe("needsBrackets", () => {
 
   it("returns true for unknown phases", () => {
     assert.equal(needsBrackets("QUARTERS"), true);
+  });
+});
+
+describe("hasBracketResult", () => {
+  it("returns false when there are no brackets", () => {
+    assert.equal(hasBracketResult([]), false);
+  });
+
+  it("returns false while every bracket match is still pending", () => {
+    assert.equal(
+      hasBracketResult([
+        { resultStatus: "PENDING" },
+        { resultStatus: "PENDING" },
+      ]),
+      false,
+    );
+  });
+
+  it("returns true on a WINNER_ONLY result", () => {
+    assert.equal(
+      hasBracketResult([
+        { resultStatus: "PENDING" },
+        { resultStatus: "WINNER_ONLY" },
+      ]),
+      true,
+    );
+  });
+
+  it("returns true on a COMPLETE result", () => {
+    assert.equal(hasBracketResult([{ resultStatus: "COMPLETE" }]), true);
   });
 });
 

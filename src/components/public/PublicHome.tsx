@@ -3,15 +3,15 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useLiveState } from "@/lib/front/use-live-state";
-import { phaseLabel, isKnownPhase } from "@/lib/front/phase";
+import { phaseLabel, isKnownPhase, hasBracketResult } from "@/lib/front/phase";
 import { liveMatchIds } from "@/lib/front/live";
 import { useChime } from "@/lib/front/chime";
 import { fetchRanking } from "@/lib/front/api";
 import type { StateSnapshot, ZoneId, TeamPublic, StandingRow, RankingResponse } from "@/lib/front/types";
 import { Hero } from "./Hero";
-import { StandingsTables } from "./StandingsTables";
+import { TournamentSwitch, type TournamentId } from "./TournamentSwitch";
 import { MatchTicker } from "./MatchTicker";
-import { EliminatoriesView } from "./EliminatoriesView";
+import { TournamentTabs } from "./TournamentTabs";
 import { TeamSheet } from "./TeamSheet";
 import { ChimeBanner } from "./ChimeBanner";
 import { RankingPanel } from "./RankingPanel";
@@ -73,6 +73,11 @@ export function PublicHome({
   // Lifted openTeam state — shared between StandingsTables and EliminatoriesView
   const [openTeam, setOpenTeam] = useState<{ id: string; name: string; zone: string } | null>(null);
 
+  // Which circuit the viewer follows. Only Principiantes has data today; the
+  // Intermedios backend is not loaded yet, so it renders a "coming soon" panel.
+  const [tournament, setTournament] = useState<TournamentId>("principiantes");
+  const isIntermedios = tournament === "intermedios";
+
   function handleOpenTeam(team: { id: string; name: string; zone: string }) {
     setOpenTeam(team);
   }
@@ -84,6 +89,11 @@ export function PublicHome({
   const isEliminatories = phase === "ELIMINATORIES";
   const isDesempate = phase === "DESEMPATE";
   const known = isKnownPhase(phase);
+
+  // The bracket view replaces the group view only once the knockout has its
+  // first decided result. Until then — even with the phase already flipped to
+  // ELIMINATORIES — the home keeps showing groups (Marcador + Posiciones).
+  const showBrackets = isEliminatories && hasBracketResult(state?.brackets ?? []);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -137,12 +147,22 @@ export function PublicHome({
 
       {/* Hero */}
       <Hero
-        etapaName={state?.etapa?.name?.toUpperCase() ?? "ETAPA 5"}
-        live={liveIds.size > 0}
+        circuit={
+          isIntermedios
+            ? "Circuito Mixto Intermedios 2026"
+            : "Circuito Mixto Principiantes 2026"
+        }
+        etapaName={
+          isIntermedios
+            ? "PRÓXIMAMENTE"
+            : state?.etapa?.name?.toUpperCase() ?? "ETAPA 5"
+        }
+        live={!isIntermedios && liveIds.size > 0}
         finished={
-          ranking?.etapas.some(
+          !isIntermedios &&
+          (ranking?.etapas.some(
             (e) => e.id === state?.etapaId && e.finished,
-          ) ?? false
+          ) ?? false)
         }
       />
 
@@ -172,55 +192,70 @@ export function PublicHome({
 
         {/* Sections */}
       <div className="mx-auto w-full max-w-3xl px-6 py-6 space-y-6">
-        {/* DESEMPATE banner above standings */}
-        {isDesempate && (
-          <div className="rounded-xl border border-amber-soft-200 bg-amber-50/60 px-4 py-3 text-sm text-amber-700">
-            Zonas definidas — desempate por el segundo mejor.
-          </div>
-        )}
+        {/* Circuit switch — below the hero, above the cards */}
+        <div className="flex justify-center">
+          <TournamentSwitch value={tournament} onChange={setTournament} />
+        </div>
 
-        {/* Phase-branched content */}
-        {isEliminatories ? (
-          <EliminatoriesView
-            brackets={state?.brackets ?? []}
-            phase={phase}
-            schedule={state?.schedule ?? []}
-            matchMinutes={state?.matchMinutes ?? 20}
-            onOpenTeam={handleOpenTeam}
-          />
-        ) : (
-          <>
-            <MatchTicker
-              schedule={state?.schedule ?? []}
-              brackets={state?.brackets ?? []}
-              nextMatch={state?.nextMatch ?? null}
-              desempate={state?.desempate ?? { needed: false, pending: false, match: null }}
-              matchMinutes={state?.matchMinutes ?? 20}
-            />
-
-            <StandingsTables
-              standings={state?.standings ?? {}}
-              zones={state?.zones ?? { A: [], B: [], C: [] } as Record<ZoneId, TeamPublic[]>}
-              liveIds={liveIds}
-              liveTeamIds={liveTeamIds}
-              initialZone={initialZone}
-              phase={phase}
-              onOpenTeam={handleOpenTeam}
-            />
-          </>
-        )}
-
-        {/* Combined points panel (S3) */}
-        <RankingPanel />
-
-        {/* Unknown phase fallback — keep standings/ticker working */}
-        {!known && (
-          <div className="rounded-2xl border border-sand-300 bg-white/40 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
-            <h2 className="text-lg font-semibold text-stone-900">Estado del torneo</h2>
-            <p className="mt-2 text-sm text-stone-500">
-              {phaseLabel(phase)}
+        {isIntermedios ? (
+          <div className="rounded-2xl border border-sand-300 bg-white/40 p-8 text-center backdrop-blur ring-1 ring-inset ring-sand-200">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-400">
+              Circuito Mixto Intermedios 2026
+            </p>
+            <p className="mt-2 text-lg font-semibold text-stone-900">
+              Próximamente
+            </p>
+            <p className="mt-1 text-sm text-stone-500">
+              Fechas y resultados se publican acá cuando arranque el circuito.
             </p>
           </div>
+        ) : (
+          <>
+            {/* DESEMPATE banner above standings */}
+            {isDesempate && (
+              <div className="rounded-xl border border-amber-soft-200 bg-amber-50/60 px-4 py-3 text-sm text-amber-700">
+                Zonas definidas — desempate por el segundo mejor.
+              </div>
+            )}
+
+            {/* Live match strip — hidden once the bracket view takes over */}
+            {!showBrackets && (
+              <MatchTicker
+                schedule={state?.schedule ?? []}
+                brackets={state?.brackets ?? []}
+                nextMatch={state?.nextMatch ?? null}
+                desempate={state?.desempate ?? { needed: false, pending: false, match: null }}
+                matchMinutes={state?.matchMinutes ?? 20}
+              />
+            )}
+
+            {/* Groups / bracket / final standings behind tabs */}
+            <TournamentTabs
+              phase={phase}
+              standings={state?.standings ?? {}}
+              zones={state?.zones ?? ({ A: [], B: [], C: [] } as Record<ZoneId, TeamPublic[]>)}
+              liveTeamIds={liveTeamIds}
+              initialZone={initialZone}
+              onOpenTeam={handleOpenTeam}
+              brackets={state?.brackets ?? []}
+              schedule={state?.schedule ?? []}
+              matchMinutes={state?.matchMinutes ?? 20}
+              ranking={ranking}
+            />
+
+            {/* Combined points panel (S3) */}
+            <RankingPanel />
+
+            {/* Unknown phase fallback — keep standings/ticker working */}
+            {!known && (
+              <div className="rounded-2xl border border-sand-300 bg-white/40 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
+                <h2 className="text-lg font-semibold text-stone-900">Estado del torneo</h2>
+                <p className="mt-2 text-sm text-stone-500">
+                  {phaseLabel(phase)}
+                </p>
+              </div>
+            )}
+          </>
         )}
       </div>
 

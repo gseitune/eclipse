@@ -29,6 +29,20 @@ export function needsBrackets(p: string): boolean {
   return p !== "GROUPS";
 }
 
+/**
+ * True once at least one bracket match already has a decided result
+ * (WINNER_ONLY or COMPLETE). The public home keeps showing the group view
+ * (Marcador + Posiciones) until the knockout actually produces its first
+ * result, even though the phase flag already flipped to ELIMINATORIES.
+ */
+export function hasBracketResult(
+  brackets: ReadonlyArray<{ resultStatus: string }>,
+): boolean {
+  return brackets.some(
+    (b) => b.resultStatus === "COMPLETE" || b.resultStatus === "WINNER_ONLY",
+  );
+}
+
 export function isKnownStage(stage: string): boolean {
   const known = [
     "GROUPS", "DESEMPATE", "SEMIFINAL_1", "SEMIFINAL_2", "FINAL",

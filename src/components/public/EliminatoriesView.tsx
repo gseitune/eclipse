@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { liveMatchIds } from "@/lib/front/live";
-import { stageLabel, phaseLabel, isKnownPhase } from "@/lib/front/phase";
-import type { MatchPublic, ScheduleRow, EtapaPosition } from "@/lib/front/types";
-import { fetchRanking } from "@/lib/front/api";
-import { Podium } from "@/components/public/Podium";
+import { phaseLabel, isKnownPhase } from "@/lib/front/phase";
+import { groupBracketColumns, matchScore } from "@/lib/front/bracket";
+import type { MatchPublic, ScheduleRow } from "@/lib/front/types";
 
 interface EliminatoriesViewProps {
   brackets: MatchPublic[];
@@ -15,47 +14,14 @@ interface EliminatoriesViewProps {
   onOpenTeam: (team: { id: string; name: string; zone: string }) => void;
 }
 
-function TeamButton({
-  match,
-  side,
-  onOpenTeam,
-  showWinner,
-}: {
-  match: MatchPublic;
-  side: "A" | "B";
-  onOpenTeam: (team: { id: string; name: string; zone: string }) => void;
-  showWinner: boolean;
-}) {
-  const player = side === "A" ? match.teamA : match.teamB;
-  const teamId = side === "A" ? match.teamAId : match.teamBId;
-  const isWinner =
-    showWinner &&
-    (match.resultStatus === "COMPLETE" ||
-      match.resultStatus === "WINNER_ONLY") &&
-    match.winnerId === teamId;
-
-  return (
-    <button
-      onClick={() => {
-        if (!player) return;
-        onOpenTeam({ id: player.id, name: player.name, zone: "—" });
-      }}
-      className={`flex min-h-[26px] w-full items-center justify-between gap-2 rounded-lg px-2.5 py-0.5 text-left text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 ${
-        isWinner
-          ? "bg-green-200/60 text-black font-bold ring-1 ring-inset ring-green-800/30"
-          : "text-black hover:bg-sand-100"
-      }`}
-    >
-      <span className="truncate">{player?.name ?? "—"}</span>
-      {isWinner && (
-        <span className="shrink-0 rounded bg-green-700/80 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-          Ganador
-        </span>
-      )}
-    </button>
-  );
-}
-
+/**
+ * Knockout panel, rendered as bare content inside the TournamentTabs card.
+ *
+ * Left-to-right bracket: earliest round on the left, final on the right, with
+ * the third-place match under the final. Matches are separated by hairlines
+ * instead of boxes, and the layout always fits the card — on phones the rounds
+ * stack, so nothing ever scrolls sideways.
+ */
 export function EliminatoriesView({
   brackets,
   phase,
@@ -68,191 +34,158 @@ export function EliminatoriesView({
     [schedule, matchMinutes],
   );
 
-  // Podium data: only the last finished etapa
-  const [lastFinishedPositions, setLastFinishedPositions] = useState<
-    EtapaPosition[] | null
-  >(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchRanking()
-      .then((data) => {
-        if (cancelled) return;
-        const finished = [...data.etapas]
-          .reverse()
-          .find((e) => e.finished && e.positions.length > 0);
-        setLastFinishedPositions(finished ? finished.positions : null);
-      })
-      .catch(() => {
-        if (!cancelled) setLastFinishedPositions(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const semis = useMemo(
-    () =>
-      brackets.filter(
-        (b) => b.stage === "SEMIFINAL_1" || b.stage === "SEMIFINAL_2",
-      ),
-    [brackets],
-  );
-
-  const semifinal1 = semis.find((b) => b.stage === "SEMIFINAL_1") ?? null;
-  const semifinal2 = semis.find((b) => b.stage === "SEMIFINAL_2") ?? null;
-  const finalMatch = brackets.find((b) => b.stage === "FINAL") ?? null;
-
-  const isDesempate = phase === "DESEMPATE";
-
-  // Champion from FINAL match
-  const finalComplete =
-    finalMatch &&
-    (finalMatch.resultStatus === "COMPLETE" ||
-      finalMatch.resultStatus === "WINNER_ONLY");
-
-  function handleOpenTeam(
-    match: MatchPublic,
-    side: "A" | "B",
-  ) {
-    const player = side === "A" ? match.teamA : match.teamB;
-    if (!player) return;
-    onOpenTeam({ id: player.id, name: player.name, zone: "—" });
-  }
-
-  function isLiveMatch(m: MatchPublic | null) {
-    if (!m) return false;
-    return liveIds.has(m.id);
-  }
-
-  // Unknown phase: render generic strip
   if (!isKnownPhase(phase)) {
     return (
-      <section aria-label="Cuadro" className="rounded-2xl border border-sand-300 bg-white/40 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
-        <h2 className="text-lg font-semibold text-stone-900">Cuadro</h2>
-        <p className="mt-2 text-sm text-stone-500">
-          Estado del torneo: {phaseLabel(phase)}
-        </p>
-      </section>
+      <p className="text-sm text-stone-500">
+        Estado del torneo: {phaseLabel(phase)}
+      </p>
     );
   }
 
-  // DESEMPATE waiting state
-  if (isDesempate) {
+  if (phase === "DESEMPATE") {
     return (
-      <section aria-label="Cuadro" className="rounded-2xl border border-sand-300 bg-white/40 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
-        <h2 className="text-lg font-semibold text-stone-900">Cuadro</h2>
-        <div className="mt-4 flex items-center justify-center rounded-xl border border-amber-soft-200 bg-amber-50/60 px-4 py-6 text-sm text-amber-700">
-          <p>Cuadro disponible al finalizar el desempate</p>
-        </div>
-      </section>
+      <div className="flex items-center justify-center rounded-xl border border-amber-soft-200 bg-amber-50/60 px-4 py-6 text-sm text-amber-700">
+        <p>Cuadro disponible al finalizar el desempate</p>
+      </div>
     );
   }
 
-  // Empty brackets edge case
   if (brackets.length === 0) {
-    return (
-      <section aria-label="Cuadro" className="rounded-2xl border border-sand-300 bg-white/40 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
-        <h2 className="text-lg font-semibold text-stone-900">Cuadro</h2>
-        <p className="mt-2 text-sm text-stone-500">Generando cuadro…</p>
-      </section>
-    );
+    return <p className="text-sm text-stone-500">Generando cuadro…</p>;
   }
+
+  const columns = groupBracketColumns(brackets);
 
   return (
-    <section aria-label="Cuadro" className="rounded-2xl border border-sand-300 bg-white/40 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
-      <h2 className="text-lg font-semibold text-stone-900">Cuadro</h2>
-
-      {/* Podium — last finished etapa, above the bracket */}
-      {lastFinishedPositions && (
-        <Podium positions={lastFinishedPositions} />
-      )}
-
-      {/* FINAL card — centered below the podium, above the semifinals */}
-      {finalMatch && (
-        <div className="mt-4 flex justify-center">
-          <div
-            className={`w-full max-w-[220px] rounded-xl border p-3 ${
-              finalComplete
-                ? "ring-2 ring-amber-soft-500 ring-inset bg-amber-50/40"
-                : "border-sand-200 bg-white/40"
-            }`}
-          >
-            <p className="text-center text-xs font-semibold uppercase tracking-wider text-black">
-              {stageLabel(finalMatch.stage)}
-            </p>
-            <div className="mt-2 space-y-1.5">
-              <TeamButton
-                match={finalMatch}
-                side="A"
-                onOpenTeam={() => handleOpenTeam(finalMatch, "A")}
-                showWinner={finalComplete === true}
+    <>
+      {/* Phones: rounds stack top to bottom, no sideways scrolling */}
+      <div className="space-y-4 sm:hidden">
+        {columns.map((column) => (
+          <div key={column.key} className="space-y-3">
+            {column.groups.map((group) => (
+              <BracketGroup
+                key={group.label}
+                group={group}
+                liveIds={liveIds}
+                onOpenTeam={onOpenTeam}
               />
-              <TeamButton
-                match={finalMatch}
-                side="B"
-                onOpenTeam={() => handleOpenTeam(finalMatch, "B")}
-                showWinner={finalComplete === true}
-              />
-            </div>
+            ))}
           </div>
-        </div>
-      )}
-
-      {/* Semifinal cards — two side by side on sm+, narrower than full width */}
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:mx-auto sm:max-w-[600px] sm:grid-cols-2">
-        {[semifinal1, semifinal2].map((match) => {
-          if (!match) {
-            return (
-              <div
-                key="semi-slot"
-                className="rounded-xl border border-sand-200 bg-white/40 p-4"
-              >
-                <p className="text-sm text-black">—</p>
-              </div>
-            );
-          }
-          const live = isLiveMatch(match);
-          const winner = match.winner;
-
-          return (
-            <div
-              key={match.id}
-              className={`rounded-xl border p-1.5 ${
-                live
-                  ? "ring-2 ring-ember-500 ring-inset animate-pulse"
-                  : "border-sand-200 bg-white/40"
-              } ${
-                winner ? "ring-2 ring-amber-soft-500 ring-inset" : ""
-              }`}
-            >
-              <p className="text-xs font-semibold uppercase tracking-wider text-black">
-                {stageLabel(match.stage)}
-              </p>
-              {live && (
-                <span className="mt-1 inline-flex items-center gap-1.5 text-[10px] font-semibold text-ember-500">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ember-500" />
-                  EN VIVO
-                </span>
-              )}
-              <div className="mt-1 space-y-1">
-                <TeamButton
-                  match={match}
-                  side="A"
-                  onOpenTeam={() => handleOpenTeam(match, "A")}
-                  showWinner={!!winner}
-                />
-                <TeamButton
-                  match={match}
-                  side="B"
-                  onOpenTeam={() => handleOpenTeam(match, "B")}
-                  showWinner={!!winner}
-                />
-              </div>
-            </div>
-          );
-        })}
+        ))}
       </div>
-      </section>
-    );
-  }
+
+      {/* sm and up: left-to-right bracket, always inside the card */}
+      <div className="hidden gap-3 sm:flex">
+        {columns.map((column) => (
+          <div
+            key={column.key}
+            className="flex min-w-0 flex-1 flex-col justify-center gap-3 border-l border-sand-300/70 pl-3 first:border-l-0 first:pl-0"
+          >
+            {column.groups.map((group) => (
+              <BracketGroup
+                key={group.label}
+                group={group}
+                liveIds={liveIds}
+                onOpenTeam={onOpenTeam}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function BracketGroup({
+  group,
+  liveIds,
+  onOpenTeam,
+}: {
+  group: { label: string; matches: MatchPublic[] };
+  liveIds: Set<string>;
+  onOpenTeam: (team: { id: string; name: string; zone: string }) => void;
+}) {
+  return (
+    <div>
+      <p className="mb-1 truncate border-b border-sand-300/70 pb-0.5 text-[10px] font-semibold uppercase tracking-wide text-stone-400">
+        {group.label}
+      </p>
+      <div className="divide-y divide-sand-300/50">
+        {group.matches.map((match) => (
+          <MatchBlock
+            key={match.id}
+            match={match}
+            live={liveIds.has(match.id)}
+            onOpenTeam={onOpenTeam}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MatchBlock({
+  match,
+  live,
+  onOpenTeam,
+}: {
+  match: MatchPublic;
+  live: boolean;
+  onOpenTeam: (team: { id: string; name: string; zone: string }) => void;
+}) {
+  return (
+    <div className={`py-1 ${live ? "bg-ember-50/40" : ""}`}>
+      <div className="divide-y divide-sand-300/50">
+        <TeamLine match={match} side="A" onOpenTeam={onOpenTeam} />
+        <TeamLine match={match} side="B" onOpenTeam={onOpenTeam} />
+      </div>
+    </div>
+  );
+}
+
+function TeamLine({
+  match,
+  side,
+  onOpenTeam,
+}: {
+  match: MatchPublic;
+  side: "A" | "B";
+  onOpenTeam: (team: { id: string; name: string; zone: string }) => void;
+}) {
+  const player = side === "A" ? match.teamA : match.teamB;
+  const teamId = side === "A" ? match.teamAId : match.teamBId;
+
+  const decided =
+    match.resultStatus === "COMPLETE" || match.resultStatus === "WINNER_ONLY";
+  const isWinner = decided && match.winnerId !== null && match.winnerId === teamId;
+
+  // Single set -> points of that set; final (best of three) -> sets won;
+  // winner only -> no number at all.
+  const score = matchScore(match);
+  const value = score ? (side === "A" ? score.a : score.b) : null;
+
+  return (
+    <button
+      onClick={() => {
+        if (!player) return;
+        onOpenTeam({ id: player.id, name: player.name, zone: "—" });
+      }}
+      className={`flex w-full items-center justify-between gap-1.5 rounded px-1 py-1 text-left text-[11px] leading-tight transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 ${
+        isWinner
+          ? "bg-emerald-50 font-semibold text-emerald-900"
+          : player
+            ? "text-stone-700 hover:bg-sand-100"
+            : "text-stone-300"
+      }`}
+    >
+      <span className="truncate">{player?.name ?? "—"}</span>
+      {value !== null && (
+        <span
+          className={`shrink-0 tabular-nums ${isWinner ? "text-emerald-800" : "text-stone-400"}`}
+        >
+          {value}
+        </span>
+      )}
+    </button>
+  );
+}

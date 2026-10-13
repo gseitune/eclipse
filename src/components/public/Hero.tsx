@@ -1,8 +1,10 @@
 export function Hero({
+  circuit,
   etapaName,
   live,
   finished,
 }: {
+  circuit: string;
   etapaName: string;
   live: boolean;
   finished: boolean;
@@ -38,7 +40,7 @@ export function Hero({
 
       {/* Stage + circuit */}
       <p className="mt-2 text-sm font-semibold uppercase tracking-[0.2em] text-amber-700">
-        Circuito Mixto Principiantes 2026
+        {circuit}
       </p>
       <p className="mt-1 text-2xl font-bold text-stone-900">{etapaName}</p>
 
