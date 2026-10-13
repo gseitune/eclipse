@@ -786,6 +786,13 @@ export async function getBracketsSnapshot(etapaId?: string | null) {
  */
 export async function getStateSnapshot(etapaId?: string | null) {
   const id = await resolveEtapaId(etapaId);
+  // Heal any bracket hole before reading it, so a stuck tournament resumes on a
+  // plain refresh instead of needing a reset. Idempotent and fill-only.
+  const phaseRow = await prisma.tournamentState.findUnique({
+    where: { etapaId: id },
+    select: { phase: true },
+  });
+  if (phaseRow?.phase === "ELIMINATORIES") await reconcileEliminatories(id);
   const [state, standings, schedule, brackets, nextMatch, zones, desempateMatches, etapas] =
     await Promise.all([
       getState(id),
@@ -1056,6 +1063,45 @@ async function fillDescendantMatches(
     return changed;
   });
   return updated;
+}
+
+/**
+ * Self-healing pass over the eliminatories: replays every derivation in
+ * bracket order from the results already recorded. It only fills slots that are
+ * still empty — it never rewrites a recorded result and never clears anything —
+ * so it is safe to run on every state read.
+ *
+ * Derivations used to be a pure write-time side effect, so a hole left behind
+ * (a build that lacked the rule, or a partial failure) froze the tournament
+ * with no way back short of a reset. With this pass, a refresh heals it.
+ */
+export async function reconcileEliminatories(etapaId: string): Promise<boolean> {
+  const etapa = await prisma.etapa.findUnique({
+    where: { id: etapaId },
+    select: { bracketFormat: true },
+  });
+  if (!etapa) return false;
+
+  const byFormat: Record<string, Stage[]> = {
+    CUARTOS: [
+      "REPECHAJE_1",
+      "CUARTOS_1",
+      "CUARTOS_2",
+      "CUARTOS_3",
+      "CUARTOS_4",
+      "SEMIFINAL_1",
+      "SEMIFINAL_2",
+    ],
+    REPECHAJE: ["REPECHAJE_1", "REPECHAJE_2", "SEMIFINAL_1", "SEMIFINAL_2"],
+    STANDARD: ["SEMIFINAL_1", "SEMIFINAL_2"],
+  };
+  const stages = byFormat[etapa.bracketFormat] ?? byFormat.STANDARD;
+
+  let changed = false;
+  for (const stage of stages) {
+    if (await fillDescendantMatches(etapaId, stage, null)) changed = true;
+  }
+  return changed;
 }
 
 /**

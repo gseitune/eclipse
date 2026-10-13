@@ -39,6 +39,7 @@ let editResult!: BackModule["editResult"];
 let recordResult!: BackModule["recordResult"];
 let getStandings!: BackModule["getStandings"];
 let getNextMatch!: BackModule["getNextMatch"];
+let reconcileEliminatories!: BackModule["reconcileEliminatories"];
 let createEtapa!: BackModule["createEtapa"];
 let reorderMatch!: BackModule["reorderMatch"];
 let getScheduleBoard!: BackModule["getScheduleBoard"];
@@ -744,6 +745,8 @@ describe("CUARTOS format (integration)", () => {
     getStateSnapshot = back.getStateSnapshot;
     resolveBestThird = back.resolveBestThird;
     createBestThirdDesempate = back.createBestThirdDesempate;
+    getNextMatch = back.getNextMatch;
+    reconcileEliminatories = back.reconcileEliminatories;
     const events = await import("./events");
     subscribeSse = events.subscribeSse;
   });
@@ -1033,6 +1036,100 @@ describe("CUARTOS format (integration)", () => {
     assert.equal(filled?.teamAId, a1Id, "CUARTOS_1 keeps seed 1 on side A");
     assert.equal(filled?.teamBId, reA, "WINNER_ONLY RE1 winner fills CUARTOS_1 side B");
     assert.equal(filled?.resultStatus, "PENDING", "CUARTOS_1 stays unplayed");
+  });
+
+  it("CUARTOS: the bracket hole that froze prod self-heals on refresh (RE1 winner -> CUARTOS_1) and the chain resumes", async () => {
+    const teamNames = Array.from({ length: 11 }, (_, i) => `Eq${i + 1}`);
+    const teams = teamNames.map((name, i) => ({
+      name,
+      maleName: `Male${i + 1}`,
+      femaleName: `Female${i + 1}`,
+    }));
+    let counter = 0;
+    const rng = () => { counter += 1; return (counter * 0.5) % 1; };
+    const etapa = await createEtapa({ name: "Cuartos Heal", teams, bracketFormat: "CUARTOS" }, { rng });
+
+    // Round-robin finished: the entry queue holds only the eliminatories.
+    const seedTeam = (await prisma.team.findFirst({ where: { etapaId: etapa.id, zone: "A" } }))!;
+    await prisma.match.updateMany({
+      where: { etapaId: etapa.id, stage: "GROUPS" },
+      data: {
+        resultStatus: "COMPLETE",
+        winnerId: seedTeam.id,
+        sets: [{ teamA: 21, teamB: 15 }],
+        recordedAt: new Date(),
+      },
+    });
+
+    // Seeded eliminatories: RE1 with both sides, seed 1 alone in CUARTOS_1
+    // (waiting for the repechage winner), the other three QFs with both sides.
+    const [a1, a2, , a4] = (await getTeamsByZone(etapa.id)).A.map((t) => t.id);
+    const [b1, b2, b3, b4] = (await getTeamsByZone(etapa.id)).B.map((t) => t.id);
+    const [c1, , c3] = (await getTeamsByZone(etapa.id)).C.map((t) => t.id);
+    const qfRows = await prisma.match.findMany({
+      where: { etapaId: etapa.id, stage: { in: ["CUARTOS_1", "CUARTOS_2", "CUARTOS_3", "CUARTOS_4"] } },
+      orderBy: { slot: "asc" },
+    });
+    const re1 = await prisma.match.findFirst({ where: { etapaId: etapa.id, stage: "REPECHAJE_1" } });
+    assert.equal(qfRows.length, 4, "four quarterfinal slots exist");
+    assert.ok(re1, "the repechage slot exists");
+    const [q1, q2, q3, q4] = qfRows;
+    await prisma.$transaction([
+      prisma.match.update({ where: { id: re1!.id }, data: { teamAId: a4, teamBId: b4 } }),
+      prisma.match.update({ where: { id: q1!.id }, data: { teamAId: a1 } }),
+      prisma.match.update({ where: { id: q2!.id }, data: { teamAId: a2, teamBId: b3 } }),
+      prisma.match.update({ where: { id: q3!.id }, data: { teamAId: c1, teamBId: b2 } }),
+      prisma.match.update({ where: { id: q4!.id }, data: { teamAId: b1, teamBId: c3 } }),
+      prisma.tournamentState.update({ where: { etapaId: etapa.id }, data: { phase: "ELIMINATORIES" } }),
+    ]);
+
+    // An older build captured the repechage winner but never derived it into
+    // CUARTOS_1: three QFs are played, the fourth has no opponent. This is the
+    // exact hole the tournament was left in.
+    await prisma.match.update({
+      where: { id: re1!.id },
+      data: { resultStatus: "WINNER_ONLY", winnerId: a4, recordedAt: new Date() },
+    });
+    for (const [qf, winner] of [[q2, a2], [q3, c1], [q4, b1]] as const) {
+      await prisma.match.update({
+        where: { id: qf!.id },
+        data: { resultStatus: "WINNER_ONLY", winnerId: winner, recordedAt: new Date() },
+      });
+    }
+    assert.equal(
+      await getNextMatch(etapa.id),
+      null,
+      "stuck: nothing is playable while CUARTOS_1 has no opponent",
+    );
+
+    // Reading the state re-derives the hole, and the seeded side survives.
+    const healed = await getStateSnapshot(etapa.id);
+    const healedQ1 = healed.brackets.find((b) => b.stage === "CUARTOS_1");
+    assert.equal(healedQ1?.teamA?.id, a1, "the seeded side of CUARTOS_1 survives");
+    assert.equal(healedQ1?.teamB?.id, a4, "the RE1 winner is derived into CUARTOS_1 on refresh");
+    const resumed = await getNextMatch(etapa.id);
+    assert.equal(resumed?.stage, "CUARTOS_1", "the recovered quarterfinal is offered next");
+
+    // Playing it opens the semis (QF1 x QF4, QF2 x QF3) and the chain continues.
+    await recordResult({ matchId: q1!.id, winnerId: a1 });
+    const semis = await prisma.match.findMany({
+      where: { etapaId: etapa.id, stage: { in: ["SEMIFINAL_1", "SEMIFINAL_2"] } },
+      orderBy: { slot: "asc" },
+    });
+    assert.equal(semis.length, 2);
+    assert.equal(semis[0].teamAId, a1);
+    assert.equal(semis[0].teamBId, b1);
+    assert.equal(semis[1].teamAId, a2);
+    assert.equal(semis[1].teamBId, c1);
+    const nextSemi = await getNextMatch(etapa.id);
+    assert.ok(nextSemi && nextSemi.stage.startsWith("SEMIFINAL_"), "a semifinal is offered after all QFs");
+
+    // Healing is repeatable and never rewrites what is already recorded.
+    const before = await prisma.match.findMany({ where: { etapaId: etapa.id }, orderBy: { slot: "asc" } });
+    await reconcileEliminatories(etapa.id);
+    await reconcileEliminatories(etapa.id);
+    const after = await prisma.match.findMany({ where: { etapaId: etapa.id }, orderBy: { slot: "asc" } });
+    assert.deepEqual(after, before, "healing an already-healed bracket changes nothing");
   });
 
   it("CUARTOS desempate path: two tied thirds play off; winner to CUARTOS_2, loser to RE1 vs the C-zone third", async () => {
