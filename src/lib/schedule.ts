@@ -79,6 +79,68 @@ export function isEditableMatch(
   );
 }
 
+/**
+ * Every elimination stage a cascade correction can touch. Shared by the
+ * backend (which clears the chain) and the organizer UI (which previews the
+ * chain before confirming), so the preview can never drift from behavior.
+ */
+export const CASCADE_ALL_ELIM: readonly string[] = [
+  "REPECHAJE_1",
+  "REPECHAJE_2",
+  "CUARTOS_1",
+  "CUARTOS_2",
+  "CUARTOS_3",
+  "CUARTOS_4",
+  "SEMIFINAL_1",
+  "SEMIFINAL_2",
+  "BRONZE",
+  "FINAL",
+];
+
+/**
+ * RESULTS cleared per edited stage when a cascade correction runs. Mirrors
+ * real winner propagation, NOT the conservative DESCENDANT_STAGES guard:
+ * correcting CUARTOS_1 invalidates SEMIFINAL_1 + BRONZE + FINAL but never the
+ * independent SEMIFINAL_2.
+ */
+export const CASCADE_CLEAR_STAGES: Record<string, readonly string[]> = {
+  GROUPS: CASCADE_ALL_ELIM,
+  DESEMPATE: CASCADE_ALL_ELIM,
+  REPECHAJE_1: ["CUARTOS_1", "SEMIFINAL_1", "BRONZE", "FINAL"],
+  REPECHAJE_2: ["SEMIFINAL_1", "SEMIFINAL_2", "BRONZE", "FINAL"],
+  CUARTOS_1: ["SEMIFINAL_1", "BRONZE", "FINAL"],
+  CUARTOS_2: ["SEMIFINAL_2", "BRONZE", "FINAL"],
+  CUARTOS_3: ["SEMIFINAL_2", "BRONZE", "FINAL"],
+  CUARTOS_4: ["SEMIFINAL_1", "BRONZE", "FINAL"],
+  SEMIFINAL_1: ["BRONZE", "FINAL"],
+  SEMIFINAL_2: ["BRONZE", "FINAL"],
+  BRONZE: [],
+  FINAL: [],
+};
+
+/**
+ * TEAM REFERENCES nulled per edited stage when a cascade correction runs. The
+ * fill contract governs this: the CUARTOS branch only re-seeds both semis when
+ * BOTH semi slots are empty (fillDescendantMatches), and the SEMIFINAL branch
+ * only re-fills FINAL and BRONZE when both slots are empty. Cleared stages
+ * therefore lose their teams, and RE1/QF edits must also empty the OTHER semi
+ * even though its result survives, so the fill can re-derive both pairings.
+ */
+export const CASCADE_NULL_TEAMS: Record<string, readonly string[]> = {
+  GROUPS: CASCADE_ALL_ELIM,
+  DESEMPATE: CASCADE_ALL_ELIM,
+  REPECHAJE_1: ["SEMIFINAL_1", "SEMIFINAL_2", "BRONZE", "FINAL"],
+  REPECHAJE_2: ["SEMIFINAL_1", "SEMIFINAL_2", "BRONZE", "FINAL"],
+  CUARTOS_1: ["SEMIFINAL_1", "SEMIFINAL_2", "BRONZE", "FINAL"],
+  CUARTOS_2: ["SEMIFINAL_1", "SEMIFINAL_2", "BRONZE", "FINAL"],
+  CUARTOS_3: ["SEMIFINAL_1", "SEMIFINAL_2", "BRONZE", "FINAL"],
+  CUARTOS_4: ["SEMIFINAL_1", "SEMIFINAL_2", "BRONZE", "FINAL"],
+  SEMIFINAL_1: ["BRONZE", "FINAL"],
+  SEMIFINAL_2: ["BRONZE", "FINAL"],
+  BRONZE: [],
+  FINAL: [],
+};
+
 const MS = 60_000;
 
 function toTimeOnly(iso: string): string {

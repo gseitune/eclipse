@@ -1,17 +1,25 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import {
+  editResult,
   fetchState,
+  fetchScheduleBoard,
   recordResult,
   setMatchTimes,
   resolveBestThird,
   createBestThirdDesempate,
   reslotEtapa,
 } from "../../lib/front/api";
-import type { ScheduleRow, StandingRow, StateSnapshot } from "../../lib/front/types";
+import type {
+  ScheduleBoardRow,
+  ScheduleRow,
+  StandingRow,
+  StateSnapshot,
+} from "../../lib/front/types";
 import { ApiError } from "../../lib/front/types";
 import { stageLabel } from "../../lib/front/phase";
+import { cascadeImpact, matchScore } from "../../lib/front/bracket";
 
 /* ── Check icon (inline SVG, no emoji) ── */
 function CheckIcon() {
@@ -599,7 +607,394 @@ export function ResultadoEntryPanel({
   );
 }
 
-/* ── Best-third tie resolution — own card, only rendered when needed ── */
+/* ── Correction of blocked results (cascade) ── */
+export interface CorregirResultadosPanelProps {
+  readonly refetch: () => Promise<void>;
+}
+
+type CorrTab = "sets" | "winner";
+
+/**
+ * Lets the organizer correct a match whose descendant phase already played
+ * (editable === false). The confirmation dialog previews exactly which results
+ * the cascade will clear (same tables the backend uses) before the PATCH with
+ * `cascade: true` is sent.
+ */
+export function CorregirResultadosPanel({ refetch }: CorregirResultadosPanelProps) {
+  const [board, setBoard] = useState<ScheduleBoardRow[] | null>(null);
+  const [boardError, setBoardError] = useState<string | null>(null);
+  const [openRow, setOpenRow] = useState<ScheduleBoardRow | null>(null);
+  const [corrTab, setCorrTab] = useState<CorrTab>("sets");
+  const [corrA, setCorrA] = useState("");
+  const [corrB, setCorrB] = useState("");
+  const [corrWinner, setCorrWinner] = useState<string | null>(null);
+  const [corrSaving, setCorrSaving] = useState(false);
+  const [corrMsg, setCorrMsg] = useState<string | null>(null);
+  const [doneMsg, setDoneMsg] = useState<string | null>(null);
+
+  const reload = useCallback(async () => {
+    try {
+      const res = await fetchScheduleBoard();
+      setBoard(res.schedule);
+      setBoardError(null);
+    } catch (err) {
+      setBoard(null);
+      setBoardError(
+        err instanceof ApiError
+          ? err.message
+          : "Error al cargar los partidos jugados.",
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+
+  const blocked = useMemo(
+    () =>
+      (board ?? []).filter(
+        (row) => row.resultStatus !== "PENDING" && !row.editable,
+      ),
+    [board],
+  );
+
+  const impact = useMemo(
+    () => (openRow ? cascadeImpact(openRow.stage, board ?? []) : null),
+    [openRow, board],
+  );
+
+  function openCorrection(row: ScheduleBoardRow) {
+    setOpenRow(row);
+    setCorrTab("sets");
+    setCorrA("");
+    setCorrB("");
+    setCorrWinner(null);
+    setCorrMsg(null);
+  }
+
+  const scoreText = useCallback((row: ScheduleBoardRow): string => {
+    const s = matchScore(row);
+    if (s) return `Actual: ${s.a} - ${s.b}`;
+    return "Resultado cargado";
+  }, []);
+
+  const canConfirm =
+    !corrSaving &&
+    openRow !== null &&
+    (corrTab === "sets"
+      ? (() => {
+          const a = parseInt(corrA, 10);
+          const b = parseInt(corrB, 10);
+          return (
+            !isNaN(a) && !isNaN(b) && a > 0 && b > 0 && a !== b
+          );
+        })()
+      : corrWinner !== null);
+
+  async function handleCorregir() {
+    if (!openRow || !canConfirm || corrSaving) return;
+    setCorrSaving(true);
+    setCorrMsg(null);
+    try {
+      if (corrTab === "sets") {
+        await editResult({
+          matchId: openRow.id,
+          setFormat: openRow.setFormat ?? "SINGLE_21",
+          sets: [
+            {
+              teamA: parseInt(corrA, 10),
+              teamB: parseInt(corrB, 10),
+            },
+          ],
+          cascade: true,
+        });
+      } else if (corrWinner) {
+        await editResult({
+          matchId: openRow.id,
+          winnerId: corrWinner,
+          cascade: true,
+        });
+      }
+      setOpenRow(null);
+      setDoneMsg(
+        "Resultado corregido — la cadena afectada se invalidó y la llave se recalculó.",
+      );
+      await refetch();
+      await reload();
+    } catch (err) {
+      setCorrMsg(
+        err instanceof ApiError
+          ? err.message
+          : "Error al corregir el resultado. Intentá de nuevo.",
+      );
+    } finally {
+      setCorrSaving(false);
+    }
+  }
+
+  if (boardError) {
+    return (
+      <section
+        aria-label="Corregir resultados trabados"
+        className="rounded-xl border border-sand-200 bg-stone-100/70 p-5"
+      >
+        <p className="text-xs font-medium text-red-700" role="alert">
+          {boardError}
+        </p>
+      </section>
+    );
+  }
+
+  if (blocked.length === 0) return null;
+
+  const clearedLabels = (impact?.cleared ?? []).map((r) => {
+    const row = r as ScheduleBoardRow;
+    return `${stageLabel(row.stage)} — ${row.teamA?.name ?? "—"} vs ${row.teamB?.name ?? "—"}`;
+  });
+  const nulledLabels = (impact?.nulledStages ?? []).map(stageLabel);
+
+  return (
+    <>
+      <section
+        aria-label="Corregir resultados trabados"
+        className="rounded-xl border border-sand-300 bg-sand-50 p-5 space-y-3"
+      >
+        <div>
+          <span className="block text-sm font-semibold text-stone-900">
+            Corregir resultados
+          </span>
+          <span className="mt-0.5 block text-xs text-stone-500">
+            Partidos que quedaron trabados porque la llave ya avanzó.
+            Corregirlos borra solo la cadena afectada y la vuelve a calcular.
+          </span>
+        </div>
+
+        {doneMsg && (
+          <p
+            className="rounded-lg bg-green-50 px-3 py-2 text-xs font-medium text-green-700 border border-green-200"
+            role="alert"
+          >
+            {doneMsg}
+          </p>
+        )}
+
+        <ul className="max-h-72 space-y-2 overflow-y-auto pr-1">
+          {blocked.map((row) => (
+            <li
+              key={row.id}
+              className="flex items-center justify-between gap-3 rounded-lg border border-sand-200 bg-white px-4 py-3"
+            >
+              <div className="min-w-0">
+                <span className="block truncate text-sm font-semibold text-stone-900">
+                  {stageLabel(row.stage)} — {row.teamA?.name ?? "Equipo A"} vs{" "}
+                  {row.teamB?.name ?? "Equipo B"}
+                </span>
+                <span className="mt-0.5 block text-xs text-stone-500">
+                  {scoreText(row)}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => openCorrection(row)}
+                className="shrink-0 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-amber-700 min-h-[36px]"
+              >
+                Corregir
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* Correction dialog: new result + cascade preview */}
+      {openRow && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Corregir resultado"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-sand-300 bg-white p-6 shadow-xl space-y-4">
+            <div>
+              <h3 className="text-base font-semibold text-stone-900">
+                Corregir resultado
+              </h3>
+              <p className="mt-1 text-sm text-stone-500">
+                {stageLabel(openRow.stage)} — {openRow.teamA?.name ?? "Equipo A"} vs{" "}
+                {openRow.teamB?.name ?? "Equipo B"}
+              </p>
+            </div>
+
+            <div
+              role="tablist"
+              className="inline-flex rounded-lg bg-stone-100 p-1 gap-0.5"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={corrTab === "sets"}
+                onClick={() => {
+                  setCorrTab("sets");
+                  setCorrMsg(null);
+                }}
+                className={`px-3 py-2 text-sm font-medium rounded-md transition-colors min-h-[44px] ${
+                  corrTab === "sets"
+                    ? "bg-white text-stone-900 shadow-sm"
+                    : "text-stone-500 hover:text-stone-700"
+                }`}
+              >
+                Sets
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={corrTab === "winner"}
+                onClick={() => {
+                  setCorrTab("winner");
+                  setCorrMsg(null);
+                }}
+                className={`px-3 py-2 text-sm font-medium rounded-md transition-colors min-h-[44px] ${
+                  corrTab === "winner"
+                    ? "bg-white text-stone-900 shadow-sm"
+                    : "text-stone-500 hover:text-stone-700"
+                }`}
+              >
+                1 ganador
+              </button>
+            </div>
+
+            {corrTab === "sets" ? (
+              <div className="flex items-center justify-center gap-2">
+                <label htmlFor="corr-set-a" className="sr-only">
+                  Sets del equipo A
+                </label>
+                <input
+                  id="corr-set-a"
+                  type="number"
+                  inputMode="numeric"
+                  min="1"
+                  value={corrA}
+                  onChange={(e) => setCorrA(e.target.value)}
+                  disabled={corrSaving}
+                  placeholder="0"
+                  className="w-16 rounded-lg border border-sand-300 bg-white px-2 py-2.5 text-center text-lg font-bold text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                />
+                <span className="text-stone-400 font-bold">:</span>
+                <label htmlFor="corr-set-b" className="sr-only">
+                  Sets del equipo B
+                </label>
+                <input
+                  id="corr-set-b"
+                  type="number"
+                  inputMode="numeric"
+                  min="1"
+                  value={corrB}
+                  onChange={(e) => setCorrB(e.target.value)}
+                  disabled={corrSaving}
+                  placeholder="0"
+                  className="w-16 rounded-lg border border-sand-300 bg-white px-2 py-2.5 text-center text-lg font-bold text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                />
+              </div>
+            ) : (
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCorrWinner(openRow.teamA?.id ?? null)}
+                  disabled={corrSaving || !openRow.teamA?.id}
+                  className={`flex-1 rounded-xl border-2 px-4 py-4 text-center font-semibold transition-colors min-h-[44px] ${
+                    corrWinner === openRow.teamA?.id
+                      ? "border-amber-600 bg-amber-50 text-stone-900"
+                      : "border-sand-300 bg-white text-stone-900 hover:border-amber-soft-400 hover:bg-amber-50"
+                  } disabled:opacity-50`}
+                >
+                  <span className="block text-sm text-stone-500 mb-1">Gana</span>
+                  <span className="text-base">{openRow.teamA?.name ?? "Equipo A"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCorrWinner(openRow.teamB?.id ?? null)}
+                  disabled={corrSaving || !openRow.teamB?.id}
+                  className={`flex-1 rounded-xl border-2 px-4 py-4 text-center font-semibold transition-colors min-h-[44px] ${
+                    corrWinner === openRow.teamB?.id
+                      ? "border-amber-600 bg-amber-50 text-stone-900"
+                      : "border-sand-300 bg-white text-stone-900 hover:border-amber-soft-400 hover:bg-amber-50"
+                  } disabled:opacity-50`}
+                >
+                  <span className="block text-sm text-stone-500 mb-1">Gana</span>
+                  <span className="text-base">{openRow.teamB?.name ?? "Equipo B"}</span>
+                </button>
+              </div>
+            )}
+
+            {/* Cascade impact preview */}
+            {(clearedLabels.length > 0 || nulledLabels.length > 0) && (
+              <div
+                className={`rounded-lg border px-4 py-3 ${
+                  clearedLabels.length > 0
+                    ? "border-red-200 bg-red-50"
+                    : "border-amber-300 bg-amber-50"
+                }`}
+              >
+                {clearedLabels.length > 0 && (
+                  <>
+                    <p className="text-xs font-semibold text-red-800">
+                      Al corregir se borran los resultados de:
+                    </p>
+                    <ul className="mt-1.5 space-y-1">
+                      {clearedLabels.map((label) => (
+                        <li
+                          key={label}
+                          className="text-xs text-red-700"
+                        >
+                          {label}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+                {nulledLabels.length > 0 && (
+                  <p className="mt-1.5 text-xs text-stone-600">
+                    Se vacían los cruces ({nulledLabels.join(", ")}) para
+                    rearmar la llave desde el resultado corregido. Esta acción
+                    no se puede deshacer.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {corrMsg && (
+              <p
+                className="rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700 border border-red-200"
+                role="alert"
+              >
+                {corrMsg}
+              </p>
+            )}
+
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => !corrSaving && setOpenRow(null)}
+                disabled={corrSaving}
+                className="rounded-lg border border-sand-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 hover:bg-sand-50 disabled:opacity-50 transition-colors min-h-[44px]"
+              >
+                Volver
+              </button>
+              <button
+                type="button"
+                onClick={handleCorregir}
+                disabled={!canConfirm}
+                className="rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50 transition-colors min-h-[44px]"
+              >
+                {corrSaving ? "Corrigiendo…" : "Corregir resultado"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
 export function MejoresTercerosPanel({ state, refetch }: MejoresTercerosPanelProps) {
   const blocked = state?.bracketsBlocked;
 

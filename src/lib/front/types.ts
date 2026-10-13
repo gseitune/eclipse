@@ -61,6 +61,9 @@ export interface ScheduleBoardRow {
   estimatedFromResult: boolean;
   teamA: TeamNamePair | null;
   teamB: TeamNamePair | null;
+  setFormat: string | null;
+  /** Full multi-set score; null for PENDING and WINNER_ONLY rows. */
+  sets: { teamA: number; teamB: number }[] | null;
   resultStatus: string;
   editable: boolean;
 }

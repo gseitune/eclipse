@@ -34,6 +34,7 @@ export async function PATCH(
       sets: Array.isArray(body?.sets) ? body.sets : null,
       winnerId:
         typeof body?.winnerId === "string" ? body.winnerId : null,
+      cascade: body?.cascade === true,
     });
     return NextResponse.json(result);
   } catch (error) {

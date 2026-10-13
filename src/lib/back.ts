@@ -2,6 +2,9 @@ import { prisma } from "./prisma";
 import { publishSse } from "./events";
 import { computeZoneStandings, type StandingRow } from "./standings";
 import {
+  CASCADE_ALL_ELIM,
+  CASCADE_CLEAR_STAGES,
+  CASCADE_NULL_TEAMS,
   computeSchedule,
   DESCENDANT_STAGES,
   type ScheduleMatchInput,
@@ -1426,15 +1429,84 @@ export async function recordResult(input: RecordResultInput) {
   };
 }
 
-/** EditResultInput is the same payload surface as recordResult. */
-export type EditResultInput = RecordResultInput;
+/**
+ * EditResultInput is the same payload surface as recordResult, plus an
+ * optional cascade flag. cascade: true lets the organizer correct a match
+ * whose descendants already have results: the invalidated chain is cleared
+ * inside the same transaction as the edit, so a failure can never leave a
+ * half-cleared bracket.
+ */
+export type EditResultInput = RecordResultInput & { cascade?: boolean };
+
+/**
+ * Clears the dependent results/teams a correction invalidates, inside the
+ * same transaction as the edit. Only called when cascade was requested AND a
+ * descendant already had a result. Runs BEFORE the edited match is updated so
+ * the new result and the cleared chain commit atomically.
+ */
+async function clearCascadeResults(
+  tx: Prisma.TransactionClient,
+  etapaId: string,
+  stage: string,
+  oldWinnerId: string | null,
+): Promise<void> {
+  const clearStages = CASCADE_CLEAR_STAGES[stage] ?? [];
+  if (clearStages.length > 0) {
+    await tx.match.updateMany({
+      where: {
+        etapaId,
+        stage: { in: [...clearStages] as Stage[] },
+        resultStatus: { not: "PENDING" },
+      },
+      data: {
+        resultStatus: "PENDING",
+        sets: Prisma.DbNull,
+        setFormat: null,
+        winnerId: null,
+        recordedAt: null,
+      },
+    });
+  }
+
+  const nullStages = CASCADE_NULL_TEAMS[stage] ?? [];
+  if (nullStages.length > 0) {
+    await tx.match.updateMany({
+      where: { etapaId, stage: { in: [...nullStages] as Stage[] } },
+      data: { teamAId: null, teamBId: null },
+    });
+  }
+
+  // REPECHAJE_1 feeds CUARTOS_1's open side (seed 8 next to seed 1). Only
+  // the side holding the old winner is cleared; the seeded side must survive
+  // so the fill can write the new winner into the empty side.
+  if (stage === "REPECHAJE_1") {
+    const cuartos1 = await tx.match.findFirst({
+      where: { etapaId, stage: "CUARTOS_1" as Stage },
+    });
+    if (cuartos1) {
+      const side =
+        cuartos1.teamBId === oldWinnerId
+          ? "teamBId"
+          : cuartos1.teamAId === oldWinnerId
+            ? "teamAId"
+            : "teamBId";
+      await tx.match.update({
+        where: { id: cuartos1.id },
+        data: { [side]: null },
+      });
+    }
+  }
+}
 
 /**
  * Re-records the result of an already-played match (fixing a bad quick-capture
  * from the phone). Same payload validation as recordResult. Guards:
  * - nothing to edit when the match has no result (409 no_result_to_edit);
  * - a played descendant phase closes the match: editing would invalidate the
- *   bracket (409 editing_blocks_bracket).
+ *   bracket (409 editing_blocks_bracket). With cascade: true the organizer can
+ *   correct it anyway: the invalidated chain is cleared atomically with the
+ *   edit, descendant bracket slots are emptied, and the fill logic re-derives
+ *   the bracket from the new result.
  * Zone confirmation does NOT block editing.
  */
 export async function editResult(input: EditResultInput) {
@@ -1454,17 +1526,18 @@ export async function editResult(input: EditResultInput) {
   // Structural guard first: a blocked edit returns its reason regardless of
   // the payload shape (validation errors never mask the bracket rule).
   const descendants = DESCENDANT_STAGES[match.stage] ?? [];
+  let playedDescendants = 0;
   if (descendants.length > 0) {
-    const played = await prisma.match.count({
+    playedDescendants = await prisma.match.count({
       where: {
         etapaId: match.etapaId,
         stage: { in: [...descendants] as Stage[] },
         resultStatus: { not: "PENDING" },
       },
     });
-    if (played > 0) {
+    if (playedDescendants > 0 && !input.cascade) {
       throw new BackError(
-        "Cannot edit: a descendant phase already has a result — editing would invalidate the bracket.",
+        "Cannot edit: a descendant phase already has a result — editing would invalidate the bracket. Pass cascade: true to clear the invalidated chain and re-enter those results.",
         409,
         "editing_blocks_bracket",
       );
@@ -1484,18 +1557,27 @@ export async function editResult(input: EditResultInput) {
     input,
   );
 
-  await prisma.match.update({
-    where: { id: match.id },
-    data: {
-      sets: payload.sets
-        ? (payload.sets as unknown as Prisma.InputJsonValue)
-        : Prisma.DbNull,
-      setFormat: payload.setFormat,
-      resultStatus: payload.resultStatus,
-      winnerId: payload.winnerId,
-      recordedAt: new Date(),
-    },
-  });
+  const updateData = {
+    sets: payload.sets
+      ? (payload.sets as unknown as Prisma.InputJsonValue)
+      : Prisma.DbNull,
+    setFormat: payload.setFormat,
+    resultStatus: payload.resultStatus,
+    winnerId: payload.winnerId,
+    recordedAt: new Date(),
+  };
+
+  if (playedDescendants > 0 && input.cascade) {
+    // Cascade correction: clear the invalidated chain INSIDE the same
+    // transaction as the edit. reconcileAfterMatch and fillDescendantMatches
+    // below then re-derive the bracket from the corrected result.
+    await prisma.$transaction(async (tx) => {
+      await clearCascadeResults(tx, match.etapaId, match.stage, match.winnerId);
+      await tx.match.update({ where: { id: match.id }, data: updateData });
+    });
+  } else {
+    await prisma.match.update({ where: { id: match.id }, data: updateData });
+  }
 
   publishSse("result-recorded", { matchId: match.id, phase: null });
 

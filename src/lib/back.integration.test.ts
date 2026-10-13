@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
-import { Prisma } from "@/generated/prisma/client";
+import { Prisma, type Stage } from "@/generated/prisma/client";
 
 /**
  * Integration tests for recordResult/editResult against a throwaway SQLite
@@ -1202,6 +1202,472 @@ describe("CUARTOS format (integration)", () => {
     assert.ok(
       cuartos1!.teamAId === re1Winner || cuartos1!.teamBId === re1Winner,
       "the REPECHAJE_1 winner (seed 8) completes CUARTOS_1",
+    );
+  });
+});
+
+/**
+ * Cascade correction (editResult with cascade: true) integration tests.
+ * Andi mis-loads a result mid-bracket; the organizer must be able to fix it
+ * WITHOUT resetting the etapa. Cascade clears only the chain the corrected
+ * match actually feeds (precise map, not the conservative DESCENDANT_STAGES
+ * guard), empties the bracket slots the fill contract needs, and re-derives
+ * the bracket from the corrected result.
+ */
+describe("cascade edit (integration)", () => {
+  before(async () => {
+    mkdirSync(dir, { recursive: true });
+    execSync(`npx prisma db push --url ${dbUrl}`, {
+      cwd: repoRoot,
+      stdio: "pipe",
+    });
+    const p = await import("./prisma");
+    prisma = p.prisma;
+    const back = await import("./back");
+    createEtapa = back.createEtapa;
+    getTeamsByZone = back.getTeamsByZone;
+    recordResult = back.recordResult;
+    editResult = back.editResult;
+    getStateSnapshot = back.getStateSnapshot;
+    BackError = back.BackError;
+    const events = await import("./events");
+    subscribeSse = events.subscribeSse;
+  });
+
+  after(async () => {
+    await prisma.$disconnect();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  /** Fresh CUARTOS etapa with deterministic zones (4/3/4). */
+  async function cascadeFixture() {
+    const teamNames = Array.from({ length: 11 }, (_, i) => `Eq${i + 1}`);
+    const teams = teamNames.map((name, i) => ({
+      name,
+      maleName: `Male${i + 1}`,
+      femaleName: `Female${i + 1}`,
+    }));
+    let counter = 0;
+    const rng = () => {
+      counter += 1;
+      return (counter * 0.5) % 1;
+    };
+    const etapa = await createEtapa(
+      { name: "Cascade Fixture", teams, bracketFormat: "CUARTOS" },
+      { rng },
+    );
+    const teamsByZone = await getTeamsByZone(etapa.id);
+    const A = teamsByZone.A.map((t) => t.id);
+    const B = teamsByZone.B.map((t) => t.id);
+    const C = teamsByZone.C.map((t) => t.id);
+    assert.deepEqual([A.length, B.length, C.length], [4, 3, 4]);
+    return { etapa, A, B, C };
+  }
+
+  /**
+   * Directly seeds the FULL bracket as already played, so a cascade edit is
+   * truly blocked without the flag. RE1 = A3 vs B3 (A3 wins). Below follow
+   * the fixed bracket pairing: CUARTOS_1 = A1 vs A3 (1v8), CUARTOS_2 = C1 vs
+   * C3, CUARTOS_3 = A2 vs B1, CUARTOS_4 = B2 vs C2, SEMIFINAL_1 = Q1w vs
+   * Q4w, SEMIFINAL_2 = Q2w vs Q3w, BRONZE = both semi losers, FINAL = both
+   * semi winners.
+   */
+  async function seedLockedBracket(
+    etapaId: string,
+    A: readonly string[],
+    B: readonly string[],
+    C: readonly string[],
+  ) {
+    const [a1, , a3] = A;
+    const [b1, b2] = B;
+    const [c1, c3] = C;
+    const slots = [
+      { stage: "REPECHAJE_1", teamAId: a3, teamBId: B[2]!, winnerId: a3 },
+      { stage: "CUARTOS_1", teamAId: a1, teamBId: a3, winnerId: a1 },
+      { stage: "CUARTOS_2", teamAId: c1, teamBId: c3, winnerId: c1 },
+      { stage: "CUARTOS_3", teamAId: A[1]!, teamBId: b1, winnerId: b1 },
+      { stage: "CUARTOS_4", teamAId: b2, teamBId: C[1]!, winnerId: b2 },
+      { stage: "SEMIFINAL_1", teamAId: a1, teamBId: b2, winnerId: a1 },
+      { stage: "SEMIFINAL_2", teamAId: c1, teamBId: b1, winnerId: c1 },
+      { stage: "BRONZE", teamAId: b2, teamBId: b1, winnerId: b2 },
+      { stage: "FINAL", teamAId: a1, teamBId: c1, winnerId: a1 },
+    ];
+    for (const s of slots) {
+      await prisma.match.updateMany({
+        where: { etapaId, stage: s.stage as Stage },
+        data: {
+          teamAId: s.teamAId,
+          teamBId: s.teamBId,
+          resultStatus: "COMPLETE",
+          winnerId: s.winnerId,
+          setFormat: "SINGLE_21",
+          sets: [{ teamA: 21, teamB: 15 }],
+          recordedAt: new Date(),
+        },
+      });
+    }
+    await prisma.tournamentState.update({
+      where: { etapaId },
+      data: { phase: "ELIMINATORIES" },
+    });
+  }
+
+  it("still blocks a locked correction without cascade (editing_blocks_bracket)", async () => {
+    const { etapa, A, B, C } = await cascadeFixture();
+    await seedLockedBracket(etapa.id, A, B, C);
+    const cuartos2 = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "CUARTOS_2" },
+    });
+
+    await assert.rejects(
+      () =>
+        editResult({
+          matchId: cuartos2!.id,
+          setFormat: "SINGLE_21",
+          sets: [{ teamA: 21, teamB: 15 }],
+        }),
+      (err: unknown) =>
+        err instanceof BackError &&
+        err.status === 409 &&
+        err.reason === "editing_blocks_bracket",
+    );
+  });
+
+  it("REPECHAJE_1 cascade clears CUARTOS_1 + one semi + BRONZE/FINAL and re-derives the bracket", async () => {
+    const { etapa, A, B, C } = await cascadeFixture();
+    await seedLockedBracket(etapa.id, A, B, C);
+    const re1 = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "REPECHAJE_1" },
+    });
+
+    // Andi flips who won the repechage: A3 (teamA) becomes B3 (teamB).
+    await editResult({
+      matchId: re1!.id,
+      cascade: true,
+      setFormat: "SINGLE_21",
+      sets: [{ teamA: 15, teamB: 21 }],
+    });
+
+    const re1After = await prisma.match.findUnique({
+      where: { id: re1!.id },
+      select: { resultStatus: true, winnerId: true },
+    });
+    assert.equal(re1After?.resultStatus, "COMPLETE");
+    assert.equal(re1After?.winnerId, B[2], "the corrected RE1 winner is B3");
+
+    // CUARTOS_1 was invalidated and re-derived immediately: seed A1 survives,
+    // the open side takes the NEW repechage winner.
+    const q1 = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "CUARTOS_1" },
+    });
+    assert.equal(q1?.resultStatus, "PENDING");
+    assert.equal(q1?.teamAId, A[0], "seeded A1 side survives the cascade");
+    assert.equal(q1?.teamBId, B[2], "new RE1 winner fills CUARTOS_1");
+
+    // The invalidated chain is cleared; the INDEPENDENT semi keeps its result
+    // (its slot is emptied only so the fill can re-seed both semis).
+    const sf1 = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "SEMIFINAL_1" },
+    });
+    assert.equal(sf1?.resultStatus, "PENDING");
+    assert.equal(sf1?.teamAId, null, "invalidated semi loses its teams");
+    const sf2 = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "SEMIFINAL_2" },
+    });
+    assert.equal(sf2?.resultStatus, "COMPLETE", "independent semi keeps its result");
+    assert.equal(sf2?.teamAId, null, "slot emptied for the fill to re-seed");
+    const bronze = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "BRONZE" },
+    });
+    assert.equal(bronze?.resultStatus, "PENDING");
+    assert.equal(bronze?.teamAId, null);
+    const final = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "FINAL" },
+    });
+    assert.equal(final?.resultStatus, "PENDING");
+    assert.equal(final?.teamAId, null);
+    const q2 = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "CUARTOS_2" },
+    });
+    assert.equal(q2?.resultStatus, "COMPLETE", "independent quarterfinal untouched");
+
+    // Reload CUARTOS_1 → the CUARTOS fill re-seeds BOTH semis from the four
+    // quarterfinal winners.
+    await recordResult({
+      matchId: q1!.id,
+      setFormat: "SINGLE_21",
+      sets: [{ teamA: 21, teamB: 18 }],
+    });
+    const sf1Refilled = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "SEMIFINAL_1" },
+    });
+    assert.deepEqual(
+      [sf1Refilled!.teamAId, sf1Refilled!.teamBId].sort(),
+      [A[0], B[1]].sort(),
+      "SEMIFINAL_1 = new Q1 winner vs Q4 winner",
+    );
+    const sf2Refilled = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "SEMIFINAL_2" },
+    });
+    assert.deepEqual(
+      [sf2Refilled!.teamAId, sf2Refilled!.teamBId].sort(),
+      [C[0], B[0]].sort(),
+      "SEMIFINAL_2 re-seeded from Q2/Q3 winners",
+    );
+
+    // Reload SEMIFINAL_1 → BRONZE and FINAL refill from the semi winners.
+    await recordResult({
+      matchId: sf1Refilled!.id,
+      setFormat: "SINGLE_21",
+      sets: [{ teamA: 21, teamB: 18 }],
+    });
+    const finalRefilled = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "FINAL" },
+    });
+    assert.deepEqual(
+      [finalRefilled!.teamAId, finalRefilled!.teamBId].sort(),
+      [A[0], C[0]].sort(),
+      "FINAL = both semi winners",
+    );
+    const bronzeRefilled = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "BRONZE" },
+    });
+    assert.deepEqual(
+      [bronzeRefilled!.teamAId, bronzeRefilled!.teamBId].sort(),
+      [B[1], B[0]].sort(),
+      "BRONZE = both semi losers",
+    );
+  });
+
+  it("CUARTOS_1 cascade clears only its semi + BRONZE + FINAL; the other semi keeps its result", async () => {
+    const { etapa, A, B, C } = await cascadeFixture();
+    await seedLockedBracket(etapa.id, A, B, C);
+    const q1 = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "CUARTOS_1" },
+    });
+
+    // Andi flips the quarterfinal: the RE1 winner (A3, teamB) beats A1.
+    await editResult({
+      matchId: q1!.id,
+      cascade: true,
+      setFormat: "SINGLE_21",
+      sets: [{ teamA: 15, teamB: 21 }],
+    });
+
+    const q1After = await prisma.match.findUnique({
+      where: { id: q1!.id },
+      select: { resultStatus: true, winnerId: true },
+    });
+    assert.equal(q1After?.resultStatus, "COMPLETE");
+    assert.equal(q1After?.winnerId, A[2], "the corrected QF1 winner is the RE1 winner");
+
+    // The CUARTOS fill re-seeded both semis right away (all 4 QFs decided);
+    // the affected semi lost its result, the other one kept it.
+    const sf1 = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "SEMIFINAL_1" },
+    });
+    assert.deepEqual(
+      [sf1!.teamAId, sf1!.teamBId].sort(),
+      [A[2], B[1]].sort(),
+      "SEMIFINAL_1 = corrected Q1 winner vs Q4 winner",
+    );
+    assert.equal(sf1?.resultStatus, "PENDING");
+    const sf2 = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "SEMIFINAL_2" },
+    });
+    assert.equal(sf2?.resultStatus, "COMPLETE", "SEMIFINAL_2 keeps its result");
+    assert.deepEqual(
+      [sf2!.teamAId, sf2!.teamBId].sort(),
+      [C[0], B[0]].sort(),
+    );
+
+    // BRONZE + FINAL wait for the affected semi to be re-loaded.
+    const bronze = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "BRONZE" },
+    });
+    assert.equal(bronze?.resultStatus, "PENDING");
+    assert.equal(bronze?.teamAId, null);
+    const final = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "FINAL" },
+    });
+    assert.equal(final?.resultStatus, "PENDING");
+    assert.equal(final?.teamAId, null);
+
+    await recordResult({
+      matchId: sf1!.id,
+      setFormat: "SINGLE_21",
+      sets: [{ teamA: 21, teamB: 18 }],
+    });
+    const finalRefilled = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "FINAL" },
+    });
+    assert.deepEqual(
+      [finalRefilled!.teamAId, finalRefilled!.teamBId].sort(),
+      [A[2], C[0]].sort(),
+      "FINAL = both semi winners",
+    );
+  });
+
+  it("GROUPS cascade wipes the whole bracket and the corrected group result rebuilds it", async () => {
+    const { etapa, A, B, C } = await cascadeFixture();
+
+    // Decide every group match by rank. The three zone thirds lose to their
+    // top 2 by DIFFERENT margins (19/17/15), so the best third is distinct
+    // and the bracket builds without an organizer tiebreak.
+    const allGroupMatches = await prisma.match.findMany({
+      where: { etapaId: etapa.id, stage: "GROUPS" },
+      orderBy: { slot: "asc" },
+    });
+    const zoneOrder: readonly (readonly string[])[] = [A, B, C];
+    const rankOf = (id: string) => {
+      for (const list of zoneOrder) {
+        const i = list.indexOf(id);
+        if (i >= 0) return i;
+      }
+      return Number.MAX_SAFE_INTEGER;
+    };
+    const b3 = B[2]!;
+    const c3 = C[2]!;
+    const thirdLossAgainstTop2 = (
+      m: { teamAId: string | null; teamBId: string | null },
+      thirdId: string,
+      zone: readonly string[],
+    ) => {
+      const opp = m.teamAId === thirdId ? m.teamBId : m.teamAId;
+      return opp !== null && zone.includes(opp) && zone.indexOf(opp) <= 1;
+    };
+    for (const m of allGroupMatches) {
+      const teamAId = m.teamAId!;
+      const teamBId = m.teamBId!;
+      const aWins = rankOf(teamAId) <= rankOf(teamBId);
+      let loserScore = 19;
+      if (thirdLossAgainstTop2(m, b3, B)) loserScore = 17;
+      else if (thirdLossAgainstTop2(m, c3, C)) loserScore = 15;
+      await recordResult({
+        matchId: m.id,
+        setFormat: "SINGLE_21",
+        sets: [
+          { teamA: aWins ? 21 : loserScore, teamB: aWins ? loserScore : 21 },
+        ],
+      });
+    }
+
+    const before = await getStateSnapshot(etapa.id);
+    assert.equal(before.bracketsBlocked, null, "no tie: the bracket built itself");
+    assert.equal(before.phase, "ELIMINATORIES");
+
+    // Andi flips the zone-A top match: A1 vs A2, so the corrected standings
+    // swap the zone champion. The thirds chain keeps A3 as the best third.
+    const a1vsA2 = allGroupMatches.find(
+      (m) =>
+        (m.teamAId === A[0] && m.teamBId === A[1]) ||
+        (m.teamAId === A[1] && m.teamBId === A[0]),
+    );
+    assert.ok(a1vsA2, "the A1 vs A2 match exists");
+    const beforeFlip = await prisma.match.findUnique({
+      where: { id: a1vsA2!.id },
+      select: { winnerId: true },
+    });
+    const newWinner = beforeFlip?.winnerId === A[0] ? A[1] : A[0];
+    await editResult({
+      matchId: a1vsA2!.id,
+      cascade: true,
+      winnerId: newWinner,
+    });
+
+    // The whole eliminatories chain is PENDING again; the group results stay
+    // (the edited one carries the corrected winner).
+    const allElim = await prisma.match.findMany({
+      where: {
+        etapaId: etapa.id,
+        stage: {
+          in: [
+            "REPECHAJE_1",
+            "REPECHAJE_2",
+            "CUARTOS_1",
+            "CUARTOS_2",
+            "CUARTOS_3",
+            "CUARTOS_4",
+            "SEMIFINAL_1",
+            "SEMIFINAL_2",
+            "BRONZE",
+            "FINAL",
+          ] as Stage[],
+        },
+      },
+    });
+    assert.ok(
+      allElim.every((m) => m.resultStatus === "PENDING"),
+      "every eliminatories stage is PENDING after the group cascade",
+    );
+
+    // The bracket rebuilt itself from the corrected standings: RE1 + QFs are
+    // seeded; semis/BRONZE/FINAL wait for results.
+    const re1 = allElim.find((m) => m.stage === "REPECHAJE_1")!;
+    assert.ok(re1.teamAId && re1.teamBId, "REPECHAJE_1 re-seeded by the rebracket");
+    const qfs = allElim.filter((m) => m.stage.startsWith("CUARTOS_"));
+    assert.equal(qfs.length, 4);
+    // Every QF has its standing-seeded side; CUARTOS_1's open side waits for
+    // the RE1 winner (filled on reload), the others pair straight from the
+    // standings.
+    assert.ok(qfs.every((m) => m.teamAId), "all QFs re-seeded by the rebracket");
+    assert.ok(
+      qfs
+        .filter((m) => m.stage !== "CUARTOS_1")
+        .every((m) => m.teamAId && m.teamBId),
+      "QF2..4 pair straight from the standings",
+    );
+    assert.equal(
+      qfs.find((m) => m.stage === "CUARTOS_1")?.teamBId,
+      null,
+      "CUARTOS_1 side B waits for REPECHAJE_1",
+    );
+    const semisEmpty = allElim.filter(
+      (m) => m.stage === "SEMIFINAL_1" || m.stage === "SEMIFINAL_2",
+    );
+    assert.ok(
+      semisEmpty.every((m) => !m.teamAId && !m.teamBId),
+      "semis stay empty until the QFs are re-played",
+    );
+
+    // Andi reloads the eliminatories normally: RE1 → CUARTOS_1, QFs → semis,
+    // semis → BRONZE + FINAL.
+    await recordResult({
+      matchId: re1.id,
+      setFormat: "SINGLE_21",
+      sets: [{ teamA: 21, teamB: 18 }],
+    });
+    const q1 = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "CUARTOS_1" },
+    });
+    assert.ok(q1?.teamAId && q1?.teamBId, "CUARTOS_1 filled after RE1 reload");
+    for (const qf of qfs) {
+      await recordResult({
+        matchId: qf.id,
+        setFormat: "SINGLE_21",
+        sets: [{ teamA: 21, teamB: 18 }],
+      });
+    }
+    const semis = await prisma.match.findMany({
+      where: {
+        etapaId: etapa.id,
+        stage: { in: ["SEMIFINAL_1", "SEMIFINAL_2"] as Stage[] },
+      },
+    });
+    assert.ok(semis.every((m) => m.teamAId && m.teamBId), "semis refilled from QF winners");
+    for (const s of semis) {
+      await recordResult({
+        matchId: s.id,
+        setFormat: "SINGLE_21",
+        sets: [{ teamA: 21, teamB: 18 }],
+      });
+    }
+    const finalMatch = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "FINAL" },
+    });
+    assert.ok(
+      finalMatch?.teamAId && finalMatch?.teamBId,
+      "FINAL refilled after the semis reload",
     );
   });
 });

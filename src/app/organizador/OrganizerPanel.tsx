@@ -7,7 +7,12 @@ import { closeEtapaUi, type CloseEtapaUi } from "@/lib/etapa-close";
 import type { MatchPublic, StateSnapshot } from "@/lib/front/types";
 import { computeTimeEstimate } from "@/lib/time-estimate";
 import { stageLabel } from "@/lib/front/phase";
-import { ResultadoEntryPanel, MejoresTercerosPanel, RotationPanel } from "./ResultadosSection";
+import {
+  CorregirResultadosPanel,
+  ResultadoEntryPanel,
+  MejoresTercerosPanel,
+  RotationPanel,
+} from "./ResultadosSection";
 import { CircuitosSection } from "./CircuitosSection";
 import { ReagendarSection } from "./ReagendarSection";
 
@@ -347,6 +352,9 @@ function ResultsCard({
           error={error}
           refetch={refetch}
         />
+      </div>
+      <div className="mt-4">
+        <CorregirResultadosPanel refetch={refetch} />
       </div>
     </div>
   );

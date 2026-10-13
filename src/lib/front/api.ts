@@ -96,6 +96,37 @@ export async function recordResult(input: {
   return handleResponse<ResultResponse>(res);
 }
 
+/**
+ * PATCH /api/results/:id — re-records the result of an already-played match.
+ * `cascade: true` clears the invalidated descendant chain inside the same
+ * transaction when that match is blocked (a descendant phase already played).
+ */
+export async function editResult(input: {
+  matchId: string;
+  /** Full score path: setFormat is required when sets are provided. */
+  setFormat?: string;
+  /** Full score path: one entry per played set. */
+  sets?: { teamA: number; teamB: number }[];
+  /** Winner-only path: legal without sets (WINNER_ONLY). */
+  winnerId?: string;
+  /** Let the correction clear the invalidated chain (default: false). */
+  cascade?: boolean;
+}): Promise<ResultResponse> {
+  const body: Record<string, unknown> = {};
+  if (input.setFormat !== undefined) body.setFormat = input.setFormat;
+  if (input.sets !== undefined) body.sets = input.sets;
+  if (input.winnerId) body.winnerId = input.winnerId;
+  if (input.cascade) body.cascade = true;
+  const res = await fetch(`${BASE}/results/${input.matchId}`, {
+    method: "PATCH",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+  return handleResponse<ResultResponse>(res);
+}
+
 export async function login(
   identifier: string,
   password: string,

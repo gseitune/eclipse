@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { matchScore, groupBracketColumns } from "./bracket";
+import {
+  cascadeImpact,
+  matchScore,
+  groupBracketColumns,
+} from "./bracket";
 import type { MatchPublic, Stage } from "./types";
 
 function match(
@@ -109,5 +113,69 @@ describe("groupBracketColumns", () => {
 
   it("returns an empty list when there are no brackets", () => {
     assert.deepEqual(groupBracketColumns([]), []);
+  });
+});
+
+describe("cascadeImpact", () => {
+  const played = (stage: string, resultStatus: string = "COMPLETE") => ({
+    stage,
+    resultStatus,
+  });
+
+  it("clears only the dependent results a CUARTOS_1 correction invalidates", () => {
+    const impact = cascadeImpact("CUARTOS_1", [
+      played("SEMIFINAL_1"),
+      played("SEMIFINAL_2"), // independent side: its result must survive
+      played("BRONZE"),
+      played("FINAL", "PENDING"), // not played yet: nothing to clear
+    ]);
+    assert.deepEqual(
+      impact.cleared.map((r) => r.stage),
+      ["SEMIFINAL_1", "BRONZE"],
+    );
+  });
+
+  it("keeps the independent quarter untouched when correcting REPECHAJE_1", () => {
+    const impact = cascadeImpact("REPECHAJE_1", [
+      played("CUARTOS_1"),
+      played("CUARTOS_2"),
+    ]);
+    assert.deepEqual(
+      impact.cleared.map((r) => r.stage),
+      ["CUARTOS_1"],
+    );
+  });
+
+  it("clears every elimination result when a GROUPS match is corrected", () => {
+    const impact = cascadeImpact("GROUPS", [
+      played("CUARTOS_1"),
+      played("SEMIFINAL_2", "WINNER_ONLY"),
+      played("FINAL", "PENDING"),
+    ]);
+    assert.deepEqual(
+      impact.cleared.map((r) => r.stage),
+      ["CUARTOS_1", "SEMIFINAL_2"],
+    );
+  });
+
+  it("returns an empty impact for FINAL and BRONZE corrections", () => {
+    for (const stage of ["FINAL", "BRONZE"]) {
+      const impact = cascadeImpact(stage, [
+        played("FINAL"),
+        played("BRONZE"),
+      ]);
+      assert.equal(impact.cleared.length, 0);
+      assert.equal(impact.nulledStages.length, 0);
+    }
+  });
+
+  it("lists the bracket slots re-seeded from the corrected result", () => {
+    assert.deepEqual(cascadeImpact("CUARTOS_1", []).nulledStages, [
+      "SEMIFINAL_1",
+      "SEMIFINAL_2",
+      "BRONZE",
+      "FINAL",
+    ]);
+    assert.deepEqual(cascadeImpact("GROUPS", []).nulledStages.length, 10);
   });
 });

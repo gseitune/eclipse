@@ -5,6 +5,7 @@
 
 import type { MatchPublic, Stage } from "./types";
 import { setWins } from "./types";
+import { CASCADE_CLEAR_STAGES, CASCADE_NULL_TEAMS } from "../schedule";
 
 export interface ScorePair {
   a: number;
@@ -24,6 +25,48 @@ export function matchScore(
   if (sets.length === 0) return null;
   if (sets.length === 1) return { a: sets[0].teamA, b: sets[0].teamB };
   return setWins(sets);
+}
+
+/**
+ * Minimal row shape the cascade preview needs: the board row already carries
+ * `stage` and `resultStatus` for every match, whether it has teams or not.
+ */
+export interface CascadeRow {
+  stage: string;
+  resultStatus: string;
+}
+
+export interface CascadeImpact<R extends CascadeRow = CascadeRow> {
+  /**
+   * Matches whose recorded result will be cleared by the correction (the
+   * dependent phases of `stage` that already played).
+   */
+  cleared: R[];
+  /**
+   * Bracket slots that will be emptied and re-seeded from the corrected
+   * result, even when some of them keep their result (e.g. the other semi).
+   */
+  nulledStages: readonly string[];
+}
+
+/**
+ * Preview of what editing `stage` with `cascade: true` will invalidate,
+ * derived from the SAME tables the backend uses (CASCADE_CLEAR_STAGES /
+ * CASCADE_NULL_TEAMS), so the confirmation dialog can never promise more or
+ * less than the transaction actually clears.
+ */
+export function cascadeImpact<R extends CascadeRow>(
+  stage: string,
+  rows: readonly R[],
+): CascadeImpact<R> {
+  const clearStages = CASCADE_CLEAR_STAGES[stage] ?? [];
+  return {
+    cleared: rows.filter(
+      (row) =>
+        clearStages.includes(row.stage) && row.resultStatus !== "PENDING",
+    ),
+    nulledStages: CASCADE_NULL_TEAMS[stage] ?? [],
+  };
 }
 
 export interface BracketGroup {
