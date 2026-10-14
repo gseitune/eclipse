@@ -792,7 +792,15 @@ export async function getStateSnapshot(etapaId?: string | null) {
     where: { etapaId: id },
     select: { phase: true },
   });
-  if (phaseRow?.phase === "ELIMINATORIES") await reconcileEliminatories(id);
+  if (phaseRow?.phase === "ELIMINATORIES") {
+    try {
+      await reconcileEliminatories(id);
+    } catch (error) {
+      // The heal is a repair, never a gate: a snapshot that cannot heal must
+      // still render. A failed heal used to take the whole read down with it.
+      console.error("reconcileEliminatories failed", error);
+    }
+  }
   const [state, standings, schedule, brackets, nextMatch, zones, desempateMatches, etapas] =
     await Promise.all([
       getState(id),
@@ -916,7 +924,12 @@ async function fillDescendantMatches(
   stage: string,
   __winnerId: string | null,
 ): Promise<boolean> {
-  const updated = await prisma.$transaction(async (tx) => {
+  // No interactive transaction: this helper is also called from the read path
+  // (reconcileEliminatories), and Prisma's $transaction holds Turso's write lock
+  // for the whole callback, which turned every /api/state read into a 5s
+  // write-lock timeout (empty 500). The fills below are fill-only and idempotent,
+  // so they run as plain sequential writes and `tx` is just the plain client.
+  const fill = async (tx: Prisma.TransactionClient) => {
     let changed = false;
 
     const etapa = await prisma.etapa.findUnique({
@@ -1061,8 +1074,9 @@ async function fillDescendantMatches(
     }
 
     return changed;
-  });
-  return updated;
+  };
+
+  return fill(prisma);
 }
 
 /**
