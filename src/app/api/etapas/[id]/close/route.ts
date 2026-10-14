@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { sessionCookieName, verifySessionToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { auditWrite } from "@/lib/audit";
 import { publishSse } from "@/lib/events";
 
 export const dynamic = "force-dynamic";
@@ -61,6 +62,7 @@ export async function POST(
       select: { id: true, name: true, closedAt: true },
     });
 
+    auditWrite({ op: "closeEtapa", etapaId: id });
     publishSse("etapa-closed", { etapaId: id, name: updated.name });
 
     return NextResponse.json({ etapa: updated });

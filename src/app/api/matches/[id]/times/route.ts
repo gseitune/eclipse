@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { sessionCookieName, verifySessionToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { auditWrite } from "@/lib/audit";
 import { publishSse } from "@/lib/events";
 
 export const dynamic = "force-dynamic";
@@ -110,6 +111,12 @@ export async function POST(
       include: { etapa: true },
     });
 
+    auditWrite({
+      op: "matchTimes",
+      etapaId: updated.etapaId,
+      matchId: updated.id,
+      detail: { fields: Object.keys(updateData) },
+    });
     publishSse("match-times-changed", { matchId: match.id });
 
     return NextResponse.json({ match: updated });

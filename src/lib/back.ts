@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { auditWrite } from "./audit";
 import { publishSse } from "./events";
 import { computeZoneStandings, type StandingRow } from "./standings";
 import {
@@ -305,6 +306,16 @@ export async function createEtapa(input: CreateEtapaInput, _opts?: { rng?: () =>
 
     await tx.match.createMany({ data: [...groupMatches, ...bracketSlotData] });
 
+    auditWrite({
+      op: "createEtapa",
+      etapaId: created.id,
+      count: groupMatches.length + bracketSlotData.length,
+      detail: {
+        name,
+        bracketFormat: isCuartos ? "CUARTOS" : isRepechaje ? "REPECHAJE" : "STANDARD",
+      },
+    });
+
     return created;
   });
 
@@ -387,6 +398,7 @@ export async function generateZones(etapaId?: string | null): Promise<Record<str
       }),
     ),
   );
+  auditWrite({ op: "generateZones", etapaId: id, count: teams.length });
   publishSse("zones-changed", { mapping });
   return mapping;
 }
@@ -417,6 +429,11 @@ export async function swapTeam(
   }
   const next = swapZone(mapping, teamId, from as ZoneId, to as ZoneId, state.zoneConfirmed);
   await prisma.team.update({ where: { id: teamId }, data: { zone: next[teamId] as "A" | "B" | "C" } });
+  auditWrite({
+    op: "swapTeam",
+    etapaId: id,
+    detail: { teamId, from, to, zone: next[teamId] },
+  });
   publishSse("zones-changed", { swap: { teamId, from, to } });
   return next;
 }
@@ -429,6 +446,7 @@ export async function confirmZonification(etapaId?: string | null): Promise<{ zo
     where: { id: state.id },
     data: { zoneConfirmed: true },
   });
+  auditWrite({ op: "confirmZonification", etapaId: id });
   publishSse("zoning-confirmed", { zoneConfirmed: true });
   return { zoneConfirmed: true };
 }
@@ -627,6 +645,12 @@ export async function reorderMatch(matchId: string, direction: "up" | "down"): P
     });
   });
 
+  auditWrite({
+    op: "reorderMatch",
+    etapaId: id,
+    matchId,
+    detail: { direction, swappedWith: matchToSwap.id },
+  });
   publishSse("schedule-changed", { matchId });
 }
 
@@ -703,6 +727,12 @@ async function finalizeBrackets(
       data: { teamAId: pairing.teamAId, teamBId: pairing.teamBId },
     });
   }
+  auditWrite({
+    op: "finalizeBrackets",
+    etapaId,
+    count: pairings.length,
+    detail: { stages: pairings.map((p) => p.stage), phase: "ELIMINATORIES" },
+  });
   const state = await getState(etapaId);
   await prisma.tournamentState.update({
     where: { id: state.id },
@@ -756,6 +786,14 @@ async function createDesempateMatch(selection: {
   await prisma.tournamentState.update({
     where: { id: state.id },
     data: { phase: "DESEMPATE" },
+  });
+
+  auditWrite({
+    op: "createDesempateMatch",
+    etapaId,
+    matchId: desempate.id,
+    count: 1,
+    detail: { slot: anchor + 1, phase: "DESEMPATE" },
   });
 
   publishSse("desempate-created", {
@@ -995,6 +1033,13 @@ async function fillDescendantMatches(
             where: { id: existing.id },
             data: { teamAId: p.teamAId, teamBId: p.teamBId },
           });
+          auditWrite({
+            op: "fillDescendantMatches",
+            etapaId,
+            matchId: existing.id,
+            stage: p.stage,
+            detail: { fill: "nextRound" },
+          });
           changed = true;
         }
       }
@@ -1018,6 +1063,13 @@ async function fillDescendantMatches(
             where: { id: finalSlot.id },
             data: { teamAId: w1, teamBId: w2 },
           });
+          auditWrite({
+            op: "fillDescendantMatches",
+            etapaId,
+            matchId: finalSlot.id,
+            stage: "FINAL",
+            detail: { fill: "semifinalWinners" },
+          });
           changed = true;
         }
         const semi1Match = allMatches.find((m) => m.stage === "SEMIFINAL_1");
@@ -1031,6 +1083,13 @@ async function fillDescendantMatches(
           await tx.match.update({
             where: { id: bronzeSlot.id },
             data: { teamAId: loser1, teamBId: loser2 },
+          });
+          auditWrite({
+            op: "fillDescendantMatches",
+            etapaId,
+            matchId: bronzeSlot.id,
+            stage: "BRONZE",
+            detail: { fill: "semifinalLosers" },
           });
           changed = true;
         }
@@ -1066,6 +1125,13 @@ async function fillDescendantMatches(
             await tx.match.update({
               where: { id: targetMatch.id },
               data: { teamAId: p.teamAId, teamBId: p.teamBId },
+            });
+            auditWrite({
+              op: "fillDescendantMatches",
+              etapaId,
+              matchId: targetMatch.id,
+              stage: p.stage,
+              detail: { fill: "cuartosWinners" },
             });
             changed = true;
           }
@@ -1325,6 +1391,12 @@ export async function reslotGroupSchedule(
         prisma.match.update({ where: { id: p.id }, data: { slot: p.newSlot } }),
       ),
     );
+    auditWrite({
+      op: "reslotGroupSchedule",
+      etapaId,
+      count: moved,
+      detail: { total: plan.length },
+    });
     publishSse("schedule-changed", {});
   }
   return { moved, total: plan.length };
@@ -1472,6 +1544,18 @@ export async function recordResult(input: RecordResultInput) {
     },
   });
 
+  auditWrite({
+    op: "recordResult",
+    etapaId: match.etapaId,
+    matchId: match.id,
+    stage: match.stage,
+    detail: {
+      resultStatus: payload.resultStatus,
+      winnerId: payload.winnerId,
+      played: payload.sets?.length ?? 0,
+    },
+  });
+
   publishSse("result-recorded", { matchId: match.id, phase: null });
 
   const outcome = await reconcileAfterMatch(match.stage, payload.winnerId, false, match.etapaId);
@@ -1512,7 +1596,7 @@ async function clearCascadeResults(
 ): Promise<void> {
   const clearStages = CASCADE_CLEAR_STAGES[stage] ?? [];
   if (clearStages.length > 0) {
-    await tx.match.updateMany({
+    const cleared = await tx.match.updateMany({
       where: {
         etapaId,
         stage: { in: [...clearStages] as Stage[] },
@@ -1526,13 +1610,27 @@ async function clearCascadeResults(
         recordedAt: null,
       },
     });
+    auditWrite({
+      op: "clearCascadeResults",
+      etapaId,
+      stage,
+      count: cleared.count,
+      detail: { clearedStages: clearStages, oldWinnerId },
+    });
   }
 
   const nullStages = CASCADE_NULL_TEAMS[stage] ?? [];
   if (nullStages.length > 0) {
-    await tx.match.updateMany({
+    const nulled = await tx.match.updateMany({
       where: { etapaId, stage: { in: [...nullStages] as Stage[] } },
       data: { teamAId: null, teamBId: null },
+    });
+    auditWrite({
+      op: "clearCascadeResults:nullTeams",
+      etapaId,
+      stage,
+      count: nulled.count,
+      detail: { nulledStages: nullStages },
     });
   }
 
@@ -1553,6 +1651,13 @@ async function clearCascadeResults(
       await tx.match.update({
         where: { id: cuartos1.id },
         data: { [side]: null },
+      });
+      auditWrite({
+        op: "clearCascadeResults:repechaje1Side",
+        etapaId,
+        matchId: cuartos1.id,
+        stage: "CUARTOS_1",
+        detail: { side, oldWinnerId },
       });
     }
   }
@@ -1638,6 +1743,14 @@ export async function editResult(input: EditResultInput) {
   } else {
     await prisma.match.update({ where: { id: match.id }, data: updateData });
   }
+
+  auditWrite({
+    op: input.cascade ? "editResult:cascade" : "editResult",
+    etapaId: match.etapaId,
+    matchId: match.id,
+    stage: match.stage,
+    detail: { cascade: Boolean(input.cascade), playedDescendants },
+  });
 
   publishSse("result-recorded", { matchId: match.id, phase: null });
 
