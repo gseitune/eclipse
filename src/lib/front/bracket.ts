@@ -134,63 +134,65 @@ export function groupBracketColumns(
   }).filter((column) => column.groups.length > 0);
 }
 /* --------------------------------------------------------------------------
- * World-Cup-style bracket tree layout (spec S9 / E6).
+ * World-Cup-style bracket layout (spec S9 / E6).
  *
- * The public "Llaves" tab renders two mirrored trees that converge on the
- * FINAL. The structure is NOT inferred from results (a round that has not been
- * played yet would lose its boxes); it comes from a static spec that mirrors
- * the pairings the backend already uses:
+ * The public "Llaves" tab draws the bracket as fixed columns that fit the
+ * phone width with no horizontal scrolling:
+ *
+ *   left   -> repechaje on top of the cuartos boxes
+ *   middle -> semifinals
+ *   right  -> final, with the 3rd/4th place match below it
+ *
+ * The layout is NOT inferred from results: a round that has not been created
+ * yet would lose its boxes. It comes from a static spec that mirrors the
+ * pairings the backend already uses:
  *
  *   cuartos   (brackets.ts:437-438, `getCuartosSemifinalPairings`)
- *             FINAL <- SF1, SF2 ; SF1 <- QF1, QF4 ; SF2 <- QF2, QF3 ;
- *             QF1's second slot <- REPECHAJE_1 winner
+ *             FINAL <- SF1, SF2 ; SF1 <- QF1, QF4 ; SF2 <- QF2, QF3 ; QF1's
+ *             second slot <- REPECHAJE_1 winner
  *   repechaje (brackets.ts:369 / 401, `getRepechajePairings`)
  *             FINAL <- SF1, SF2 ; SF1 <- RE2 ; SF2 <- RE1
  *   standard  (brackets.ts:146-147 and 196-197)
  *             FINAL <- SF1, SF2 (semifinalists come straight from the groups)
  *
- * Every node is always emitted, even when the row does not exist yet, so the
- * bracket keeps its shape while a round is pending. `bronze` is rendered when
- * the payload has the row (the backend does not create it for the cuartos
- * format -- brackets.ts:442 -- but a legacy row may exist).
+ * Every slot is always emitted, even when its row does not exist yet, so the
+ * bracket keeps its shape while a round is pending. Note that the backend does
+ * not create a bronze match for the cuartos format (brackets.ts:442), but a
+ * legacy row may exist, so the right column always shows the slot.
  * ------------------------------------------------------------------------ */
 
 export type BracketLayoutMode = "cuartos" | "repechaje" | "standard";
 
-export interface BracketTreeLinks {
-  a?: Stage;
-  b?: Stage;
-}
-
-export interface BracketTreeNode {
+export interface BracketSlot {
   stage: Stage;
   match: MatchPublic | null;
-  a: BracketTreeNode | null;
-  b: BracketTreeNode | null;
 }
 
-export interface BracketTree {
+export interface BracketColumns {
   mode: BracketLayoutMode;
-  final: MatchPublic | null;
-  left: BracketTreeNode;
-  right: BracketTreeNode;
-  bronze: MatchPublic | null;
+  left: BracketSlot[];
+  middle: BracketSlot[];
+  right: BracketSlot[];
 }
 
-const TREE_LINKS: Record<BracketLayoutMode, Partial<Record<Stage, BracketTreeLinks>>> = {
+const COLUMN_SLOTS: Record<
+  BracketLayoutMode,
+  { left: Stage[]; middle: Stage[]; right: Stage[] }
+> = {
   cuartos: {
-    FINAL: { a: "SEMIFINAL_1", b: "SEMIFINAL_2" },
-    SEMIFINAL_1: { a: "CUARTOS_1", b: "CUARTOS_4" },
-    SEMIFINAL_2: { a: "CUARTOS_2", b: "CUARTOS_3" },
-    CUARTOS_1: { b: "REPECHAJE_1" },
+    left: ["REPECHAJE_1", "CUARTOS_1", "CUARTOS_2", "CUARTOS_3", "CUARTOS_4"],
+    middle: ["SEMIFINAL_1", "SEMIFINAL_2"],
+    right: ["FINAL", "BRONZE"],
   },
   repechaje: {
-    FINAL: { a: "SEMIFINAL_1", b: "SEMIFINAL_2" },
-    SEMIFINAL_1: { b: "REPECHAJE_2" },
-    SEMIFINAL_2: { b: "REPECHAJE_1" },
+    left: ["REPECHAJE_1", "REPECHAJE_2"],
+    middle: ["SEMIFINAL_1", "SEMIFINAL_2"],
+    right: ["FINAL", "BRONZE"],
   },
   standard: {
-    FINAL: { a: "SEMIFINAL_1", b: "SEMIFINAL_2" },
+    left: [],
+    middle: ["SEMIFINAL_1", "SEMIFINAL_2"],
+    right: ["FINAL", "BRONZE"],
   },
 };
 
@@ -221,37 +223,20 @@ function indexByStage(brackets: MatchPublic[]): Map<Stage, MatchPublic> {
   return byStage;
 }
 
-function buildNode(
-  stage: Stage,
-  links: Partial<Record<Stage, BracketTreeLinks>>,
-  byStage: Map<Stage, MatchPublic>,
-  seen: Set<Stage>,
-): BracketTreeNode {
-  const branch: BracketTreeLinks = links[stage] ?? {};
-  const nextSeen = new Set(seen);
-  nextSeen.add(stage);
-  const child = (childStage?: Stage) =>
-    childStage && !nextSeen.has(childStage)
-      ? buildNode(childStage, links, byStage, nextSeen)
-      : null;
-  return {
-    stage,
-    match: byStage.get(stage) ?? null,
-    a: child(branch.a),
-    b: child(branch.b),
-  };
-}
-
-export function buildBracketTree(brackets: MatchPublic[]): BracketTree {
+/**
+ * Every slot of every column, in display order. Slots stay in the result even
+ * when the payload has no row for them, so the bracket keeps its shape.
+ */
+export function buildBracketColumns(brackets: MatchPublic[]): BracketColumns {
   const mode = bracketLayoutMode(brackets);
-  const links = TREE_LINKS[mode];
   const byStage = indexByStage(brackets);
-  const seen = new Set<Stage>();
+  const slots = (stages: Stage[]): BracketSlot[] =>
+    stages.map((stage) => ({ stage, match: byStage.get(stage) ?? null }));
+
   return {
     mode,
-    final: byStage.get("FINAL") ?? null,
-    left: buildNode("SEMIFINAL_1", links, byStage, seen),
-    right: buildNode("SEMIFINAL_2", links, byStage, seen),
-    bronze: byStage.get("BRONZE") ?? null,
+    left: slots(COLUMN_SLOTS[mode].left),
+    middle: slots(COLUMN_SLOTS[mode].middle),
+    right: slots(COLUMN_SLOTS[mode].right),
   };
 }

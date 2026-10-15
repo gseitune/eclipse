@@ -180,15 +180,11 @@ describe("cascadeImpact", () => {
   });
 });
 /* ---------------------------------------------------------------------------
- * World-Cup-style bracket tree layout (spec S9 / E6).
+ * World-Cup-style bracket layout (spec S9 / E6).
  * Structure rules mirror the backend pairings; see src/lib/front/bracket.ts.
  * ------------------------------------------------------------------------- */
 
-import {
-  bracketLayoutMode,
-  buildBracketTree,
-  type BracketTreeNode,
-} from "./bracket";
+import { bracketLayoutMode, buildBracketColumns } from "./bracket";
 
 const mk = (stage: Stage): MatchPublic => ({
   id: `id-${stage}`,
@@ -208,8 +204,7 @@ const mk = (stage: Stage): MatchPublic => ({
   recordedAt: null,
 });
 
-const stagesOf = (node: BracketTreeNode | null): string[] =>
-  node === null ? [] : [node.stage, ...stagesOf(node.a), ...stagesOf(node.b)];
+const stagesOf = (slots: Array<{ stage: Stage }>): string[] => slots.map((slot) => slot.stage);
 
 const cuartosPayload = (): MatchPublic[] => [
   mk("REPECHAJE_1"),
@@ -219,6 +214,7 @@ const cuartosPayload = (): MatchPublic[] => [
   mk("CUARTOS_4"),
   mk("SEMIFINAL_1"),
   mk("SEMIFINAL_2"),
+  mk("BRONZE"),
   mk("FINAL"),
 ];
 
@@ -245,81 +241,72 @@ describe("bracketLayoutMode", () => {
   });
 });
 
-describe("buildBracketTree", () => {
-  it("cuartos: SF1 hangs from QF1 and QF4, SF2 from QF2 and QF3", () => {
-    const tree = buildBracketTree(cuartosPayload());
-    assert.equal(tree.mode, "cuartos");
-    assert.equal(tree.left.stage, "SEMIFINAL_1");
-    assert.equal(tree.left.a!.stage, "CUARTOS_1");
-    assert.equal(tree.left.b!.stage, "CUARTOS_4");
-    assert.equal(tree.right.stage, "SEMIFINAL_2");
-    assert.equal(tree.right.a!.stage, "CUARTOS_2");
-    assert.equal(tree.right.b!.stage, "CUARTOS_3");
+describe("buildBracketColumns", () => {
+  it("cuartos: repechaje sits on top of the cuartos column", () => {
+    const columns = buildBracketColumns(cuartosPayload());
+    assert.equal(columns.mode, "cuartos");
+    assert.deepEqual(stagesOf(columns.left), [
+      "REPECHAJE_1",
+      "CUARTOS_1",
+      "CUARTOS_2",
+      "CUARTOS_3",
+      "CUARTOS_4",
+    ]);
   });
 
-  it("cuartos: the repechaje feeds QF1 and only QF1", () => {
-    const tree = buildBracketTree(cuartosPayload());
-    assert.equal(tree.left.a!.b!.stage, "REPECHAJE_1");
-    assert.equal(tree.left.a!.a, null);
-    assert.equal(tree.right.a!.a, null);
-    assert.equal(tree.right.a!.b, null);
+  it("cuartos: semis go in the middle column", () => {
+    const columns = buildBracketColumns(cuartosPayload());
+    assert.deepEqual(stagesOf(columns.middle), ["SEMIFINAL_1", "SEMIFINAL_2"]);
   });
 
-  it("repechaje: SF1 takes the RE2 winner and SF2 takes the RE1 winner", () => {
-    const tree = buildBracketTree([
+  it("cuartos: the right column holds the final and the 3rd/4th place match", () => {
+    const columns = buildBracketColumns(cuartosPayload());
+    assert.deepEqual(stagesOf(columns.right), ["FINAL", "BRONZE"]);
+  });
+
+  it("keeps slots and their match in display order", () => {
+    const columns = buildBracketColumns(cuartosPayload());
+    assert.equal(columns.left[0].match!.stage, "REPECHAJE_1");
+    assert.equal(columns.left[1].match!.stage, "CUARTOS_1");
+    assert.equal(columns.middle[1].match!.stage, "SEMIFINAL_2");
+    assert.equal(columns.right[0].match!.stage, "FINAL");
+  });
+
+  it("keeps the skeleton slots when a row does not exist yet", () => {
+    const columns = buildBracketColumns([mk("CUARTOS_1")]);
+    assert.equal(columns.mode, "cuartos");
+    assert.equal(columns.left.length, 5);
+    assert.equal(columns.left[0].match, null);
+    assert.equal(columns.left[1].match!.stage, "CUARTOS_1");
+    assert.equal(columns.left[4].match, null);
+    assert.equal(columns.right[0].match, null);
+  });
+
+  it("repechaje format: both repechaje rows share the left column", () => {
+    const columns = buildBracketColumns([
       mk("REPECHAJE_1"),
       mk("REPECHAJE_2"),
       mk("SEMIFINAL_1"),
       mk("SEMIFINAL_2"),
       mk("FINAL"),
     ]);
-    assert.equal(tree.mode, "repechaje");
-    assert.equal(tree.left.a, null);
-    assert.equal(tree.left.b!.stage, "REPECHAJE_2");
-    assert.equal(tree.right.b!.stage, "REPECHAJE_1");
+    assert.equal(columns.mode, "repechaje");
+    assert.deepEqual(stagesOf(columns.left), ["REPECHAJE_1", "REPECHAJE_2"]);
+    assert.deepEqual(stagesOf(columns.middle), ["SEMIFINAL_1", "SEMIFINAL_2"]);
+    assert.deepEqual(stagesOf(columns.right), ["FINAL", "BRONZE"]);
   });
 
-  it("keeps the skeleton when a round has not been created yet", () => {
-    const tree = buildBracketTree([mk("FINAL")]);
-    assert.equal(tree.mode, "standard");
-    assert.equal(tree.left.stage, "SEMIFINAL_1");
-    assert.equal(tree.left.match, null);
-    assert.equal(tree.right.match, null);
-  });
-
-  it("draws an empty FINAL box when the FINAL row does not exist yet", () => {
-    const tree = buildBracketTree([mk("SEMIFINAL_1"), mk("SEMIFINAL_2")]);
-    assert.equal(tree.final, null);
-    assert.equal(tree.left.match!.stage, "SEMIFINAL_1");
-    assert.equal(tree.right.match!.stage, "SEMIFINAL_2");
+  it("standard format: no left column, so only two frames are drawn", () => {
+    const columns = buildBracketColumns([mk("SEMIFINAL_1"), mk("SEMIFINAL_2"), mk("FINAL")]);
+    assert.equal(columns.mode, "standard");
+    assert.deepEqual(columns.left, []);
+    assert.deepEqual(stagesOf(columns.middle), ["SEMIFINAL_1", "SEMIFINAL_2"]);
   });
 
   it("keeps the shape with an empty payload", () => {
-    const tree = buildBracketTree([]);
-    assert.equal(tree.mode, "standard");
-    assert.equal(tree.final, null);
-    assert.equal(tree.left.stage, "SEMIFINAL_1");
-    assert.equal(tree.left.match, null);
-  });
-
-  it("picks up the bronze match when the payload has one", () => {
-    const bronze = mk("BRONZE");
-    const tree = buildBracketTree([...cuartosPayload(), bronze]);
-    assert.equal(tree.bronze, bronze);
-  });
-
-  it("cuartos: each side carries exactly its own column", () => {
-    const tree = buildBracketTree(cuartosPayload());
-    assert.deepEqual(stagesOf(tree.left).sort(), [
-      "CUARTOS_1",
-      "CUARTOS_4",
-      "REPECHAJE_1",
-      "SEMIFINAL_1",
-    ]);
-    assert.deepEqual(stagesOf(tree.right).sort(), [
-      "CUARTOS_2",
-      "CUARTOS_3",
-      "SEMIFINAL_2",
-    ]);
+    const columns = buildBracketColumns([]);
+    assert.equal(columns.mode, "standard");
+    assert.deepEqual(columns.left, []);
+    assert.equal(columns.right[0].match, null);
   });
 });
