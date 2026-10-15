@@ -8,6 +8,7 @@ import { liveMatchIds } from "@/lib/front/live";
 import { useChime } from "@/lib/front/chime";
 import { fetchRanking } from "@/lib/front/api";
 import type { StateSnapshot, ZoneId, TeamPublic, StandingRow, RankingResponse } from "@/lib/front/types";
+import type { FotoGaleria } from "@/lib/front/galeria";
 import { Hero } from "./Hero";
 import { TournamentSwitch, type TournamentId } from "./TournamentSwitch";
 import { MatchTicker } from "./MatchTicker";
@@ -15,15 +16,27 @@ import { TournamentTabs } from "./TournamentTabs";
 import { TeamSheet } from "./TeamSheet";
 import { ChimeBanner } from "./ChimeBanner";
 import { RankingPanel } from "./RankingPanel";
+import { GaleriaCarrusel } from "./GaleriaCarrusel";
+import { IconoInstagram } from "./IconoInstagram";
+
+/** Redes oficiales. Único dato manual de los links. */
+const INSTAGRAM_SELVARENA = "https://www.instagram.com/selvarena_obera/";
+const INSTAGRAM_DACOSTA = "https://www.instagram.com/dacosta.fotodeportiva/";
 
 export function PublicHome({
   initial,
   isPreview = false,
   version,
+  fotos,
+  albumUrl,
 }: {
   initial: StateSnapshot | null;
   isPreview?: boolean;
   version: string;
+  /** Fotos ya armadas por el servidor. Vacío = la galería no se dibuja. */
+  fotos: FotoGaleria[];
+  /** Link a la carpeta completa del fotógrafo en Drive. */
+  albumUrl: string;
 }) {
   const { state, loading, error } = useLiveState({ initial });
 
@@ -94,6 +107,11 @@ export function PublicHome({
   // first decided result. Until then — even with the phase already flipped to
   // ELIMINATORIES — the home keeps showing groups (Marcador + Posiciones).
   const showBrackets = isEliminatories && hasBracketResult(state?.brackets ?? []);
+
+  // Galería del fotógrafo. Se dibuja en las dos ramas del circuito para que no
+  // desaparezca al cambiar a Intermedios, y va sin recuadro propio: la enmarca
+  // el contenedor de la home.
+  const galeria = <GaleriaCarrusel fotos={fotos} albumUrl={albumUrl} />;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -245,6 +263,9 @@ export function PublicHome({
               etapaClosed={state?.etapa?.closedAt != null}
             />
 
+            {/* Galería del fotógrafo — fotos del Drive público, sin recuadro */}
+            {galeria}
+
             {/* Combined points panel (S3) */}
             <RankingPanel />
 
@@ -259,6 +280,10 @@ export function PublicHome({
             )}
           </>
         )}
+
+        {/* En Intermedios no hay pestañas ni ranking, así que la galería cierra
+            la card de "Próximamente". */}
+        {isIntermedios && galeria}
       </div>
 
       {/* TeamSheet modal — rendered at PublicHome level */}
@@ -281,11 +306,35 @@ export function PublicHome({
       )}
 
       {/* Footer with GS badge */}
-      <footer className="mt-auto flex items-center justify-between gap-4 border-t border-sand-200 px-6 py-5 text-sm text-stone-500">
-        <span>SELVARENA · Deportes de playa - Beach Voley</span>
-        <span className="flex items-center gap-1 font-bold uppercase">
-          GS proyecto eclipse
-        </span>
+      <footer className="mt-auto border-t border-sand-200 px-6 py-5 text-sm text-stone-500">
+        {/* Redes oficiales */}
+        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+          <a
+            href={INSTAGRAM_SELVARENA}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-[32px] items-center gap-1.5 transition-colors hover:text-amber-700"
+          >
+            <IconoInstagram className="h-4 w-4" />
+            @selvarena_obera
+          </a>
+          <a
+            href={INSTAGRAM_DACOSTA}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-[32px] items-center gap-1.5 transition-colors hover:text-amber-700"
+          >
+            <IconoInstagram className="h-4 w-4" />
+            @dacosta.fotodeportiva
+          </a>
+        </div>
+
+        <div className="mt-4 flex flex-col items-center justify-between gap-2 sm:flex-row">
+          <span>SELVARENA · Deportes de playa - Beach Voley</span>
+          <span className="flex items-center gap-1 font-bold uppercase">
+            GS proyecto eclipse
+          </span>
+        </div>
       </footer>
     </div>
   );

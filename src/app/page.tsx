@@ -2,6 +2,11 @@ import { connection } from "next/server";
 import { headers } from "next/headers";
 import Link from "next/link";
 import type { StateSnapshot } from "@/lib/front/types";
+import {
+  GALERIA_FOLDER_POR_DEFECTO,
+  listarFotosGaleria,
+  urlAlbumDrive,
+} from "@/lib/front/galeria";
 import { PublicHome } from "@/components/public/PublicHome";
 import { betaVersion } from "@/lib/version";
 
@@ -19,6 +24,11 @@ export default async function Home({
   const proto = headersList.get("x-forwarded-proto") ?? "http";
   const host = headersList.get("host") ?? "localhost:3000";
 
+  // La galería se pide EN PARALELO al estado: si Google tarda, no frena la
+  // home (tiene timeout propio y devuelve [] ante cualquier problema).
+  const carpetaGaleria = process.env.GALERIA_FOLDER_ID ?? GALERIA_FOLDER_POR_DEFECTO;
+  const fotosGaleria = listarFotosGaleria(carpetaGaleria, 12);
+
   let initial: StateSnapshot | null = null;
   let fetchError = false;
 
@@ -33,9 +43,17 @@ export default async function Home({
     fetchError = true;
   }
 
+  const fotos = await fotosGaleria;
+
   return (
     <>
-      <PublicHome initial={initial} isPreview={isPreview} version={betaVersion()} />
+      <PublicHome
+        initial={initial}
+        isPreview={isPreview}
+        version={betaVersion()}
+        fotos={fotos}
+        albumUrl={urlAlbumDrive(carpetaGaleria)}
+      />
       {fetchError && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
           <Link
