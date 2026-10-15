@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { fetchEtapas, createEtapa, cancelEtapa } from "@/lib/front/api";
+import { fetchEtapas, createEtapa, cancelEtapa, updateEtapa } from "@/lib/front/api";
 import type { BracketFormat, EtapaMeta } from "@/lib/front/types";
 import { ApiError } from "@/lib/front/types";
 
@@ -35,6 +35,13 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
   const [cancelPassword, setCancelPassword] = useState("");
   const [cancelMsg, setCancelMsg] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
+
+  // Edit (name/date) modal state — only for open, unplayed etapas
+  const [editTarget, setEditTarget] = useState<EtapaMeta | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDate, setEditDate] = useState("");
+  const [editMsg, setEditMsg] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
 
   // Form state
   const [nombre, setNombre] = useState("");
@@ -177,6 +184,50 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
       setCancelMsg(msg);
     } finally {
       setCancelling(false);
+    }
+  }
+
+  // An etapa's name/date can only be edited while it is open and unplayed:
+  // once the first result is loaded the fixture and the roster are frozen.
+  function isEtapaEditable(etapa: EtapaMeta): boolean {
+    return !etapa.cancelledAt && !etapa.closedAt && !etapa.played;
+  }
+
+  function openEditModal(etapa: EtapaMeta) {
+    setEditTarget(etapa);
+    setEditName(etapa.name);
+    setEditDate(etapa.date ? etapa.date.slice(0, 10) : "");
+    setEditMsg(null);
+  }
+
+  function closeEditModal() {
+    if (editing) return;
+    setEditTarget(null);
+    setEditName("");
+    setEditDate("");
+    setEditMsg(null);
+  }
+
+  async function handleEditConfirm(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editTarget) return;
+    const name = editName.trim();
+    if (!name) {
+      setEditMsg("El nombre es obligatorio.");
+      return;
+    }
+    setEditing(true);
+    setEditMsg(null);
+    try {
+      await updateEtapa(editTarget.id, { name, date: editDate || null });
+      await reloadEtapas();
+      setEditTarget(null);
+      setSubmitMsg("Etapa actualizada");
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : String(err);
+      setEditMsg(msg);
+    } finally {
+      setEditing(false);
     }
   }
 
@@ -428,19 +479,110 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
                   </div>
                 </div>
                 {!etapa.cancelledAt && (
-                  <button
-                    type="button"
-                    onClick={() => openCancelModal(etapa)}
-                    className="ml-3 shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors min-h-[44px]"
-                  >
-                    🚫 Cancelar fecha
-                  </button>
+                  <div className="ml-3 flex shrink-0 items-center gap-2">
+                    {isEtapaEditable(etapa) && (
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(etapa)}
+                        className="rounded-lg border border-sand-300 bg-white px-3 py-2 text-xs font-semibold text-stone-700 hover:bg-sand-100 transition-colors min-h-[44px]"
+                      >
+                        ✏️ Editar
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => openCancelModal(etapa)}
+                      className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors min-h-[44px]"
+                    >
+                      🚫 Cancelar fecha
+                    </button>
+                  </div>
                 )}
               </li>
             ))}
           </ul>
         )}
       </section>
+
+      {/* Edit-etapa modal */}
+      {editTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Editar etapa"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-sand-300 bg-white p-6 shadow-xl">
+            <h3 className="text-base font-semibold text-stone-900">
+              Editar {editTarget.name}
+            </h3>
+            <p className="mt-2 text-sm text-stone-600">
+              Sólo se editan el nombre y la fecha. Los equipos de la etapa no se
+              modifican: sólo cambian entre etapas.
+            </p>
+            <form onSubmit={handleEditConfirm} className="mt-4 space-y-4">
+              <div>
+                <label
+                  htmlFor="edit-name"
+                  className="block text-xs font-medium text-stone-600 mb-1"
+                >
+                  Nombre de la etapa
+                </label>
+                <input
+                  id="edit-name"
+                  type="text"
+                  required
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  disabled={editing}
+                  className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="edit-date"
+                  className="block text-xs font-medium text-stone-600 mb-1"
+                >
+                  Fecha
+                </label>
+                <input
+                  id="edit-date"
+                  type="date"
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                  disabled={editing}
+                  className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                />
+              </div>
+              {editMsg && (
+                <p
+                  className="rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700 border border-red-200"
+                  role="alert"
+                >
+                  {editMsg}
+                </p>
+              )}
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={closeEditModal}
+                  disabled={editing}
+                  className="rounded-lg border border-sand-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 hover:bg-sand-50 transition-colors min-h-[44px]"
+                >
+                  Volver
+                </button>
+                <button
+                  type="submit"
+                  disabled={editing || !editName.trim()}
+                  className="rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50 transition-colors min-h-[44px]"
+                >
+                  {editing ? "Guardando…" : "Guardar cambios"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Cancel-etapa modal */}
       {cancelTarget && (

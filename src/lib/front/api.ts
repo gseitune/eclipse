@@ -162,6 +162,21 @@ export async function fetchEtapas(): Promise<{ etapas: EtapaMeta[] }> {
   return handleResponse<{ etapas: EtapaMeta[] }>(res);
 }
 
+/** Organizer edits an etapa's metadata (name/date). Only while open and unplayed. */
+export async function updateEtapa(
+  etapaId: string,
+  input: { name?: string; date?: string | null },
+): Promise<{ etapa: EtapaMeta }> {
+  const res = await fetch(`${BASE}/etapas/${etapaId}`, {
+    method: "PATCH",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+    body: JSON.stringify(input),
+  });
+  return handleResponse<{ etapa: EtapaMeta }>(res);
+}
+
 export async function closeEtapa(
   etapaId: string,
 ): Promise<{ etapa: { id: string; name: string; closedAt: string | null } }> {
