@@ -47,9 +47,11 @@ function DownIcon() {
 /* ── Props ── */
 export interface ReagendarSectionProps {
   readonly onBack: () => void;
+  /** Closed etapa: the agenda stays visible but the order can't be changed. */
+  readonly readOnly?: boolean;
 }
 
-export function ReagendarSection({ onBack }: ReagendarSectionProps) {
+export function ReagendarSection({ onBack, readOnly = false }: ReagendarSectionProps) {
   const [rows, setRows] = useState<ScheduleBoardRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -163,6 +165,11 @@ export function ReagendarSection({ onBack }: ReagendarSectionProps) {
             </svg>
           </button>
           <h2 className="text-lg font-semibold text-stone-900">Agenda de partidos</h2>
+          {readOnly && (
+            <span className="ml-auto rounded-full bg-stone-200 px-2.5 py-0.5 text-xs font-semibold text-stone-600">
+              Sólo lectura
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2 text-sm text-stone-400">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-amber-700 border-t-transparent" />
@@ -219,8 +226,8 @@ export function ReagendarSection({ onBack }: ReagendarSectionProps) {
           {rows.map((row, index) => {
             const isPending = row.resultStatus === "PENDING";
             const isSubmitting = submittingIds.has(row.id);
-            const moveUpDisabled = !isPending || !canMoveUp(index) || isSubmitting;
-            const moveDownDisabled = !isPending || !canMoveDown(index) || isSubmitting;
+            const moveUpDisabled = readOnly || !isPending || !canMoveUp(index) || isSubmitting;
+            const moveDownDisabled = readOnly || !isPending || !canMoveDown(index) || isSubmitting;
 
             return (
               <li

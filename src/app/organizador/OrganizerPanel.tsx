@@ -213,7 +213,7 @@ interface SectionConfig {
 
 const SECTIONS_DEFAULT: readonly SectionConfig[] = [
   {
-    label: "Equipos",
+    label: "Crear Etapa",
     hint: "Crear y editar etapas con equipos",
     kind: "actionable",
   },
@@ -226,7 +226,7 @@ const SECTIONS_DEFAULT: readonly SectionConfig[] = [
 
 const SECTIONS_CANCELLED: readonly SectionConfig[] = [
   {
-    label: "Equipos",
+    label: "Crear Etapa",
     hint: "Crear y editar etapas con equipos",
     kind: "actionable",
   },
@@ -234,6 +234,19 @@ const SECTIONS_CANCELLED: readonly SectionConfig[] = [
     label: "Agenda de partidos",
     hint: "Etapa cancelada: sin acceso de edición",
     kind: "disabled",
+  },
+] as const;
+
+const SECTIONS_CLOSED: readonly SectionConfig[] = [
+  {
+    label: "Crear Etapa",
+    hint: "Crear y editar etapas con equipos",
+    kind: "actionable",
+  },
+  {
+    label: "Agenda de partidos",
+    hint: "Etapa finalizada: sólo consulta",
+    kind: "actionable",
   },
 ] as const;
 
@@ -307,12 +320,14 @@ function ResultsCard({
   error,
   refetch,
   disabled = false,
+  closed = false,
 }: {
   readonly state: StateSnapshot | null;
   readonly loading: boolean;
   readonly error: string | null;
   readonly refetch: () => Promise<void>;
   readonly disabled?: boolean;
+  readonly closed?: boolean;
 }) {
   if (disabled) {
     return (
@@ -343,18 +358,22 @@ function ResultsCard({
         Resultados
       </span>
       <span className="mt-0.5 block text-xs text-stone-500">
-        Cargar o corregir resultados
+        {closed
+          ? "Etapa finalizada: ya no se pueden cargar ni editar resultados."
+          : "Cargar o corregir resultados"}
       </span>
+      {!closed && (
+        <div className="mt-4">
+          <ResultadoEntryPanel
+            state={state}
+            loading={loading}
+            error={error}
+            refetch={refetch}
+          />
+        </div>
+      )}
       <div className="mt-4">
-        <ResultadoEntryPanel
-          state={state}
-          loading={loading}
-          error={error}
-          refetch={refetch}
-        />
-      </div>
-      <div className="mt-4">
-        <CorregirResultadosPanel refetch={refetch} />
+        <CorregirResultadosPanel refetch={refetch} readOnly={closed} />
       </div>
     </div>
   );
@@ -458,6 +477,7 @@ export function OrganizerPanel({
 
   // Closing is irreversible and only allowed once the FINAL has a result.
   const closeState = closeEtapaUi(liveState?.etapa, liveState?.brackets);
+  const isClosed = closeState === "closed";
 
   const [closingEtapa, setClosingEtapa] = useState(false);
   const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
@@ -488,7 +508,11 @@ export function OrganizerPanel({
     return map;
   }, [liveState?.brackets]);
 
-  const sections = isCancelled ? SECTIONS_CANCELLED : SECTIONS_DEFAULT;
+  const sections = isCancelled
+    ? SECTIONS_CANCELLED
+    : isClosed
+      ? SECTIONS_CLOSED
+      : SECTIONS_DEFAULT;
 
   function handleSectionClick(label: string) {
     switch (label) {
@@ -626,7 +650,7 @@ export function OrganizerPanel({
       {activeSection === "circuitos" ? (
         <CircuitosSection onBack={() => setActiveSection(null)} />
       ) : activeSection === "reagendar" ? (
-        <ReagendarSection onBack={() => setActiveSection(null)} />
+        <ReagendarSection onBack={() => setActiveSection(null)} readOnly={isClosed} />
       ) : (
         /* Sections list */
         <main className="mx-auto w-full max-w-3xl px-6 py-8">
@@ -653,11 +677,12 @@ export function OrganizerPanel({
               error={liveStateError}
               refetch={refetch}
               disabled={isCancelled}
+              closed={isClosed}
             />
-            {!isCancelled && (
+            {!isCancelled && !isClosed && (
               <MejoresTercerosPanel state={liveState} refetch={refetch} />
             )}
-            {!isCancelled && (
+            {!isCancelled && !isClosed && (
               <RotationPanel state={liveState} refetch={refetch} />
             )}
           </nav>

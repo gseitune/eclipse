@@ -610,6 +610,8 @@ export function ResultadoEntryPanel({
 /* ── Correction of blocked results (cascade) ── */
 export interface CorregirResultadosPanelProps {
   readonly refetch: () => Promise<void>;
+  /** Closed etapa: the board stays visible but nothing can be corrected. */
+  readonly readOnly?: boolean;
 }
 
 type CorrTab = "sets" | "winner";
@@ -620,7 +622,10 @@ type CorrTab = "sets" | "winner";
  * the cascade will clear (same tables the backend uses) before the PATCH with
  * `cascade: true` is sent.
  */
-export function CorregirResultadosPanel({ refetch }: CorregirResultadosPanelProps) {
+export function CorregirResultadosPanel({
+  refetch,
+  readOnly = false,
+}: CorregirResultadosPanelProps) {
   const [board, setBoard] = useState<ScheduleBoardRow[] | null>(null);
   const [boardError, setBoardError] = useState<string | null>(null);
   const [openRow, setOpenRow] = useState<ScheduleBoardRow | null>(null);
@@ -765,8 +770,9 @@ export function CorregirResultadosPanel({ refetch }: CorregirResultadosPanelProp
             Corregir resultados
           </span>
           <span className="mt-0.5 block text-xs text-stone-500">
-            Partidos que quedaron trabados porque la llave ya avanzó.
-            Corregirlos borra solo la cadena afectada y la vuelve a calcular.
+            {readOnly
+              ? "Etapa finalizada: los resultados quedan sólo para consulta."
+              : "Partidos que quedaron trabados porque la llave ya avanzó. Corregirlos borra solo la cadena afectada y la vuelve a calcular."}
           </span>
         </div>
 
@@ -794,13 +800,15 @@ export function CorregirResultadosPanel({ refetch }: CorregirResultadosPanelProp
                   {scoreText(row)}
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() => openCorrection(row)}
-                className="shrink-0 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-amber-700 min-h-[36px]"
-              >
-                Corregir
-              </button>
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={() => openCorrection(row)}
+                  className="shrink-0 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-amber-700 min-h-[36px]"
+                >
+                  Corregir
+                </button>
+              )}
             </li>
           ))}
         </ul>

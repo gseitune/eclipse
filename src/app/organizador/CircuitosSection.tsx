@@ -205,7 +205,7 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
             </svg>
           </button>
           <h2 className="text-lg font-semibold text-stone-900">
-            Equipos
+            Crear Etapa
           </h2>
         </div>
         <div className="flex items-center gap-2 text-sm text-stone-400">
@@ -241,14 +241,14 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
           </svg>
         </button>
         <h2 className="text-lg font-semibold text-stone-900">
-          Equipos
+          Crear Etapa
         </h2>
       </div>
 
       {/* Create form */}
       <section aria-label="Crear etapa" className="mb-8">
         <h3 className="text-sm font-semibold text-stone-700 mb-3">
-          Crear etapa
+          Crear Etapa
         </h3>
         <form onSubmit={handleCreate} className="rounded-xl border border-sand-200 bg-sand-50 p-5 space-y-4">
           <div>
@@ -301,7 +301,7 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
           </div>
           <div>
             <span className="block text-xs font-medium text-stone-600 mb-1">
-              Equipos — mixto fijo: un jugador masculino y una jugadora femenina por equipo
+              Crear Etapa — mixto fijo: un jugador masculino y una jugadora femenina por equipo
             </span>
             {equipos.length === 0 ? (
               <p className="text-sm text-stone-400 mb-2">
