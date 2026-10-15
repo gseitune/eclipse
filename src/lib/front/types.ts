@@ -151,6 +151,8 @@ export interface EtapaMeta {
   teamCount: number;
   closedAt: string | null;
   cancelledAt: string | null;
+  /** True once any match of the etapa has a recorded result (fixture frozen). */
+  played: boolean;
 }
 
 export interface ZonesMapping {

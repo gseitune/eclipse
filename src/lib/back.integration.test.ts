@@ -47,6 +47,7 @@ let getTeamsByZone!: BackModule["getTeamsByZone"];
 let getBracketsSnapshot!: BackModule["getBracketsSnapshot"];
 let generateZones!: BackModule["generateZones"];
 let listEtapas!: BackModule["listEtapas"];
+let updateEtapaMeta!: BackModule["updateEtapaMeta"];
 let getState!: BackModule["getState"];
 let getStateSnapshot!: BackModule["getStateSnapshot"];
 let resolveBestThird!: BackModule["resolveBestThird"];
@@ -56,6 +57,7 @@ let BackError!: BackModule["BackError"];
 let InvalidResultError!: ResultFormatModule["InvalidResultError"];
 let subscribeSse!: EventsModule["subscribeSse"];
 let etapaId = "";
+let metaEtapaId = "";
 
 async function seedTournament() {
   const etapa = await prisma.etapa.create({
@@ -754,6 +756,121 @@ it("blocks recordResult after double-cancel (etapa_cancelled persists)", async (
      );
    });
  });
+
+/**
+ * Etapa metadata CRUD: only name/date, and only while the etapa is neither
+ * closed/cancelled nor played. The roster is never editable through this path:
+ * a team loaded into an etapa is frozen, and teams only change between etapas.
+ */
+describe("updateEtapaMeta (integration) - edit name/date of unplayed etapas", () => {
+  before(async () => {
+    mkdirSync(dir, { recursive: true });
+    execSync(`npx prisma db push --url ${dbUrl}`, {
+      cwd: repoRoot,
+      stdio: "pipe",
+    });
+    const p = await import("./prisma");
+    prisma = p.prisma;
+    const back = await import("./back");
+    updateEtapaMeta = back.updateEtapaMeta;
+    listEtapas = back.listEtapas;
+    BackError = back.BackError;
+
+    const etapa = await prisma.etapa.create({
+      data: { name: "Etapa sin jugar", sortOrder: 1 },
+    });
+    metaEtapaId = etapa.id;
+  });
+
+  after(async () => {
+    await prisma.$disconnect();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("renames an unplayed etapa and persists the trimmed name and the date", async () => {
+    const updated = await updateEtapaMeta(metaEtapaId, {
+      name: "  Etapa renombrada  ",
+      date: "2026-11-07",
+    });
+    assert.equal(updated.name, "Etapa renombrada");
+    assert.equal(updated.played, false, "no result yet: the etapa is not played");
+
+    const row = await prisma.etapa.findUnique({ where: { id: metaEtapaId } });
+    assert.equal(row?.name, "Etapa renombrada");
+    assert.equal(row?.date?.toISOString().slice(0, 10), "2026-11-07");
+  });
+
+  it("clears the date when null is sent", async () => {
+    const updated = await updateEtapaMeta(metaEtapaId, { date: null });
+    assert.equal(updated.date, null);
+  });
+
+  it("rejects a blank name (name_required)", async () => {
+    await assert.rejects(
+      () => updateEtapaMeta(metaEtapaId, { name: "   " }),
+      (err: unknown) =>
+        err instanceof BackError &&
+        err.status === 400 &&
+        err.reason === "name_required",
+    );
+  });
+
+  it("rejects any field other than name/date: the roster can never be edited (field_not_editable)", async () => {
+    await assert.rejects(
+      () =>
+        updateEtapaMeta(metaEtapaId, { name: "Nope", teams: [] } as unknown as {
+          name?: string;
+        }),
+      (err: unknown) =>
+        err instanceof BackError &&
+        err.status === 400 &&
+        err.reason === "field_not_editable",
+    );
+  });
+
+  it("freezes the etapa once a result is recorded (etapa_jugada)", async () => {
+    await prisma.match.create({
+      data: {
+        id: "meta-m1",
+        etapaId: metaEtapaId,
+        stage: "GROUPS",
+        zone: "A",
+        slot: 1,
+        resultStatus: "COMPLETE",
+      },
+    });
+
+    await assert.rejects(
+      () => updateEtapaMeta(metaEtapaId, { name: "Ya jugada" }),
+      (err: unknown) =>
+        err instanceof BackError &&
+        err.status === 409 &&
+        err.reason === "etapa_jugada",
+    );
+  });
+
+  it("reports played:true in listEtapas once the etapa has a result", async () => {
+    const etapas = await listEtapas();
+    const target = etapas.find((e) => e.id === metaEtapaId);
+    assert.ok(target, "etapa should be listed");
+    assert.equal(target!.played, true);
+  });
+
+  it("keeps rejecting after the etapa is closed (etapa_cerrada)", async () => {
+    await prisma.etapa.update({
+      where: { id: metaEtapaId },
+      data: { closedAt: new Date() },
+    });
+
+    await assert.rejects(
+      () => updateEtapaMeta(metaEtapaId, { name: "Cerrada" }),
+      (err: unknown) =>
+        err instanceof BackError &&
+        err.status === 409 &&
+        err.reason === "etapa_cerrada",
+    );
+  });
+});
 
 /**
  * CUARTOS format integration tests.

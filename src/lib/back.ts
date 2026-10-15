@@ -70,6 +70,19 @@ export interface EtapaMeta {
   teamCount: number;
   closedAt: string | null;
   cancelledAt: string | null;
+  /** True once any match of the etapa has a recorded result. */
+  played: boolean;
+}
+
+/** Etapa ids (from the given set) that already have at least one result. */
+async function playedEtapaIds(etapaIds: string[]): Promise<Set<string>> {
+  if (etapaIds.length === 0) return new Set();
+  const rows = await prisma.match.findMany({
+    where: { etapaId: { in: etapaIds }, resultStatus: { not: "PENDING" } },
+    select: { etapaId: true },
+    distinct: ["etapaId"],
+  });
+  return new Set(rows.map((r) => r.etapaId));
 }
 
 export async function listEtapas(): Promise<EtapaMeta[]> {
@@ -85,6 +98,7 @@ export async function listEtapas(): Promise<EtapaMeta[]> {
        _count: { select: { teams: true } },
      },
    });
+   const played = await playedEtapaIds(etapas.map((e) => e.id));
    return etapas.map((e) => ({
      id: e.id,
      name: e.name,
@@ -93,7 +107,101 @@ export async function listEtapas(): Promise<EtapaMeta[]> {
      teamCount: e._count.teams,
      closedAt: e.closedAt ? e.closedAt.toISOString() : null,
      cancelledAt: e.cancelledAt ? e.cancelledAt.toISOString() : null,
+     played: played.has(e.id),
    }));
+}
+
+/**
+ * Fields that may be edited on an existing etapa. Teams are deliberately NOT
+ * here: a team loaded into an etapa is frozen, and teams only change between
+ * etapas (by creating the next one).
+ */
+const EDITABLE_ETAPA_FIELDS = new Set(["name", "date"]);
+
+export interface UpdateEtapaMetaInput {
+  name?: string;
+  date?: string | null;
+}
+
+/**
+ * Edits an etapa's metadata (name and/or date). Allowed only while the etapa is
+ * open (not closed/cancelled) and unplayed. Any other field is rejected: the
+ * roster can never be edited through this path.
+ */
+export async function updateEtapaMeta(
+  etapaId: string,
+  input: UpdateEtapaMetaInput,
+): Promise<EtapaMeta> {
+  const id = await resolveEtapaId(etapaId);
+  await requireEtapaEditable(id);
+
+  const unknown = Object.keys(input ?? {}).filter(
+    (key) => !EDITABLE_ETAPA_FIELDS.has(key),
+  );
+  if (unknown.length > 0) {
+    throw new BackError(
+      `Only name and date can be edited on an etapa; got: ${unknown.join(", ")}.`,
+      400,
+      "field_not_editable",
+    );
+  }
+
+  const data: { name?: string; date?: Date | null } = {};
+  if (input.name !== undefined) {
+    if (typeof input.name !== "string") {
+      throw new BackError("Etapa name is required.", 400, "name_required");
+    }
+    const name = input.name.trim();
+    if (!name) throw new BackError("Etapa name is required.", 400, "name_required");
+    if (name.length > 120) {
+      throw new BackError("Etapa name is too long.", 400, "name_too_long");
+    }
+    data.name = name;
+  }
+  if (input.date !== undefined) {
+    if (input.date === null || input.date === "") {
+      data.date = null;
+    } else if (typeof input.date !== "string") {
+      throw new BackError("Invalid etapa date.", 400, "invalid_date");
+    } else {
+      const parsed = new Date(input.date);
+      if (Number.isNaN(parsed.getTime())) {
+        throw new BackError("Invalid etapa date.", 400, "invalid_date");
+      }
+      data.date = parsed;
+    }
+  }
+  if (Object.keys(data).length === 0) {
+    throw new BackError("Nothing to update.", 400, "nothing_to_update");
+  }
+
+  const updated = await prisma.etapa.update({
+    where: { id },
+    data,
+    select: {
+      id: true,
+      name: true,
+      date: true,
+      sortOrder: true,
+      closedAt: true,
+      cancelledAt: true,
+      _count: { select: { teams: true } },
+    },
+  });
+  auditWrite({ op: "updateEtapaMeta", etapaId: id, detail: { fields: Object.keys(data) } });
+  publishSse("etapa-updated", { etapaId: id });
+
+  return {
+    id: updated.id,
+    name: updated.name,
+    date: updated.date ? updated.date.toISOString() : null,
+    sortOrder: updated.sortOrder,
+    teamCount: updated._count.teams,
+    closedAt: updated.closedAt ? updated.closedAt.toISOString() : null,
+    cancelledAt: updated.cancelledAt ? updated.cancelledAt.toISOString() : null,
+    // requireEtapaEditable already proved there is no result yet.
+    played: false,
+  };
 }
 
 export interface CreateTeamInput {
@@ -422,6 +530,25 @@ async function requireEtapaOpen(etapaId: string): Promise<void> {
       "Circuito cerrado: la etapa ya no admite modificaciones.",
       409,
       "etapa_cerrada",
+    );
+  }
+}
+
+/**
+ * An etapa is editable (metadata) only while it is open AND unplayed. Once the
+ * first result is loaded, the roster and the fixture are frozen: teams only
+ * change between etapas.
+ */
+export async function requireEtapaEditable(etapaId: string): Promise<void> {
+  await requireEtapaOpen(etapaId);
+  const played = await prisma.match.count({
+    where: { etapaId, resultStatus: { not: "PENDING" } },
+  });
+  if (played > 0) {
+    throw new BackError(
+      "Etapa ya jugada: los equipos y el fixture quedan congelados. Los equipos sólo cambian entre etapas.",
+      409,
+      "etapa_jugada",
     );
   }
 }
