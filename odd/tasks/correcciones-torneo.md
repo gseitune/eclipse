@@ -29,8 +29,17 @@ no está en PATH) + `npm test` (`node --import tsx --test`, NO vitest). No tocar
   Decisión: visible en MODO LECTURA (flechas de reorden deshabilitadas), no oculta.
 - **S6 (E2)**: agenda intercalada A/B/C al crear los partidos de zona de fábrica (hoy sale
   agrupada por grupo; el interleave sólo llega vía botón de re-rotación).
-- **S7 (E3)**: cruces de 4tos/semis definibles a mano (el cuadro real de Andi cruzó dos
-  1ºs; el motor separa los 1ºs).
+- **S7 (E3 — DESCARTADA por el usuario)**: la edición manual de los cruces de 4tos/semis queda
+  eliminada. La regla que la reemplaza (L5, verbatim):
+  > "Una vez que se carga el equipo en la etapa, no se puede modificar. (Los equipos solo se pueden
+  > cambiar entre etapa y etapa, pero cuando empieza una se tiene que mantener)"
+  Verificado contra el código: la regla YA se cumple, no hace falta cambiarlo.
+  - El plantel de una etapa no tiene endpoint de edición: `/api/etapas` sólo expone GET (lista) y
+    POST (crear). `createEtapa` es el único escritor de filas `Team`.
+  - Las únicas mutaciones intra-etapa son de ZONA (`generateZones`, `swapTeam`), y están bloqueadas
+    por `requireEtapaOpen` + `requireUnconfirmed` (back.ts:431, 461-465): sólo corren antes de
+    confirmar la zonificación, o sea antes de que arranque el fixture.
+  - Restricción hacia E5: "modificar una etapa" nunca puede tocar los equipos.
 - **S8 (E5)**: CRUD de etapas (crear/modificar/eliminar), sólo para etapas NO jugadas.
 - **S9 (E6)**: vista pública con cuadro gráfico tipo Mundial desde "Llaves".
 - **S10 (E7)**: paridad local/producción (datos como puntos anuales que no vienen del git).
@@ -47,7 +56,8 @@ no está en PATH) + `npm test` (`node --import tsx --test`, NO vitest). No tocar
       (Etapa 6 en DB = `ABCABCABCABABAB`). Test de regresión añadido (back.integration.test.ts, 39/39). tsc 0.
 - [x] **E8** — dedup de jugadores (S3). Route: inline. Backup DB hecho. Prevención aplicada
       (whitelist `canonicalTeamNameKey` en back.ts). DB actual: sin variantes duplicadas → no requiere merge.
-- [ ] **E3** — cruces manuales 4tos/semis (S7). Route: inline.
+- [x] ~~E3~~ — DESCARTADA (S7): los cruces no se editan a mano; el plantel de una etapa no se
+      modifica (ya cumplido por diseño, verificado).
 - [ ] **E5** — CRUD de etapas sólo no jugadas (S8). Route: inline.
 - [ ] **E6** — cuadro público (S9). Route: inline.
 - [ ] **E7** — paridad local/prod (S10). Route: inline.
@@ -93,3 +103,18 @@ distintas y cualquier heurística de prefijo las fusionaría. Backup previo:
 **Decisión de alcance**: por L2 ("si hay cosas que se cruzan o pisan, consultame antes de hacer"),
 E2 y E8 se cierran sin mutación de datos ni de código de producción de datos; queda a la espera de
 OK del usuario cualquier repair de la Etapa 3 histórica.
+
+### L5 — Decisión del usuario sobre E3 (2026-10-15, verbatim)
+> 1) lo de editar los cruces no. Una vez que se carga el equipo en la etapa, no se puede modificar. (Los equipos solo se pueden cambiar entre etapa y etapa, pero cuando empieza una se tiene que mantener)
+
+**Lectura**: E3 (editar cruces a mano) se descarta. En su lugar rige la regla del plantel
+congelado por etapa. Verificado (S7) que el código ya la cumple; no se agrega ni se cambia código
+por esta regla. Queda como restricción de diseño para E5.
+
+### L6 — Commits locales de E1/E9/E8/E2 (2026-10-15)
+- `87f071e` fix(etapa): freeze closed etapas and canonicalize player aliases (back.ts + test)
+- `394c697` feat(organizador): read-only closed etapa and Crear Etapa card (4 archivos de UI)
+- `3739a9e` docs(odd): plan and evidence for the correcciones-torneo stages
+Verde: `npm test` 278/278, scan completo 293/293, `tsc` 0. Sin push (decisión del usuario).
+Nota: el hook `.githooks/pre-commit` (`core.hooksPath`) incrementa `src/lib/beta-commits.ts` en
+cada commit y lo stagea; el contador quedó en 170.
