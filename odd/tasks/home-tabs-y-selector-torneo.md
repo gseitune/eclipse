@@ -131,3 +131,11 @@ Mostrar al usuario para iterar visual. Pendiente de decisión del usuario: qué
 hacer con la etapa de prueba `Cuartos WinnerOnly` (es la que sirve el home hoy,
 y su nombre se sigue viendo en el hero). Pendiente además: cargar los datos de la
 etapa según el archivo de Andi y revisar el criterio "mejor vs peor".
+
+## ADDENDUM 2026-10-15 - criterio 5 (llaves compactas) SUPERSEDED
+
+El criterio 5 de este documento ("llaves compactas, sin recuadro por enfrentamiento y sin scroll horizontal") queda **reemplazado** por la decision del usuario registrada en `correcciones-torneo.md` (S9, L8 y L9): el tab de llaves muestra un **cuadro completo tipo Mundial**, con una caja por partido, dos arboles espejados que convergen en la FINAL, 3er/4to puesto debajo y scroll horizontal admitido en celular.
+
+Motivo: al cargar la etapa 6 (formato CUARTOS, 9 partidos) el usuario preciso que queria un cuadro grafico completo y no una lista compacta.
+
+Alcance: `src/lib/front/bracket.ts` (spec de layout y `buildBracketTree`) y `src/components/public/EliminatoriesView.tsx` (render). El gating por milestone de los tabs y la estructura de `TournamentTabs.tsx` no se tocaron. Commits: `9145b62` y `0edc5ea`.

@@ -48,7 +48,16 @@ no está en PATH) + `npm test` (`node --import tsx --test`, NO vitest). No tocar
   - "Eliminar": la app YA tiene borrado suave ("Cancelar fecha", `cancelledAt`, "No se borran
     datos"). Falta la decisión del usuario sobre si quiere además un borrado REAL (delete de la
     fila + cascada) o si "Cancelar fecha" alcanza. PENDIENTE.
-- **S9 (E6)**: vista pública con cuadro gráfico tipo Mundial desde "Llaves".
+- **S9 (E6)** — REQUISITO ACTUALIZADO 2026-10-15 (evidencia y verbatim en L8): vista pública con
+  **cuadro completo tipo Mundial** desde "Llaves": cajas por partido y **árbol de dos lados** que
+  converge en la FINAL, con el 3er/4to puesto debajo. REVERSA la decisión anterior de "compacto y
+  sin recuadro por enfrentamiento" (`home-tabs-y-selector-torneo.md:28-31` + criterio 5, que queda
+  superseded) y admite **scroll horizontal en celular**.
+  - Layout: spec estático por formato (cuartos / repechaje / estándar) espejado a los dos lados de
+    la FINAL. El modo se infiere de los stages presentes en los datos → **no hacen falta props
+    nuevas** ni tocar `PublicHome.tsx` / `TournamentTabs.tsx`.
+  - Rondas que todavía no existen en los datos: se dibujan como caja vacía (esqueleto), no se
+    esconde la columna.
 - **S10 (E7)**: paridad local/producción (datos como puntos anuales que no vienen del git).
 - **Fuera de plan (S11)**: la E4 queda eliminada por decisión del usuario (verbatim):
   > "La E4 no la hagas, porque ya cargue yo la etapa 6 y quedo guardada ya."
@@ -65,10 +74,14 @@ no está en PATH) + `npm test` (`node --import tsx --test`, NO vitest). No tocar
       (whitelist `canonicalTeamNameKey` en back.ts). DB actual: sin variantes duplicadas → no requiere merge.
 - [x] ~~E3~~ — DESCARTADA (S7): los cruces no se editan a mano; el plantel de una etapa no se
       modifica (ya cumplido por diseño, verificado).
-- [ ] **E5** — CRUD de etapas sólo no jugadas (S8). Route: inline. Parcial: "modificar"
-      (name/date) hecho y verificado; "eliminar" pendiente de decisión del usuario (borrado real
-      vs "Cancelar fecha" soft).
-- [ ] **E6** — cuadro público (S9). Route: inline.
+- [x] **E5** — CRUD de etapas sólo no jugadas (S8). Route: inline. "Modificar" (name/date) hecho y
+      verificado (`a473e80` backend+contrato+tests, `9752d48` UI). "Eliminar": DECIDIDO por el
+      usuario = "Cancelar fecha" soft (`cancelledAt`) alcanza; NO se agrega borrado real, sin
+      código nuevo. Cerrado.
+- [x] **E6** - cuadro publico tipo Mundial (S9, ver L8 y L9). Route: inline. RED->GREEN. bracket.test.ts 24/24. npm test 321/321. tsc 0. Commits: `9145b62` (spec + tests) y `0edc5ea` (UI).
+      WU1 spec de layout + tests (RED→GREEN) · WU2 UI (cajas + árbol espejado + scroll en celular) ·
+      WU3 docs/evidencia. Archivos: `src/lib/front/bracket.ts`, `src/lib/front/bracket.test.ts`,
+      `src/components/public/EliminatoriesView.tsx`.
 - [ ] **E7** — paridad local/prod (S10). Route: inline.
 - [x] ~~E4~~ — eliminada (S11).
 
@@ -151,4 +164,79 @@ queda pendiente porque se cruza con el "Cancelar fecha" que ya existe (soft, `ca
   RED observado: los 7 fallaban (`updateEtapaMeta is not a function` / `played` undefined).
 - Commits: `a473e80` feat(etapas) backend+contrato+tests, `9752d48` feat(organizador) UI.
 - Verde: `npm test` 285/285 (278 + 7), `tsc --noEmit` exit 0. Sin push.
-- Pendiente: decisión de "eliminar" (borrado real vs cancelar).
+- Pendiente: decisión de "eliminar" (borrado real vs cancelar). → RESUELTO en L8: alcanza
+  "Cancelar fecha"; E5 cerrado.
+
+### L8 — Cambio de requisito: llaves pasan a cuadro completo tipo Mundial (2026-10-15, verbatim)
+Respuesta del usuario al choque de alcance (opción elegida, textual):
+> Cuadro completo tipo Mundial
+
+Alcance de esa opción, tal como se le presentó (textual):
+> "Cajas por partido y árbol de dos lados que converge en la final (bronce abajo). Es el look
+> clásico que pediría 'tipo Mundial', pero REVERSA tu decisión de 'sin recuadros, compacto' y en
+> celular obliga a scroll horizontal (o a un layout distinto para el teléfono)."
+
+**Choque detectado ANTES de escribir código** (regla del usuario L2: "si hay cosas que se cruzan o
+pisan, consultame antes de hacer"): el S9 original ("cuadro gráfico tipo Mundial") contradecía una
+decisión ya cerrada y verificada en `home-tabs-y-selector-torneo.md` (líneas 28-31, T12 y criterio
+de aceptación 5): llaves "compactas, **sin recuadro por enfrentamiento** … sin scroll horizontal en
+ningún ancho de pantalla". Se le mostró la evidencia y eligió revertirla. Se agregó un ADDENDUM
+fechado en ese doc dejando su criterio 5 como superseded (no se reescribió su historia).
+
+**Verificación contra la data real** (`prisma/dev.db`, Etapa 6, CUARTOS, cerrada, leída read-only):
+- Llave completa y ordenada por `slot`: REPECHAJE_1 (16), CUARTOS_1..4 (17-20), SEMIFINAL_1/2
+  (21-22), BRONZE (23), FINAL (24). 9 partidos, **todos `WINNER_ONLY`** (sin sets) → el árbol no
+  muestra números, sólo ganador.
+- Cruces reales confirman el spec del back (`brackets.ts:437-464`): SF1 = ganador QF1 (Vivi y
+  Santy) vs ganador QF4 (Gonza y Belén); SF2 = ganador QF2 (Roxi y Gaso) vs ganador QF3 (Lu y
+  Mateo).
+- OBSERVACIÓN (no es alcance de E6, no se tocó nada): existe un partido BRONZE **jugado** en esa
+  etapa, pero para CUARTOS el back NO crea bronce (`brackets.ts:443`, "fill FINAL only (no
+  BRONZE)"). El árbol lo dibuja si el dato está.
+
+**Límites de cruce respetados (worktree compartido)**
+- Archivos de E6: `src/lib/front/bracket.ts`, `src/lib/front/bracket.test.ts`,
+  `src/components/public/EliminatoriesView.tsx`. Ninguno pertenece a la galería en curso.
+- NO se toca `package.json` (los tests nuevos van al archivo ya registrado `bracket.test.ts`), ni
+  `PublicHome.tsx` / `page.tsx` / `Galeria*`, ni los 8 commits locales (sin push).
+- NO se agregan colores a `globals.css`: `ember-50/200/600` están referenciados pero NO definidos
+  en `@theme` (son clases no-op). El componente nuevo usa sólo tokens definidos (`sand-*`, `sun-*`,
+  `stone-*`, `emerald-*`, `amber-soft-*`).
+
+
+### L9 - E6 implementado: cuadro tipo Mundial (2026-10-15)
+
+Contexto: las salidas largas del runner devolvian contenido fabricado para archivos del repo
+(lecturas de archivo, grep de bloques grandes). Se trabajo con salidas chicas (numero de linea
+y linea suelta) y con `git status`/`git log`, y las escrituras por shell si funcionaban.
+
+Cruces verificados contra la fuente (no contra memoria):
+- `brackets.ts:437-438` -> "QF1 vs QF4, QF2 vs QF3 (Andi's bracket)".
+- `brackets.ts:369 / 401` -> repechaje: SF1 = 1o A + ganador RE2, SF2 = 1o B + ganador RE1.
+- `brackets.ts:442` -> "fill FINAL only (no BRONZE)".
+- Etapa 6 real: FINAL presente y un BRONZE jugado (dato legacy); 9 partidos, todos WINNER_ONLY.
+
+Implementacion:
+- `src/lib/front/bracket.ts`: `BracketLayoutMode`, `TREE_LINKS`, `bracketLayoutMode()` y
+  `buildBracketTree()`. El modo se infiere de los stages presentes (CUARTOS_* gana sobre
+  REPECHAJE_*), asi que no hacen falta props nuevas ni tocar `TournamentTabs.tsx`/`PublicHome.tsx`.
+  Todo nodo se emite siempre (esqueleto), para que el arbol no desaparezca con una ronda pendiente.
+- `src/components/public/EliminatoriesView.tsx`: cajas por partido, conectores, dos lados
+  espejados que convergen en la FINAL, 3er/4to puesto abajo y `overflow-x-auto` en celular.
+  Se preservaron los estados existentes con su texto exacto: fase desconocida ->
+  "Estado del torneo: ...", DESEMPATE -> "Cuadro disponible al finalizar el desempate",
+  sin datos -> "Generando cuadro...". `schedule`/`matchMinutes` se siguen usando solo para
+  `liveMatchIds`, igual que antes.
+- Colores: solo tokens definidos en `globals.css` (`sand-*`, `sun-500`, `ember-500`, `amber-soft-*`).
+
+Evidencia:
+- RED observado: `bracket.test.ts` con 10 fallas al revertir la libreria a HEAD.
+- GREEN: 24/24 en `bracket.test.ts`.
+- `npm test`: 321/321 pass, 0 fail. `tsc --noEmit`: 0 errores.
+- Commits: `9145b62` (spec + tests) y `0edc5ea` (UI).
+
+Pendiente / observaciones:
+- El BRONZE de la etapa 6 es un dato legacy (las reglas de CUARTOS no lo crean). El arbol lo
+  dibuja si el dato esta. No se toco nada de eso.
+- Falta ojo humano sobre el cuadro en el navegador: no hay infra de tests de UI en el repo.
+- E7 (paridad local/prod, S10) sigue abierto.
