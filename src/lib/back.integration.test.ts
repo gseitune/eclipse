@@ -51,6 +51,7 @@ let getState!: BackModule["getState"];
 let getStateSnapshot!: BackModule["getStateSnapshot"];
 let resolveBestThird!: BackModule["resolveBestThird"];
 let createBestThirdDesempate!: BackModule["createBestThirdDesempate"];
+let reslotGroupSchedule!: BackModule["reslotGroupSchedule"];
 let BackError!: BackModule["BackError"];
 let InvalidResultError!: ResultFormatModule["InvalidResultError"];
 let subscribeSse!: EventsModule["subscribeSse"];
@@ -464,6 +465,37 @@ describe("createEtapa (integration) â€” mixto fijo", () => {
     );
   });
 
+  it("canonicalizes whitelisted player aliases so a variant does not open a second team", async () => {
+    const etapa = await createEtapa({
+      name: "Alias",
+      teams: [
+        ...teams(MIN_TEAMS - 1),
+        { name: "Seba y Liz", maleName: "Seba", femaleName: "Liz" },
+        { name: "Sebita y Liz", maleName: "Sebita", femaleName: "Liz" },
+      ],
+    });
+    const rows = await prisma.team.findMany({ where: { etapaId: etapa.id } });
+    const liz = rows.filter((t) => t.femaleName === "Liz");
+    assert.equal(liz.length, 1, "Sebita y Liz collapses into the canonical Seba y Liz");
+    assert.equal(liz[0].name, "Seba y Liz", "the confirmed name wins");
+    assert.equal(liz[0].maleName, "Seba", "the alias is rewritten on the player too");
+  });
+
+  it("keeps similar but different names apart (Cami vs CamiC)", async () => {
+    const etapa = await createEtapa({
+      name: "Sin falso merge",
+      teams: [
+        ...teams(MIN_TEAMS - 2),
+        { name: "Cami y Juan", maleName: "Juan", femaleName: "Cami" },
+        { name: "CamiC y Juan", maleName: "Juan", femaleName: "CamiC" },
+      ],
+    });
+    const rows = await prisma.team.findMany({ where: { etapaId: etapa.id } });
+    assert.equal(rows.length, MIN_TEAMS, "both players survive as separate teams");
+    assert.ok(rows.some((t) => t.name === "Cami y Juan"), "Cami keeps its exact name");
+    assert.ok(rows.some((t) => t.name === "CamiC y Juan"), "CamiC keeps its exact name");
+  });
+
 it("enforces the minimum and maximum team counts", async () => {
      await assert.rejects(
        () => createEtapa({ name: "Pocos", teams: teams(MIN_TEAMS - 1) }),
@@ -745,6 +777,7 @@ describe("CUARTOS format (integration)", () => {
     getStateSnapshot = back.getStateSnapshot;
     resolveBestThird = back.resolveBestThird;
     createBestThirdDesempate = back.createBestThirdDesempate;
+    reslotGroupSchedule = back.reslotGroupSchedule;
     getNextMatch = back.getNextMatch;
     reconcileEliminatories = back.reconcileEliminatories;
     const events = await import("./events");
@@ -1299,6 +1332,76 @@ describe("CUARTOS format (integration)", () => {
     assert.ok(
       cuartos1!.teamAId === re1Winner || cuartos1!.teamBId === re1Winner,
       "the REPECHAJE_1 winner (seed 8) completes CUARTOS_1",
+    );
+  });
+
+  it("interleaves the GROUPS fixture by zone at creation (no zone repeats back-to-back)", async () => {
+    const teamNames = Array.from({ length: 11 }, (_, i) => `Il${i + 1}`);
+    const teams = teamNames.map((name, i) => ({
+      name,
+      maleName: `MaleI${i + 1}`,
+      femaleName: `FemaleI${i + 1}`,
+    }));
+    // distributeTeams picks which zones carry the extra team with the rng, so
+    // pin it: an unpinned rng makes the zone sizes (not the rotation) random.
+    let counter = 0;
+    const rng = () => {
+      counter += 1;
+      return (counter * 0.5) % 1;
+    };
+    const etapa = await createEtapa(
+      { name: "Interleave Etapa", teams, bracketFormat: "CUARTOS" },
+      { rng },
+    );
+
+    const groupRows = await prisma.match.findMany({
+      where: { etapaId: etapa.id, stage: "GROUPS" },
+      orderBy: { slot: "asc" },
+      select: { zone: true },
+    });
+    const zones = groupRows.map((m) => m.zone as string);
+    assert.equal(zones.length, 15, "11 teams across 3 zones play 15 group matches");
+    assert.deepEqual(
+      [...new Set(zones)].sort(),
+      ["A", "B", "C"],
+      "all three zones are represented",
+    );
+    for (let i = 1; i < zones.length; i++) {
+      assert.notEqual(
+        zones[i],
+        zones[i - 1],
+        `zone ${zones[i]} repeats back-to-back at slot ${i + 1}: the fixture is grouped, not rotated`,
+      );
+    }
+  });
+
+  it("refuses best-third and reslot mutations on a closed etapa (etapa_cerrada)", async () => {
+    const teamNames = Array.from({ length: 11 }, (_, i) => `Cl${i + 1}`);
+    const teams = teamNames.map((name, i) => ({
+      name,
+      maleName: `MaleC${i + 1}`,
+      femaleName: `FemaleC${i + 1}`,
+    }));
+    const etapa = await createEtapa({ name: "Closed Etapa", teams, bracketFormat: "CUARTOS" });
+    await prisma.etapa.update({
+      where: { id: etapa.id },
+      data: { closedAt: new Date() },
+    });
+
+    await assert.rejects(
+      () => resolveBestThird(etapa.id, "whatever"),
+      (err: unknown) =>
+        err instanceof BackError && err.status === 409 && err.reason === "etapa_cerrada",
+    );
+    await assert.rejects(
+      () => createBestThirdDesempate(etapa.id),
+      (err: unknown) =>
+        err instanceof BackError && err.status === 409 && err.reason === "etapa_cerrada",
+    );
+    await assert.rejects(
+      () => reslotGroupSchedule(etapa.id),
+      (err: unknown) =>
+        err instanceof BackError && err.status === 409 && err.reason === "etapa_cerrada",
     );
   });
 });

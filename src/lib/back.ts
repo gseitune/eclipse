@@ -124,6 +124,48 @@ export const MIN_TEAMS_PER_ETAPA = 6;
  * Mixto fijo: every team must carry exactly one male and one female player
  * name — the per-sex individual ranking depends on them.
  */
+/**
+ * Confirmed player-name aliases. This is a WHITELIST on purpose: an alias is
+ * collapsed only when it is an explicit, confirmed equivalence. Any other name
+ * keeps its exact form, so similar-but-different people (Cami vs CamiC) never
+ * merge by accident. Keys are accent-stripped lowercase; values are the
+ * canonical display form that gets stored.
+ */
+const PLAYER_ALIASES: Readonly<Record<string, string>> = {
+  sebita: "Seba",
+  sebi: "Seba",
+  seba: "Seba",
+  gon: "Gonza",
+  gonz: "Gonza",
+  gonza: "Gonza",
+  gaso: "Gastón",
+  gaston: "Gastón",
+};
+
+/**
+ * Canonical display form of a single player name: trims, and rewrites only the
+ * whitelisted aliases. Everything else is returned untouched (case and accents
+ * are preserved), so no accidental lowercasing or merging happens.
+ */
+function canonicalPlayerName(raw: string): string {
+  const trimmed = raw.trim();
+  const key = trimmed.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+  return PLAYER_ALIASES[key] ?? trimmed;
+}
+
+/**
+ * Canonical team name: canonicalizes each side of the "X y Y" pair and leaves
+ * any other shape untouched. Keeps the original order and separator, only
+ * swapping whitelisted aliases for their canonical form.
+ */
+function canonicalTeamName(raw: string): string {
+  return raw
+    .trim()
+    .split(/\s+y\s+/i)
+    .map((token) => canonicalPlayerName(token))
+    .join(" y ");
+}
+
 export async function createEtapa(input: CreateEtapaInput, _opts?: { rng?: () => number }) {
   const name = input.name.trim();
   if (!name) throw new BackError("Etapa name is required.", 400, "name_required");
@@ -133,20 +175,26 @@ export async function createEtapa(input: CreateEtapaInput, _opts?: { rng?: () =>
 
   const uniqueTeams = new Map<string, CreateTeamInput>();
   for (const rawTeam of input.teams ?? []) {
-    const teamName = typeof rawTeam?.name === "string" ? rawTeam.name.trim() : "";
-    const maleName = typeof rawTeam?.maleName === "string" ? rawTeam.maleName.trim() : "";
-    const femaleName = typeof rawTeam?.femaleName === "string" ? rawTeam.femaleName.trim() : "";
-    if (!teamName) continue;
-    if (!maleName || !femaleName) {
+    const teamNameRaw = typeof rawTeam?.name === "string" ? rawTeam.name.trim() : "";
+    const maleNameRaw = typeof rawTeam?.maleName === "string" ? rawTeam.maleName.trim() : "";
+    const femaleNameRaw = typeof rawTeam?.femaleName === "string" ? rawTeam.femaleName.trim() : "";
+    if (!teamNameRaw) continue;
+    if (!maleNameRaw || !femaleNameRaw) {
       throw new BackError(
-        `Team "${teamName}" needs both players: mixto fijo requires one male and one female name.`,
+        `Team "${teamNameRaw}" needs both players: mixto fijo requires one male and one female name.`,
         400,
         "team_players_required",
       );
     }
+    // Store the canonical form so a variant entered later (Sebita) lands as the
+    // confirmed name (Seba) and does not open a second, duplicate team.
+    const teamName = canonicalTeamName(teamNameRaw);
+    const maleName = canonicalPlayerName(maleNameRaw);
+    const femaleName = canonicalPlayerName(femaleNameRaw);
     if (!uniqueTeams.has(teamName)) {
       uniqueTeams.set(teamName, { name: teamName, maleName, femaleName });
     }
+    // A later variant that canonicalizes to the same name is ignored on purpose.
   }
 
   const teamNames = [...uniqueTeams.keys()];
@@ -1213,6 +1261,7 @@ export async function resolveBestThird(
   etapaId: string,
   teamId: string,
 ): Promise<{ ok: boolean; missing: string[] }> {
+  await requireEtapaOpen(etapaId);
   const etapa = await prisma.etapa.findUnique({
     where: { id: etapaId },
     select: { bracketFormat: true },
@@ -1267,6 +1316,7 @@ export async function resolveBestThird(
 export async function createBestThirdDesempate(
   etapaId: string,
 ): Promise<{ ok: boolean }> {
+  await requireEtapaOpen(etapaId);
   const etapa = await prisma.etapa.findUnique({
     where: { id: etapaId },
     select: { bracketFormat: true },
@@ -1329,6 +1379,7 @@ export async function createBestThirdDesempate(
 export async function reslotGroupSchedule(
   etapaId: string,
 ): Promise<{ moved: number; total: number }> {
+  await requireEtapaOpen(etapaId);
   const state = await getState(etapaId);
   if (state.phase !== "GROUPS") {
     throw new BackError(
