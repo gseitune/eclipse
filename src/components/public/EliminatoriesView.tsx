@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
+
+import { buildBracketTree, matchScore, type BracketTreeNode } from "@/lib/front/bracket";
 import { liveMatchIds } from "@/lib/front/live";
-import { phaseLabel, isKnownPhase } from "@/lib/front/phase";
-import { groupBracketColumns, matchScore } from "@/lib/front/bracket";
-import type { MatchPublic, ScheduleRow } from "@/lib/front/types";
+import { isKnownPhase, phaseLabel } from "@/lib/front/phase";
+import type { MatchPlayer, MatchPublic, ScheduleRow, Stage } from "@/lib/front/types";
 
 interface EliminatoriesViewProps {
   brackets: MatchPublic[];
@@ -14,14 +15,180 @@ interface EliminatoriesViewProps {
   onOpenTeam: (team: { id: string; name: string; zone: string }) => void;
 }
 
+type OpenTeam = (team: { id: string; name: string; zone: string }) => void;
+
+/** Round name shown above each box. */
+const STAGE_LABEL: Partial<Record<Stage, string>> = {
+  REPECHAJE_1: "Repechaje",
+  REPECHAJE_2: "Repechaje",
+  CUARTOS_1: "Cuartos",
+  CUARTOS_2: "Cuartos",
+  CUARTOS_3: "Cuartos",
+  CUARTOS_4: "Cuartos",
+  SEMIFINAL_1: "Semifinal",
+  SEMIFINAL_2: "Semifinal",
+  BRONZE: "3er y 4to puesto",
+  FINAL: "Final",
+};
+
+function NoticeBox({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex items-center justify-center rounded-xl border border-amber-soft-200 bg-amber-50/60 px-4 py-6 text-sm text-amber-700">
+      {children}
+    </div>
+  );
+}
+
+function BracketSlot({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <span className="text-[0.6rem] font-semibold uppercase tracking-wide text-stone-400">
+        {label}
+      </span>
+      {children}
+    </div>
+  );
+}
+
+function TeamRow({
+  player,
+  score,
+  winner,
+  zone,
+  onOpenTeam,
+}: {
+  player: MatchPlayer | null;
+  score: number | null;
+  winner: boolean;
+  zone: string;
+  onOpenTeam: OpenTeam;
+}) {
+  const shell =
+    "flex w-full items-center justify-between gap-2 border-b border-sand-100 px-2.5 py-1.5 text-left text-xs last:border-b-0";
+
+  if (!player) {
+    return (
+      <div className={`${shell} text-stone-400`}>
+        <span className="truncate italic">A definir</span>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => onOpenTeam({ id: player.id, name: player.name, zone })}
+      className={`${shell} transition-colors hover:bg-sand-50 ${
+        winner ? "bg-sand-50 font-semibold text-foreground" : "text-stone-600"
+      }`}
+    >
+      <span className="truncate">{player.name}</span>
+      <span className="shrink-0 tabular-nums">{score ?? ""}</span>
+    </button>
+  );
+}
+
+function MatchBox({
+  match,
+  live,
+  emphasis = false,
+  onOpenTeam,
+}: {
+  match: MatchPublic | null;
+  live: boolean;
+  emphasis?: boolean;
+  onOpenTeam: OpenTeam;
+}) {
+  const score = match ? matchScore(match) : null;
+  const zone = match?.zone ?? "";
+  const rows: Array<{
+    key: string;
+    player: MatchPlayer | null;
+    score: number | null;
+    winner: boolean;
+  }> = [
+    {
+      key: "A",
+      player: match?.teamA ?? null,
+      score: score?.a ?? null,
+      winner: match?.winnerId != null && match.winnerId === match.teamAId,
+    },
+    {
+      key: "B",
+      player: match?.teamB ?? null,
+      score: score?.b ?? null,
+      winner: match?.winnerId != null && match.winnerId === match.teamBId,
+    },
+  ];
+  const border = live
+    ? "border-ember-500 ring-1 ring-ember-500/40"
+    : emphasis
+      ? "border-sun-500"
+      : "border-sand-300";
+
+  return (
+    <div className={`w-44 shrink-0 overflow-hidden rounded-lg border bg-white shadow-sm ${border}`}>
+      {rows.map((row) => (
+        <TeamRow
+          key={row.key}
+          player={row.player}
+          score={row.score}
+          winner={row.winner}
+          zone={zone}
+          onOpenTeam={onOpenTeam}
+        />
+      ))}
+    </div>
+  );
+}
+
 /**
- * Knockout panel, rendered as bare content inside the TournamentTabs card.
- *
- * Left-to-right bracket: earliest round on the left, final on the right, with
- * the third-place match under the final. Matches are separated by hairlines
- * instead of boxes, and the layout always fits the card — on phones the rounds
- * stack, so nothing ever scrolls sideways.
+ * One side of the tree: its box sits on the edge closest to the FINAL and each
+ * previous round hangs to the outside, so both sides mirror each other.
  */
+function TreeNode({
+  node,
+  mirror,
+  liveIds,
+  onOpenTeam,
+}: {
+  node: BracketTreeNode;
+  mirror: boolean;
+  liveIds: Set<string>;
+  onOpenTeam: OpenTeam;
+}) {
+  const kids = [node.a, node.b].filter((kid): kid is BracketTreeNode => kid !== null);
+  const slot = (
+    <BracketSlot label={STAGE_LABEL[node.stage] ?? node.stage}>
+      <MatchBox
+        match={node.match}
+        live={node.match ? liveIds.has(node.match.id) : false}
+        onOpenTeam={onOpenTeam}
+      />
+    </BracketSlot>
+  );
+
+  if (kids.length === 0) return slot;
+
+  return (
+    <div className={`flex items-stretch ${mirror ? "flex-row-reverse" : ""}`}>
+      <div
+        className={`flex flex-col justify-around gap-4 ${
+          mirror ? "border-l border-sand-300 pl-4" : "border-r border-sand-300 pr-4"
+        }`}
+      >
+        {kids.map((kid) => (
+          <TreeNode key={kid.stage} node={kid} mirror={mirror} liveIds={liveIds} onOpenTeam={onOpenTeam} />
+        ))}
+      </div>
+      <div className={`flex items-center ${mirror ? "flex-row-reverse" : ""}`}>
+        <div className="h-px w-5 bg-sand-300" />
+        {slot}
+      </div>
+    </div>
+  );
+}
+
 export function EliminatoriesView({
   brackets,
   phase,
@@ -29,163 +196,58 @@ export function EliminatoriesView({
   matchMinutes,
   onOpenTeam,
 }: EliminatoriesViewProps) {
-  const liveIds = useMemo(
-    () => liveMatchIds(schedule, matchMinutes),
-    [schedule, matchMinutes],
-  );
+  const liveIds = useMemo(() => liveMatchIds(schedule, matchMinutes), [schedule, matchMinutes]);
+  const tree = useMemo(() => buildBracketTree(brackets), [brackets]);
 
   if (!isKnownPhase(phase)) {
     return (
-      <p className="text-sm text-stone-500">
-        Estado del torneo: {phaseLabel(phase)}
-      </p>
+      <NoticeBox>
+        <p>Estado del torneo: {phaseLabel(phase)}</p>
+      </NoticeBox>
     );
   }
 
   if (phase === "DESEMPATE") {
     return (
-      <div className="flex items-center justify-center rounded-xl border border-amber-soft-200 bg-amber-50/60 px-4 py-6 text-sm text-amber-700">
+      <NoticeBox>
         <p>Cuadro disponible al finalizar el desempate</p>
-      </div>
+      </NoticeBox>
     );
   }
 
   if (brackets.length === 0) {
-    return <p className="text-sm text-stone-500">Generando cuadro…</p>;
+    return (
+      <NoticeBox>
+        <p>Generando cuadro…</p>
+      </NoticeBox>
+    );
   }
 
-  const columns = groupBracketColumns(brackets);
-
   return (
-    <>
-      {/* Phones: rounds stack top to bottom, no sideways scrolling */}
-      <div className="space-y-4 sm:hidden">
-        {columns.map((column) => (
-          <div key={column.key} className="space-y-3">
-            {column.groups.map((group) => (
-              <BracketGroup
-                key={group.label}
-                group={group}
-                liveIds={liveIds}
+    <div className="overflow-x-auto pb-2">
+      <div className="flex min-w-max items-stretch justify-center gap-6 px-1">
+        <TreeNode node={tree.left} mirror={false} liveIds={liveIds} onOpenTeam={onOpenTeam} />
+        <div className="flex flex-col items-center justify-center gap-8">
+          <BracketSlot label={STAGE_LABEL.FINAL ?? "Final"}>
+            <MatchBox
+              match={tree.final}
+              emphasis
+              live={tree.final ? liveIds.has(tree.final.id) : false}
+              onOpenTeam={onOpenTeam}
+            />
+          </BracketSlot>
+          {tree.bronze ? (
+            <BracketSlot label={STAGE_LABEL.BRONZE ?? "Bronce"}>
+              <MatchBox
+                match={tree.bronze}
+                live={liveIds.has(tree.bronze.id)}
                 onOpenTeam={onOpenTeam}
               />
-            ))}
-          </div>
-        ))}
-      </div>
-
-      {/* sm and up: left-to-right bracket, always inside the card */}
-      <div className="hidden gap-3 sm:flex">
-        {columns.map((column) => (
-          <div
-            key={column.key}
-            className="flex min-w-0 flex-1 flex-col justify-center gap-3 border-l border-sand-300/70 pl-3 first:border-l-0 first:pl-0"
-          >
-            {column.groups.map((group) => (
-              <BracketGroup
-                key={group.label}
-                group={group}
-                liveIds={liveIds}
-                onOpenTeam={onOpenTeam}
-              />
-            ))}
-          </div>
-        ))}
-      </div>
-    </>
-  );
-}
-
-function BracketGroup({
-  group,
-  liveIds,
-  onOpenTeam,
-}: {
-  group: { label: string; matches: MatchPublic[] };
-  liveIds: Set<string>;
-  onOpenTeam: (team: { id: string; name: string; zone: string }) => void;
-}) {
-  return (
-    <div>
-      <p className="mb-1 truncate border-b border-sand-300/70 pb-0.5 text-[10px] font-semibold uppercase tracking-wide text-stone-400">
-        {group.label}
-      </p>
-      <div className="divide-y divide-sand-300/50">
-        {group.matches.map((match) => (
-          <MatchBlock
-            key={match.id}
-            match={match}
-            live={liveIds.has(match.id)}
-            onOpenTeam={onOpenTeam}
-          />
-        ))}
+            </BracketSlot>
+          ) : null}
+        </div>
+        <TreeNode node={tree.right} mirror liveIds={liveIds} onOpenTeam={onOpenTeam} />
       </div>
     </div>
-  );
-}
-
-function MatchBlock({
-  match,
-  live,
-  onOpenTeam,
-}: {
-  match: MatchPublic;
-  live: boolean;
-  onOpenTeam: (team: { id: string; name: string; zone: string }) => void;
-}) {
-  return (
-    <div className={`py-1 ${live ? "bg-ember-50/40" : ""}`}>
-      <div className="divide-y divide-sand-300/50">
-        <TeamLine match={match} side="A" onOpenTeam={onOpenTeam} />
-        <TeamLine match={match} side="B" onOpenTeam={onOpenTeam} />
-      </div>
-    </div>
-  );
-}
-
-function TeamLine({
-  match,
-  side,
-  onOpenTeam,
-}: {
-  match: MatchPublic;
-  side: "A" | "B";
-  onOpenTeam: (team: { id: string; name: string; zone: string }) => void;
-}) {
-  const player = side === "A" ? match.teamA : match.teamB;
-  const teamId = side === "A" ? match.teamAId : match.teamBId;
-
-  const decided =
-    match.resultStatus === "COMPLETE" || match.resultStatus === "WINNER_ONLY";
-  const isWinner = decided && match.winnerId !== null && match.winnerId === teamId;
-
-  // Single set -> points of that set; final (best of three) -> sets won;
-  // winner only -> no number at all.
-  const score = matchScore(match);
-  const value = score ? (side === "A" ? score.a : score.b) : null;
-
-  return (
-    <button
-      onClick={() => {
-        if (!player) return;
-        onOpenTeam({ id: player.id, name: player.name, zone: "—" });
-      }}
-      className={`flex w-full items-center justify-between gap-1.5 rounded px-1 py-1 text-left text-[11px] leading-tight transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 ${
-        isWinner
-          ? "bg-emerald-50 font-semibold text-emerald-900"
-          : player
-            ? "text-stone-700 hover:bg-sand-100"
-            : "text-stone-300"
-      }`}
-    >
-      <span className="truncate">{player?.name ?? "—"}</span>
-      {value !== null && (
-        <span
-          className={`shrink-0 tabular-nums ${isWinner ? "text-emerald-800" : "text-stone-400"}`}
-        >
-          {value}
-        </span>
-      )}
-    </button>
   );
 }
