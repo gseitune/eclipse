@@ -2,7 +2,7 @@
 
 import { useMemo, type ReactNode } from "react";
 
-import { buildBracketTree, matchScore, type BracketTreeNode } from "@/lib/front/bracket";
+import { buildBracketColumns, matchScore, type BracketSlot } from "@/lib/front/bracket";
 import { liveMatchIds } from "@/lib/front/live";
 import { isKnownPhase, phaseLabel } from "@/lib/front/phase";
 import type { MatchPlayer, MatchPublic, ScheduleRow, Stage } from "@/lib/front/types";
@@ -17,7 +17,15 @@ interface EliminatoriesViewProps {
 
 type OpenTeam = (team: { id: string; name: string; zone: string }) => void;
 
-/** Round name shown above each box. */
+/**
+ * Fixed column layout per format (spec S9 / E6). The boxes are always in the
+ * same place so the bracket reads the same on every phone, and the whole board
+ * fits the screen width without horizontal scrolling:
+ *
+ *   left   -> repechaje on top of the cuartos boxes
+ *   middle -> semifinals
+ *   right  -> final, with the 3rd/4th place match below it
+ */
 const STAGE_LABEL: Partial<Record<Stage, string>> = {
   REPECHAJE_1: "Repechaje",
   REPECHAJE_2: "Repechaje",
@@ -27,164 +35,121 @@ const STAGE_LABEL: Partial<Record<Stage, string>> = {
   CUARTOS_4: "Cuartos",
   SEMIFINAL_1: "Semifinal",
   SEMIFINAL_2: "Semifinal",
-  BRONZE: "3er y 4to puesto",
+  BRONZE: "3er y 4to",
   FINAL: "Final",
 };
 
 function NoticeBox({ children }: { children: ReactNode }) {
   return (
-    <div className="flex items-center justify-center rounded-xl border border-amber-soft-200 bg-amber-50/60 px-4 py-6 text-sm text-amber-700">
+    <div className="rounded-xl border border-sand-200 bg-sand-50 px-4 py-6 text-center text-sm text-stone-500">
       {children}
     </div>
   );
 }
 
-function BracketSlot({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <span className="text-[0.6rem] font-semibold uppercase tracking-wide text-stone-400">
-        {label}
-      </span>
-      {children}
-    </div>
-  );
-}
-
-function TeamRow({
-  player,
-  score,
-  winner,
-  zone,
-  onOpenTeam,
-}: {
+interface MatchRow {
+  key: "a" | "b";
   player: MatchPlayer | null;
   score: number | null;
   winner: boolean;
-  zone: string;
-  onOpenTeam: OpenTeam;
-}) {
-  const shell =
-    "flex w-full items-center justify-between gap-2 border-b border-sand-100 px-2.5 py-1.5 text-left text-xs last:border-b-0";
+}
 
-  if (!player) {
-    return (
-      <div className={`${shell} text-stone-400`}>
-        <span className="truncate italic">A definir</span>
-      </div>
-    );
-  }
+function matchRows(match: MatchPublic | null): MatchRow[] {
+  const score = match ? matchScore(match) : null;
+  const teamA = match?.teamA ?? null;
+  const teamB = match?.teamB ?? null;
 
-  return (
-    <button
-      type="button"
-      onClick={() => onOpenTeam({ id: player.id, name: player.name, zone })}
-      className={`${shell} transition-colors hover:bg-sand-50 ${
-        winner ? "bg-sand-50 font-semibold text-foreground" : "text-stone-600"
-      }`}
-    >
-      <span className="truncate">{player.name}</span>
-      <span className="shrink-0 tabular-nums">{score ?? ""}</span>
-    </button>
-  );
+  return [
+    {
+      key: "a",
+      player: teamA,
+      score: score ? score.a : null,
+      winner: Boolean(match && teamA && match.winnerId === match.teamAId),
+    },
+    {
+      key: "b",
+      player: teamB,
+      score: score ? score.b : null,
+      winner: Boolean(match && teamB && match.winnerId === match.teamBId),
+    },
+  ];
 }
 
 function MatchBox({
   match,
   live,
-  emphasis = false,
+  emphasis,
   onOpenTeam,
 }: {
   match: MatchPublic | null;
   live: boolean;
-  emphasis?: boolean;
+  emphasis: boolean;
   onOpenTeam: OpenTeam;
 }) {
-  const score = match ? matchScore(match) : null;
   const zone = match?.zone ?? "";
-  const rows: Array<{
-    key: string;
-    player: MatchPlayer | null;
-    score: number | null;
-    winner: boolean;
-  }> = [
-    {
-      key: "A",
-      player: match?.teamA ?? null,
-      score: score?.a ?? null,
-      winner: match?.winnerId != null && match.winnerId === match.teamAId,
-    },
-    {
-      key: "B",
-      player: match?.teamB ?? null,
-      score: score?.b ?? null,
-      winner: match?.winnerId != null && match.winnerId === match.teamBId,
-    },
-  ];
-  const border = live
-    ? "border-ember-500 ring-1 ring-ember-500/40"
-    : emphasis
-      ? "border-sun-500"
-      : "border-sand-300";
+  let border = "border-sand-300";
+  if (emphasis) border = "border-sun-500";
+  if (live) border = "border-ember-500 ring-2 ring-ember-500/30";
 
   return (
-    <div className={`w-44 shrink-0 overflow-hidden rounded-lg border bg-white shadow-sm ${border}`}>
-      {rows.map((row) => (
-        <TeamRow
+    <div className={`flex w-full flex-col overflow-hidden rounded-lg border bg-white shadow-sm ${border}`}>
+      {matchRows(match).map((row) => (
+        <button
           key={row.key}
-          player={row.player}
-          score={row.score}
-          winner={row.winner}
-          zone={zone}
-          onOpenTeam={onOpenTeam}
-        />
+          type="button"
+          disabled={!row.player}
+          onClick={() => {
+            if (!row.player) return;
+            onOpenTeam({ id: row.player.id, name: row.player.name, zone });
+          }}
+          className={`flex w-full items-start justify-between gap-1 border-b border-sand-100 px-1.5 py-1.5 text-left text-[0.72rem] leading-tight transition-colors last:border-b-0 ${
+            row.player ? "hover:bg-sand-50" : "cursor-default"
+          } ${row.winner ? "bg-amber-soft-100 font-semibold text-foreground" : "text-stone-600"}`}
+        >
+          <span className={`min-w-0 flex-1 break-words ${row.player ? "" : "italic text-stone-400"}`}>
+            {row.player ? row.player.name : "A definir"}
+          </span>
+          <span className="shrink-0 tabular-nums text-stone-500">{row.score ?? ""}</span>
+        </button>
       ))}
     </div>
   );
 }
 
-/**
- * One side of the tree: its box sits on the edge closest to the FINAL and each
- * previous round hangs to the outside, so both sides mirror each other.
- */
-function TreeNode({
-  node,
-  mirror,
+const COLUMN_JUSTIFY = {
+  start: "justify-start",
+  around: "justify-around",
+  center: "justify-center",
+} as const;
+
+function BracketColumn({
+  slots,
+  justify,
   liveIds,
   onOpenTeam,
 }: {
-  node: BracketTreeNode;
-  mirror: boolean;
+  slots: BracketSlot[];
+  justify: keyof typeof COLUMN_JUSTIFY;
   liveIds: Set<string>;
   onOpenTeam: OpenTeam;
 }) {
-  const kids = [node.a, node.b].filter((kid): kid is BracketTreeNode => kid !== null);
-  const slot = (
-    <BracketSlot label={STAGE_LABEL[node.stage] ?? node.stage}>
-      <MatchBox
-        match={node.match}
-        live={node.match ? liveIds.has(node.match.id) : false}
-        onOpenTeam={onOpenTeam}
-      />
-    </BracketSlot>
-  );
-
-  if (kids.length === 0) return slot;
+  if (slots.length === 0) return null;
 
   return (
-    <div className={`flex items-stretch ${mirror ? "flex-row-reverse" : ""}`}>
-      <div
-        className={`flex flex-col justify-around gap-4 ${
-          mirror ? "border-l border-sand-300 pl-4" : "border-r border-sand-300 pr-4"
-        }`}
-      >
-        {kids.map((kid) => (
-          <TreeNode key={kid.stage} node={kid} mirror={mirror} liveIds={liveIds} onOpenTeam={onOpenTeam} />
-        ))}
-      </div>
-      <div className={`flex items-center ${mirror ? "flex-row-reverse" : ""}`}>
-        <div className="h-px w-5 bg-sand-300" />
-        {slot}
-      </div>
+    <div className={`flex min-w-0 flex-1 flex-col gap-2 ${COLUMN_JUSTIFY[justify]}`}>
+      {slots.map((slot) => (
+        <div key={slot.stage} className="flex flex-col gap-0.5">
+          <span className="px-0.5 text-[0.55rem] font-semibold uppercase tracking-wide text-stone-400">
+            {STAGE_LABEL[slot.stage] ?? slot.stage}
+          </span>
+          <MatchBox
+            match={slot.match}
+            live={Boolean(slot.match && liveIds.has(slot.match.id))}
+            emphasis={slot.stage === "FINAL"}
+            onOpenTeam={onOpenTeam}
+          />
+        </div>
+      ))}
     </div>
   );
 }
@@ -197,56 +162,26 @@ export function EliminatoriesView({
   onOpenTeam,
 }: EliminatoriesViewProps) {
   const liveIds = useMemo(() => liveMatchIds(schedule, matchMinutes), [schedule, matchMinutes]);
-  const tree = useMemo(() => buildBracketTree(brackets), [brackets]);
+  const columns = useMemo(() => buildBracketColumns(brackets), [brackets]);
 
   if (!isKnownPhase(phase)) {
-    return (
-      <NoticeBox>
-        <p>Estado del torneo: {phaseLabel(phase)}</p>
-      </NoticeBox>
-    );
+    return <NoticeBox>Estado del torneo: {phaseLabel(phase)}</NoticeBox>;
   }
 
   if (phase === "DESEMPATE") {
-    return (
-      <NoticeBox>
-        <p>Cuadro disponible al finalizar el desempate</p>
-      </NoticeBox>
-    );
+    return <NoticeBox>Cuadro disponible al finalizar el desempate</NoticeBox>;
   }
 
   if (brackets.length === 0) {
-    return (
-      <NoticeBox>
-        <p>Generando cuadro…</p>
-      </NoticeBox>
-    );
+    return <NoticeBox>Generando cuadro…</NoticeBox>;
   }
 
   return (
-    <div className="overflow-x-auto pb-2">
-      <div className="flex min-w-max items-stretch justify-center gap-6 px-1">
-        <TreeNode node={tree.left} mirror={false} liveIds={liveIds} onOpenTeam={onOpenTeam} />
-        <div className="flex flex-col items-center justify-center gap-8">
-          <BracketSlot label={STAGE_LABEL.FINAL ?? "Final"}>
-            <MatchBox
-              match={tree.final}
-              emphasis
-              live={tree.final ? liveIds.has(tree.final.id) : false}
-              onOpenTeam={onOpenTeam}
-            />
-          </BracketSlot>
-          {tree.bronze ? (
-            <BracketSlot label={STAGE_LABEL.BRONZE ?? "Bronce"}>
-              <MatchBox
-                match={tree.bronze}
-                live={liveIds.has(tree.bronze.id)}
-                onOpenTeam={onOpenTeam}
-              />
-            </BracketSlot>
-          ) : null}
-        </div>
-        <TreeNode node={tree.right} mirror liveIds={liveIds} onOpenTeam={onOpenTeam} />
+    <div className="mx-auto w-full max-w-xl">
+      <div className="flex items-stretch gap-1.5">
+        <BracketColumn slots={columns.left} justify="start" liveIds={liveIds} onOpenTeam={onOpenTeam} />
+        <BracketColumn slots={columns.middle} justify="around" liveIds={liveIds} onOpenTeam={onOpenTeam} />
+        <BracketColumn slots={columns.right} justify="center" liveIds={liveIds} onOpenTeam={onOpenTeam} />
       </div>
     </div>
   );
