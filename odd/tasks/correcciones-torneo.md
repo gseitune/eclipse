@@ -41,6 +41,13 @@ no está en PATH) + `npm test` (`node --import tsx --test`, NO vitest). No tocar
     confirmar la zonificación, o sea antes de que arranque el fixture.
   - Restricción hacia E5: "modificar una etapa" nunca puede tocar los equipos.
 - **S8 (E5)**: CRUD de etapas (crear/modificar/eliminar), sólo para etapas NO jugadas.
+  - "Modificar" = sólo `name` y `date` (nunca equipos, ver S7). Implementado en
+    `updateEtapaMeta` + `PATCH /api/etapas/:id` + modal "Editar" en `CircuitosSection`.
+  - "No jugada" (predicado nuevo, no existía): ninguna `Match` de la etapa con
+    `resultStatus != "PENDING"` → `BackError 409 etapa_jugada` (`requireEtapaEditable`).
+  - "Eliminar": la app YA tiene borrado suave ("Cancelar fecha", `cancelledAt`, "No se borran
+    datos"). Falta la decisión del usuario sobre si quiere además un borrado REAL (delete de la
+    fila + cascada) o si "Cancelar fecha" alcanza. PENDIENTE.
 - **S9 (E6)**: vista pública con cuadro gráfico tipo Mundial desde "Llaves".
 - **S10 (E7)**: paridad local/producción (datos como puntos anuales que no vienen del git).
 - **Fuera de plan (S11)**: la E4 queda eliminada por decisión del usuario (verbatim):
@@ -58,7 +65,9 @@ no está en PATH) + `npm test` (`node --import tsx --test`, NO vitest). No tocar
       (whitelist `canonicalTeamNameKey` en back.ts). DB actual: sin variantes duplicadas → no requiere merge.
 - [x] ~~E3~~ — DESCARTADA (S7): los cruces no se editan a mano; el plantel de una etapa no se
       modifica (ya cumplido por diseño, verificado).
-- [ ] **E5** — CRUD de etapas sólo no jugadas (S8). Route: inline.
+- [ ] **E5** — CRUD de etapas sólo no jugadas (S8). Route: inline. Parcial: "modificar"
+      (name/date) hecho y verificado; "eliminar" pendiente de decisión del usuario (borrado real
+      vs "Cancelar fecha" soft).
 - [ ] **E6** — cuadro público (S9). Route: inline.
 - [ ] **E7** — paridad local/prod (S10). Route: inline.
 - [x] ~~E4~~ — eliminada (S11).
@@ -118,3 +127,28 @@ por esta regla. Queda como restricción de diseño para E5.
 Verde: `npm test` 278/278, scan completo 293/293, `tsc` 0. Sin push (decisión del usuario).
 Nota: el hook `.githooks/pre-commit` (`core.hooksPath`) incrementa `src/lib/beta-commits.ts` en
 cada commit y lo stagea; el contador quedó en 170.
+
+### L7 — E5 parcial: "modificar" una etapa no jugada (2026-10-15)
+Alcance elegido dentro de S8: implementar sólo el "U" (modificar nombre/fecha). El "D" (eliminar)
+queda pendiente porque se cruza con el "Cancelar fecha" que ya existe (soft, `cancelledAt`,
+"No se borran datos") → se le consultó al usuario si quiere borrado real o si alcanza con eso.
+
+- Predicado nuevo `requireEtapaEditable` (no existía ninguno de "etapa jugada"): `requireEtapaOpen`
+  + `Match.count({ resultStatus: { not: "PENDING" } }) > 0` → `409 etapa_jugada`.
+- `updateEtapaMeta(etapaId, { name?, date? })`: únicos campos editables (`EDITABLE_ETAPA_FIELDS`);
+  cualquier otra clave → `400 field_not_editable` (defensa en la capa de datos, no sólo en la ruta).
+  Trim del nombre, `name_required`/`name_too_long`/`invalid_date` igual que `createEtapa`.
+  `date: null | ""` limpia la fecha. `nothing_to_update` si no viene ningún campo.
+- `PATCH /api/etapas/:id` (sesión de organizador, mismo patrón que cancel/close): reenvía el body
+  tal cual para que `back.ts` sea la única autoridad sobre qué es editable.
+- `EtapaMeta.played` (nuevo, aditivo) calculado con `playedEtapaIds` en `listEtapas` → la UI muestra
+  "Editar" sólo si `!cancelledAt && !closedAt && !played`.
+- UI: botón "✏️ Editar" + modal (nombre/fecha) en `CircuitosSection.tsx`. El texto del modal aclara
+  que los equipos no se tocan.
+- Tests (RED → GREEN): 7 nuevos en `back.integration.test.ts` (`describe "updateEtapaMeta"`) — renombra
+  y persiste nombre/fecha, limpia la fecha con null, `name_required`, `field_not_editable` (mandar
+  `teams`), `etapa_jugada` tras cargar un resultado, `played: true` en `listEtapas`, `etapa_cerrada`.
+  RED observado: los 7 fallaban (`updateEtapaMeta is not a function` / `played` undefined).
+- Commits: `a473e80` feat(etapas) backend+contrato+tests, `9752d48` feat(organizador) UI.
+- Verde: `npm test` 285/285 (278 + 7), `tsc --noEmit` exit 0. Sin push.
+- Pendiente: decisión de "eliminar" (borrado real vs cancelar).
