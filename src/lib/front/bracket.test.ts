@@ -242,15 +242,15 @@ describe("bracketLayoutMode", () => {
 });
 
 describe("buildBracketColumns", () => {
-  it("cuartos: repechaje sits on top of the cuartos column", () => {
+  it("cuartos: repechaje on top, then the cuartos in the order they feed the semis", () => {
     const columns = buildBracketColumns(cuartosPayload());
     assert.equal(columns.mode, "cuartos");
     assert.deepEqual(stagesOf(columns.left), [
       "REPECHAJE_1",
       "CUARTOS_1",
+      "CUARTOS_4",
       "CUARTOS_2",
       "CUARTOS_3",
-      "CUARTOS_4",
     ]);
   });
 

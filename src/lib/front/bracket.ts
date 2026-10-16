@@ -180,7 +180,10 @@ const COLUMN_SLOTS: Record<
   { left: Stage[]; middle: Stage[]; right: Stage[] }
 > = {
   cuartos: {
-    left: ["REPECHAJE_1", "CUARTOS_1", "CUARTOS_2", "CUARTOS_3", "CUARTOS_4"],
+    // Repechaje on top, then the cuartos in the order they feed the semis
+    // (SF1 <- QF1, QF4 ; SF2 <- QF2, QF3; brackets.ts:437-438), so the view can
+    // center each semi between the two cuartos that feed it.
+    left: ["REPECHAJE_1", "CUARTOS_1", "CUARTOS_4", "CUARTOS_2", "CUARTOS_3"],
     middle: ["SEMIFINAL_1", "SEMIFINAL_2"],
     right: ["FINAL", "BRONZE"],
   },
