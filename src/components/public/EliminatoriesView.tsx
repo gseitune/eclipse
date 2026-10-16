@@ -116,6 +116,10 @@ function MatchBox({
   if (emphasis) border = "border-sun-500";
   if (live) border = "border-ember-500 ring-2 ring-ember-500/30";
   const sizing = BOX_SIZE_CLASS[size];
+  // The winner keeps a filled background. The app uses the standard amber
+  // palette for highlights (the `amber-soft-*` tokens are almost white), and
+  // the repechaje box stays one step lighter because it is already small.
+  const winnerFill = size === "tiny" ? "bg-amber-soft-100" : "bg-amber-100";
 
   return (
     <div className={`flex w-full flex-col overflow-hidden rounded-lg border bg-white shadow-sm ${border}`}>
@@ -129,8 +133,8 @@ function MatchBox({
             onOpenTeam({ id: row.player.id, name: row.player.name, zone });
           }}
           className={`flex w-full items-start justify-between gap-1 border-b border-sand-100 text-left leading-tight transition-colors last:border-b-0 ${sizing} ${
-            row.player ? "hover:bg-sand-50" : "cursor-default"
-          } ${row.winner ? "bg-amber-soft-100 font-semibold text-foreground" : "text-stone-600"}`}
+            row.player ? (row.winner ? "hover:bg-amber-200" : "hover:bg-sand-50") : "cursor-default"
+          } ${row.winner ? `${winnerFill} font-semibold text-foreground` : "text-stone-600"}`}
         >
           <span className={`min-w-0 flex-1 break-words ${row.player ? "" : "italic text-stone-400"}`}>
             {row.player ? row.player.name : "A definir"}
