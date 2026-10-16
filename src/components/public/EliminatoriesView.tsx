@@ -1,8 +1,13 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { Fragment, useMemo, type ReactNode } from "react";
 
-import { buildBracketColumns, matchScore, type BracketSlot } from "@/lib/front/bracket";
+import {
+  buildBracketColumns,
+  matchScore,
+  type BracketColumns,
+  type BracketSlot,
+} from "@/lib/front/bracket";
 import { liveMatchIds } from "@/lib/front/live";
 import { isKnownPhase, phaseLabel } from "@/lib/front/phase";
 import type { MatchPlayer, MatchPublic, ScheduleRow, Stage } from "@/lib/front/types";
@@ -79,17 +84,20 @@ function MatchBox({
   match,
   live,
   emphasis,
+  compact = false,
   onOpenTeam,
 }: {
   match: MatchPublic | null;
   live: boolean;
   emphasis: boolean;
+  compact?: boolean;
   onOpenTeam: OpenTeam;
 }) {
   const zone = match?.zone ?? "";
   let border = "border-sand-300";
   if (emphasis) border = "border-sun-500";
   if (live) border = "border-ember-500 ring-2 ring-ember-500/30";
+  const sizing = compact ? "px-1.5 py-0.5 text-[0.62rem]" : "px-1.5 py-1.5 text-[0.72rem]";
 
   return (
     <div className={`flex w-full flex-col overflow-hidden rounded-lg border bg-white shadow-sm ${border}`}>
@@ -102,7 +110,7 @@ function MatchBox({
             if (!row.player) return;
             onOpenTeam({ id: row.player.id, name: row.player.name, zone });
           }}
-          className={`flex w-full items-start justify-between gap-1 border-b border-sand-100 px-1.5 py-1.5 text-left text-[0.72rem] leading-tight transition-colors last:border-b-0 ${
+          className={`flex w-full items-start justify-between gap-1 border-b border-sand-100 text-left leading-tight transition-colors last:border-b-0 ${sizing} ${
             row.player ? "hover:bg-sand-50" : "cursor-default"
           } ${row.winner ? "bg-amber-soft-100 font-semibold text-foreground" : "text-stone-600"}`}
         >
@@ -112,6 +120,33 @@ function MatchBox({
           <span className="shrink-0 tabular-nums text-stone-500">{row.score ?? ""}</span>
         </button>
       ))}
+    </div>
+  );
+}
+
+function SlotView({
+  slot,
+  compact = false,
+  liveIds,
+  onOpenTeam,
+}: {
+  slot: BracketSlot;
+  compact?: boolean;
+  liveIds: Set<string>;
+  onOpenTeam: OpenTeam;
+}) {
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <span className="px-0.5 text-[0.55rem] font-semibold uppercase tracking-wide text-stone-400">
+        {STAGE_LABEL[slot.stage] ?? slot.stage}
+      </span>
+      <MatchBox
+        match={slot.match}
+        live={Boolean(slot.match && liveIds.has(slot.match.id))}
+        emphasis={slot.stage === "FINAL"}
+        compact={compact}
+        onOpenTeam={onOpenTeam}
+      />
     </div>
   );
 }
@@ -138,18 +173,81 @@ function BracketColumn({
   return (
     <div className={`flex min-w-0 flex-1 flex-col gap-2 ${COLUMN_JUSTIFY[justify]}`}>
       {slots.map((slot) => (
-        <div key={slot.stage} className="flex flex-col gap-0.5">
-          <span className="px-0.5 text-[0.55rem] font-semibold uppercase tracking-wide text-stone-400">
-            {STAGE_LABEL[slot.stage] ?? slot.stage}
-          </span>
-          <MatchBox
-            match={slot.match}
-            live={Boolean(slot.match && liveIds.has(slot.match.id))}
-            emphasis={slot.stage === "FINAL"}
-            onOpenTeam={onOpenTeam}
-          />
-        </div>
+        <SlotView key={slot.stage} slot={slot} liveIds={liveIds} onOpenTeam={onOpenTeam} />
       ))}
+    </div>
+  );
+}
+
+/**
+ * Cuartos format. The left column lists the repechaje and then the cuartos
+ * already paired for the semis (QF1, QF4, QF2, QF3), so each semi can be
+ * centered between the two cuartos that feed it. A grid keeps every box in the
+ * same place whatever the length of the team names.
+ */
+function CuartosBoard({
+  columns,
+  liveIds,
+  onOpenTeam,
+}: {
+  columns: BracketColumns;
+  liveIds: Set<string>;
+  onOpenTeam: OpenTeam;
+}) {
+  const cuartos = columns.left.slice(1);
+  const pairs: Array<[BracketSlot, BracketSlot]> = [];
+  for (let index = 0; index + 1 < cuartos.length; index += 2) {
+    const top = cuartos[index];
+    const bottom = cuartos[index + 1];
+    if (top && bottom) pairs.push([top, bottom]);
+  }
+  const repechaje = columns.left[0] ?? null;
+  const rows = pairs.length * 2 + 1;
+
+  return (
+    <div
+      className="grid gap-x-1.5 gap-y-1.5"
+      style={{
+        gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+        gridTemplateRows: `repeat(${rows}, auto)`,
+      }}
+    >
+      {repechaje ? (
+        <div style={{ gridColumn: 1, gridRow: 1 }}>
+          <SlotView slot={repechaje} compact liveIds={liveIds} onOpenTeam={onOpenTeam} />
+        </div>
+      ) : null}
+
+      {pairs.map((pair, index) => {
+        const [top, bottom] = pair;
+        const semi = columns.middle[index] ?? null;
+        const firstRow = index * 2 + 2;
+
+        return (
+          <Fragment key={top.stage}>
+            <div style={{ gridColumn: 1, gridRow: firstRow }}>
+              <SlotView slot={top} liveIds={liveIds} onOpenTeam={onOpenTeam} />
+            </div>
+            <div style={{ gridColumn: 1, gridRow: firstRow + 1 }}>
+              <SlotView slot={bottom} liveIds={liveIds} onOpenTeam={onOpenTeam} />
+            </div>
+            {semi ? (
+              <div style={{ gridColumn: 2, gridRow: `${firstRow} / span 2`, alignSelf: "center" }}>
+                <SlotView slot={semi} liveIds={liveIds} onOpenTeam={onOpenTeam} />
+              </div>
+            ) : null}
+          </Fragment>
+        );
+      })}
+
+      <div
+        className="flex min-w-0 flex-col justify-center gap-2"
+        style={{ gridColumn: 3, gridRow: `1 / span ${rows}` }}
+      >
+        {columns.right.map((slot) => (
+          <SlotView key={slot.stage} slot={slot} liveIds={liveIds} onOpenTeam={onOpenTeam} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -174,6 +272,14 @@ export function EliminatoriesView({
 
   if (brackets.length === 0) {
     return <NoticeBox>Generando cuadro…</NoticeBox>;
+  }
+
+  if (columns.mode === "cuartos") {
+    return (
+      <div className="mx-auto w-full max-w-xl">
+        <CuartosBoard columns={columns} liveIds={liveIds} onOpenTeam={onOpenTeam} />
+      </div>
+    );
   }
 
   return (
