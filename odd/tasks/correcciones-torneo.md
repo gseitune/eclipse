@@ -62,78 +62,12 @@ no está en PATH) + `npm test` (`node --import tsx --test`, NO vitest). No tocar
     columnas restantes.
 ```
 
-Now the E6 task line (line 81). Let me update it to include the WU4 changes and new commits (I don't have the new commit hash yet — I'll commit after the doc edit; so I'll write the doc, then commit and then... hmm, the doc references the commit hash. Per ODD, the commit identity should be recorded in the doc as evidence. Circular (doc references its own commit). Previously I wrote "Commits: 9145b62 ... 0edc5ea" in L9 — presumably I committed docs after. Simplest: commit docs and then amend? Or record "commit pendiente/this commit" — hmm.
-
-Approach used before: the doc mentioned commits of prior work units. For this WU, the code commits will be: lib+tests, UI, docs. So I can commit code first (2 commits), then write the doc referencing those hashes, then commit the doc ✓ — but I've already edited the doc's S9. Hmm, that's fine: the S9 edit is part of the doc commit (third commit). I can commit the lib+tests and the UI now (their hashes are what L10 will cite), then finalize the doc with those hashes and commit the doc.
-
-But wait: S9 is already edited in the working tree; if I commit lib+tests now I must not include the doc. `git add` specific paths ✓ fine.
-
-Plan:
-- Commit 1: `src/lib/front/bracket.ts` + `src/lib/front/bracket.test.ts` → hash H1.
-- Commit 2: `src/components/public/EliminatoriesView.tsx` → hash H2.
-- Then update the E6 task line + append L10 citing H1/H2.
-- Commit 3: the doc.
-
-Good. Let me do the S9 edit first (done above), then the git commits, then finish the doc.
-
-Actually, ordering: let me do git commits now, then write the remaining doc parts. But careful: the commit hook adds `src/lib/beta-commits.ts` to each commit — so those files will be included automatically ✓ (as before).
-
-Let me commit. Use small shell commands with explicit paths.
-
-Commit 1:
-```
-git add src/lib/front/bracket.ts src/lib/front/bracket.test.ts
-git commit -m "refactor(bracket): layout de columnas fijas para el cuadro (S9)"
-```
-Then print the short hash. But the commit hook prints "bump-beta: N -> N+1" ✓ small output ✓.
-
-Hmm, also: the untracked galería files must NOT be added ✓ (I add explicit paths only).
-
-Also: the hook adds beta-commits.ts to the commit ✓ that's repo behavior.
-
-Let me run commit 1 and 2 in one shell call, printing hashes with `git rev-parse --short HEAD`.
-
-Let me be careful: `git commit` may require hooks to run node; fine.
-
-Command:
-```powershell
-$app='D:\Proyectos\Eclipse\04-Codigo\eclipse-app'; Set-Location $app
-git add src/lib/front/bracket.ts src/lib/front/bracket.test.ts
-git commit -m "refactor(bracket): columnas fijas para el cuadro publico (S9)"
-git rev-parse --short HEAD
-git add src/components/public/EliminatoriesView.tsx
-git commit -m "refactor(llaves): tres columnas que entran en el ancho del celular (S9)"
-git rev-parse --short HEAD
-git status --short
-```
-
-Hmm, the inline quoting issue in `-Command`... The earlier failure was due to escaped quotes `\"`. Here I only need single quotes inside — hmm, `-Command "..."` with single quotes inside is fine? The earlier failing command had `\"` escapes. The previous working approach: write a .ps1 file. Let me just write a script file to be safe.
-
-Actually, a simpler approach for shell calls: the `shell` tool runs PowerShell directly (the docs say commands run on Windows using powershell). My earlier `powershell -NoProfile ... -File script.ps1` worked. And inline `-Command` failed due to escaping.
-
-Let me test whether the shell tool accepts a multi-line command directly without `powershell -Command` wrapper — the tool description says commands run on Windows using powershell ✓ so I can pass the script content directly. That's how previous turns presumably worked (the checkpoint says commands like `git status` worked). Let me write the git commands directly in the command string.
-
-Let me use a here-string-free, multi-line command with `;` separators.
-
-Command:
-```
-Set-Location 'D:\Proyectos\Eclipse\04-Codigo\eclipse-app'; git add src/lib/front/bracket.ts src/lib/front/bracket.test.ts; git commit -m 'refactor(bracket): columnas fijas para el cuadro publico (S9)'; git rev-parse --short HEAD
-```
-Hmm, and multi-line with newlines should be ok.
-
-Let me do commit 1 and 2 in one call.</think>Docs S9 actualizado. Ahora commiteo el código (2 work units) antes de cerrar el log con los hashes:
-
-<｜DSML｜ calls>
-<｜DSML｜ invoke name="shell">
-<｜DSML｜ parameter name="command" string="true">Set-Location 'D:\Proyectos\Eclipse\04-Codigo\eclipse-app'
-git add src/lib/front/bracket.ts src/lib/front/bracket.test.ts
-git commit -m "refactor(bracket): columnas fijas para el cuadro publico (S9)"
-git rev-parse --short HEAD
-git add src/components/public/EliminatoriesView.tsx
-git commit -m "refactor(llaves): tres columnas que entran en el ancho del celular (S9)"
-git rev-parse --short HEAD
-git status --short
-- **S10 (E7)**: paridad local/producción (datos como puntos anuales que no vienen del git).
+- **S10 (E7)** — ARCHIVADA 2026-10-15 (ver L14): paridad local/producción (datos como puntos
+anuales que no vienen del git). **No se implementa**: no hay código roto. Local y producción son
+dos bases distintas (local = SQLite `file:`, producción = Turso libSQL, `src/lib/prisma.ts:12-25`)
+y ningún dato está en git (`.gitignore:38`), así que "paridad" no es un fix de código sino un
+sync/verificación de datos. El caso real detrás es cargar/verificar los datos en producción, que
+pertenece al deploy pendiente de E0 (requiere credenciales de Turso).
 - **Fuera de plan (S11)**: la E4 queda eliminada por decisión del usuario (verbatim):
   > "La E4 no la hagas, porque ya cargue yo la etapa 6 y quedo guardada ya."
 
@@ -157,7 +91,10 @@ git status --short
       WU1 spec de layout + tests (RED→GREEN) · WU2 UI (cajas + árbol espejado + scroll en celular) ·
       WU3 docs/evidencia. Archivos: `src/lib/front/bracket.ts`, `src/lib/front/bracket.test.ts`,
       `src/components/public/EliminatoriesView.tsx`.
-- [ ] **E7** — paridad local/prod (S10). Route: inline.
+- [x] ~~E7~~ — ARCHIVADA (S10, ver L14): no se implementa. Relevamiento read-only: el ranking anual
+      se deriva al vuelo (`src/lib/ranking.ts:392`) y local/producción son bases separadas (SQLite
+      vs Turso, `src/lib/prisma.ts:12-25`); ningún dato está en git (`.gitignore:38`). El caso real
+      (cargar/verificar datos en producción) pertenece al deploy de E0.
 - [x] ~~E4~~ — eliminada (S11).
 
 ## Log
@@ -434,3 +371,41 @@ Evidencia:
 Pendiente:
 - Ojo humano del usuario sobre el celular.
 - Si `bg-amber-100` resulta demasiado, el escalon anterior de esa familia es `bg-amber-50`.
+
+
+### L14 — E7 archivada + limpieza de este doc (2026-10-15, verbatim)
+
+Pedido del usuario (verbatim):
+
+> "Pero no entiendo que es enrealidad E7 y si es necesario hacerlo"
+
+Respuesta dada (relevamiento read-only de E7/S10):
+- El ranking anual NO es un dato guardado: se deriva al vuelo desde los resultados de las etapas mas
+  una constante de puntajes (`src/lib/ranking.ts:392` `getAnnualRanking()`, escala en `ranking.ts:7`).
+- Local = SQLite (`file:`), produccion = Turso libSQL (`src/lib/prisma.ts:12-25`, spot check propio).
+- Ningun dato esta en git: `git ls-files` devuelve 0 archivos `.db`/`.sqlite` y `.gitignore:38` los
+  ignora.
+- `prisma/seed.ts` carga solo Etapas 1/3/5; no hay `vercel.json` ni script de npm que corra
+  migraciones/seed en el deploy.
+- El ORIGEN de este item no esta registrado en ningun lado: no hay verbatim del usuario en el doc,
+  en el repo ni en Engram (la obs #291 citada en S1 es la regla de inmutabilidad, no este item).
+
+Conclusion: no es un bug y no hace falta como tarea del plan. Lo que hay detras en realidad es
+cargar/verificar los datos en produccion, y eso pertenece al deploy de E0 (necesita credenciales de
+Turso). Decision del usuario (verbatim):
+
+> "Si hace eso, que otra cosa quedaba pendiente?"
+
+Interpretacion: se archiva. Estado: `[x] ~~E7~~` con el motivo en S10 y en el task list.
+
+Limpieza de este doc (mismo commit):
+- Se borraron 71 lineas (65-135) de basura: razonamiento interno del asistente y llamadas de tool
+  filtradas (XML de tool calls, comandos git) que habian quedado escritas dentro de `## Specs`, entre
+  el bloque de S9 y S10, incluido un code fence abierto que rompia el markdown de todo lo que venia
+  despues.
+- Verificado que era el unico doc afectado de los 21 `.md` de `odd/` (grep por
+  `DSML|^Let me |^Now the |^Hmm,|^Approach used`). Doc: 436 -> 365 lineas; S10 quedo en la linea 65.
+- Sin test: es un artefacto de documentacion (misma excepcion test-first documentada en L12).
+- Nota de metodo: la limpieza se hizo con un script con guardas (aborta si los bordes no coinciden) y
+  verificacion por sondas chicas (numero de linea + linea), porque el canal de salidas largas de esta
+  sesion devuelve lecturas truncadas o cruzadas.
