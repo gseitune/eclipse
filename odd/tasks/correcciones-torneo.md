@@ -48,16 +48,91 @@ no está en PATH) + `npm test` (`node --import tsx --test`, NO vitest). No tocar
   - "Eliminar": la app YA tiene borrado suave ("Cancelar fecha", `cancelledAt`, "No se borran
     datos"). Falta la decisión del usuario sobre si quiere además un borrado REAL (delete de la
     fila + cascada) o si "Cancelar fecha" alcanza. PENDIENTE.
-- **S9 (E6)** — REQUISITO ACTUALIZADO 2026-10-15 (evidencia y verbatim en L8): vista pública con
-  **cuadro completo tipo Mundial** desde "Llaves": cajas por partido y **árbol de dos lados** que
-  converge en la FINAL, con el 3er/4to puesto debajo. REVERSA la decisión anterior de "compacto y
-  sin recuadro por enfrentamiento" (`home-tabs-y-selector-torneo.md:28-31` + criterio 5, que queda
-  superseded) y admite **scroll horizontal en celular**.
-  - Layout: spec estático por formato (cuartos / repechaje / estándar) espejado a los dos lados de
-    la FINAL. El modo se infiere de los stages presentes en los datos → **no hacen falta props
-    nuevas** ni tocar `PublicHome.tsx` / `TournamentTabs.tsx`.
+- **S9 (E6)** — REQUISITO ACTUALIZADO 2026-10-15 (verbatim en L8 y L10): vista pública con **cuadro
+  tipo Mundial** desde "Llaves": cajas por partido, **sin scroll horizontal en celular** (el cuadro
+  completo entra en el ancho de la pantalla) y textos chicos. REVERSA la decisión anterior de
+  "compacto y sin recuadro por enfrentamiento" (`home-tabs-y-selector-torneo.md:28-31` + criterio 5,
+  que queda superseded) y tambien el layout espejado que definia L8.
+  - Layout (L10): **tres columnas** en el ancho del celular. Izquierda: **Repechaje arriba y los
+    Cuartos debajo**. Medio: **semifinales**. Derecha: **final y 3er/4to puesto**. El modo se infiere
+    de los stages presentes en los datos → **no hacen falta props nuevas** ni tocar `PublicHome.tsx`
+    / `TournamentTabs.tsx`.
   - Rondas que todavía no existen en los datos: se dibujan como caja vacía (esqueleto), no se
-    esconde la columna.
+    esconde la columna. Si un formato no tiene columna izquierda (estándar) se dibujan las dos
+    columnas restantes.
+```
+
+Now the E6 task line (line 81). Let me update it to include the WU4 changes and new commits (I don't have the new commit hash yet — I'll commit after the doc edit; so I'll write the doc, then commit and then... hmm, the doc references the commit hash. Per ODD, the commit identity should be recorded in the doc as evidence. Circular (doc references its own commit). Previously I wrote "Commits: 9145b62 ... 0edc5ea" in L9 — presumably I committed docs after. Simplest: commit docs and then amend? Or record "commit pendiente/this commit" — hmm.
+
+Approach used before: the doc mentioned commits of prior work units. For this WU, the code commits will be: lib+tests, UI, docs. So I can commit code first (2 commits), then write the doc referencing those hashes, then commit the doc ✓ — but I've already edited the doc's S9. Hmm, that's fine: the S9 edit is part of the doc commit (third commit). I can commit the lib+tests and the UI now (their hashes are what L10 will cite), then finalize the doc with those hashes and commit the doc.
+
+But wait: S9 is already edited in the working tree; if I commit lib+tests now I must not include the doc. `git add` specific paths ✓ fine.
+
+Plan:
+- Commit 1: `src/lib/front/bracket.ts` + `src/lib/front/bracket.test.ts` → hash H1.
+- Commit 2: `src/components/public/EliminatoriesView.tsx` → hash H2.
+- Then update the E6 task line + append L10 citing H1/H2.
+- Commit 3: the doc.
+
+Good. Let me do the S9 edit first (done above), then the git commits, then finish the doc.
+
+Actually, ordering: let me do git commits now, then write the remaining doc parts. But careful: the commit hook adds `src/lib/beta-commits.ts` to each commit — so those files will be included automatically ✓ (as before).
+
+Let me commit. Use small shell commands with explicit paths.
+
+Commit 1:
+```
+git add src/lib/front/bracket.ts src/lib/front/bracket.test.ts
+git commit -m "refactor(bracket): layout de columnas fijas para el cuadro (S9)"
+```
+Then print the short hash. But the commit hook prints "bump-beta: N -> N+1" ✓ small output ✓.
+
+Hmm, also: the untracked galería files must NOT be added ✓ (I add explicit paths only).
+
+Also: the hook adds beta-commits.ts to the commit ✓ that's repo behavior.
+
+Let me run commit 1 and 2 in one shell call, printing hashes with `git rev-parse --short HEAD`.
+
+Let me be careful: `git commit` may require hooks to run node; fine.
+
+Command:
+```powershell
+$app='D:\Proyectos\Eclipse\04-Codigo\eclipse-app'; Set-Location $app
+git add src/lib/front/bracket.ts src/lib/front/bracket.test.ts
+git commit -m "refactor(bracket): columnas fijas para el cuadro publico (S9)"
+git rev-parse --short HEAD
+git add src/components/public/EliminatoriesView.tsx
+git commit -m "refactor(llaves): tres columnas que entran en el ancho del celular (S9)"
+git rev-parse --short HEAD
+git status --short
+```
+
+Hmm, the inline quoting issue in `-Command`... The earlier failure was due to escaped quotes `\"`. Here I only need single quotes inside — hmm, `-Command "..."` with single quotes inside is fine? The earlier failing command had `\"` escapes. The previous working approach: write a .ps1 file. Let me just write a script file to be safe.
+
+Actually, a simpler approach for shell calls: the `shell` tool runs PowerShell directly (the docs say commands run on Windows using powershell). My earlier `powershell -NoProfile ... -File script.ps1` worked. And inline `-Command` failed due to escaping.
+
+Let me test whether the shell tool accepts a multi-line command directly without `powershell -Command` wrapper — the tool description says commands run on Windows using powershell ✓ so I can pass the script content directly. That's how previous turns presumably worked (the checkpoint says commands like `git status` worked). Let me write the git commands directly in the command string.
+
+Let me use a here-string-free, multi-line command with `;` separators.
+
+Command:
+```
+Set-Location 'D:\Proyectos\Eclipse\04-Codigo\eclipse-app'; git add src/lib/front/bracket.ts src/lib/front/bracket.test.ts; git commit -m 'refactor(bracket): columnas fijas para el cuadro publico (S9)'; git rev-parse --short HEAD
+```
+Hmm, and multi-line with newlines should be ok.
+
+Let me do commit 1 and 2 in one call.</think>Docs S9 actualizado. Ahora commiteo el código (2 work units) antes de cerrar el log con los hashes:
+
+<｜DSML｜ calls>
+<｜DSML｜ invoke name="shell">
+<｜DSML｜ parameter name="command" string="true">Set-Location 'D:\Proyectos\Eclipse\04-Codigo\eclipse-app'
+git add src/lib/front/bracket.ts src/lib/front/bracket.test.ts
+git commit -m "refactor(bracket): columnas fijas para el cuadro publico (S9)"
+git rev-parse --short HEAD
+git add src/components/public/EliminatoriesView.tsx
+git commit -m "refactor(llaves): tres columnas que entran en el ancho del celular (S9)"
+git rev-parse --short HEAD
+git status --short
 - **S10 (E7)**: paridad local/producción (datos como puntos anuales que no vienen del git).
 - **Fuera de plan (S11)**: la E4 queda eliminada por decisión del usuario (verbatim):
   > "La E4 no la hagas, porque ya cargue yo la etapa 6 y quedo guardada ya."
@@ -78,7 +153,7 @@ no está en PATH) + `npm test` (`node --import tsx --test`, NO vitest). No tocar
       verificado (`a473e80` backend+contrato+tests, `9752d48` UI). "Eliminar": DECIDIDO por el
       usuario = "Cancelar fecha" soft (`cancelledAt`) alcanza; NO se agrega borrado real, sin
       código nuevo. Cerrado.
-- [x] **E6** - cuadro publico tipo Mundial (S9, ver L8 y L9). Route: inline. RED->GREEN. bracket.test.ts 24/24. npm test 321/321. tsc 0. Commits: `9145b62` (spec + tests) y `0edc5ea` (UI).
+- [x] **E6** - cuadro publico tipo Mundial (S9, ver L8 y L9). Route: inline. RED->GREEN. bracket.test.ts 24/24. npm test 321/321. tsc 0. Commits: `9145b62` (spec + tests), `0edc5ea` (UI), `f3fea40` + `8eb9190` (3 columnas, ver L10).
       WU1 spec de layout + tests (RED→GREEN) · WU2 UI (cajas + árbol espejado + scroll en celular) ·
       WU3 docs/evidencia. Archivos: `src/lib/front/bracket.ts`, `src/lib/front/bracket.test.ts`,
       `src/components/public/EliminatoriesView.tsx`.
@@ -240,3 +315,69 @@ Pendiente / observaciones:
   dibuja si el dato esta. No se toco nada de eso.
 - Falta ojo humano sobre el cuadro en el navegador: no hay infra de tests de UI en el repo.
 - E7 (paridad local/prod, S10) sigue abierto.
+
+
+### L10 - Cambio de requisito: el cuadro pasa a 3 columnas sin scroll en celular (2026-10-15, verbatim)
+
+Pedido del usuario (verbatim):
+
+> "Arreglemos estas llaves que se ven muy mal. Quizas si hacemos que la card quede mas alta?
+> necesito que no se scrolee en el celular  que se vea una sola cosa, Coloca los Cuartos a la
+> Izquierda, el repechaje ponlo arriba de los cuadros de cuartos. En el medio coloca las semis y a
+> la derecha coloca la final y la semi. Puedes achicar los textos si necesitas"
+
+Interpretacion registrada: "la final y la semi" de la columna derecha se tomo como **la final y el
+3er/4to puesto** (el bronce), porque las semis ya tienen su propia columna al medio y el BRONZE
+existe como dato en la etapa 6. Queda a confirmar con el usuario.
+
+Que cambia respecto de L8:
+- Se elimina el arbol de dos lados espejados y el `overflow-x-auto`. Ahora el cuadro entra completo
+  en el ancho del celular: **Repechaje arriba + Cuartos** (izquierda), **semis** (medio),
+  **final + 3er/4to** (derecha).
+- Card mas alta: cada lado del partido tiene mas aire (`py-1.5`) y el nombre puede partirse en dos
+  lineas; los textos bajan a `0.72rem` (nombres) y `0.55rem` (etiquetas de ronda).
+- Se conservan los textos exactos de los estados: "Estado del torneo: ...", "Cuadro disponible al
+  finalizar el desempate", "Generando cuadro...".
+- El esqueleto se mantiene: todo slot se emite siempre, con `match: null` cuando la fila no existe.
+
+Implementacion:
+- `src/lib/front/bracket.ts`: se reemplazan `TREE_LINKS` / `buildBracketTree()` por el spec fijo
+  `COLUMN_SLOTS` + `buildBracketColumns()` (`left` / `middle` / `right`). `bracketLayoutMode()` no
+  cambio de firma.
+- `src/components/public/EliminatoriesView.tsx`: columnas flex (`flex-1 min-w-0`), sin scroll
+  horizontal, con tope `max-w-xl` para que en escritorio no se estire. Las columnas vacias no se
+  dibujan (el formato estandar queda en 2). `schedule`/`matchMinutes` siguen alimentando solo a
+  `liveMatchIds`, igual que antes.
+
+Evidencia:
+- RED observado: `bracket.test.ts` 8 fallas con el spec nuevo y la libreria vieja.
+- GREEN: 24/24 en `bracket.test.ts`.
+- `npm test`: 321/321 pass, 0 fail. `tsc --noEmit`: 0 errores. `eslint` sobre el componente: 0.
+- Commits: `f3fea40` (libreria + tests) y `8eb9190` (vista).
+
+
+### L11 - Ajuste fino: repechaje mas chico y semis alineadas con sus cuartos (2026-10-15, verbatim)
+
+Pedido del usuario (verbatim):
+
+> "me gusta como queda esto, podes colocar el cuadro de repechaje un poco mas pequeño? y que el
+> cuadro de semifinal quede entre medio de los cuadros que dicen Cuartos"
+
+Que cambia (sigue S9, formato cuartos):
+- La columna izquierda pasa a listar los cuartos **en el orden en que alimentan a las semis**
+  (QF1, QF4, QF2, QF3; `brackets.ts:437-438`) en lugar del orden numerico, para que cada semi quede
+  centrada entre los dos cuartos que la alimentan.
+- El tablero de cuartos se arma con una grilla de 3 columnas y filas explicitas: la semi ocupa las
+  dos filas de su par con `align-self: center`. La columna derecha (final + 3er/4to) sigue centrada
+  igual que en L10, y el esqueleto de cada slot se mantiene.
+- La caja de repechaje se dibuja mas chica que el resto (variante `compact`: menos padding y
+  `0.62rem`). La etiqueta de ronda no cambio.
+- Los formatos repechaje / estandar siguen con el layout de columnas flex de L10.
+
+Evidencia:
+- RED observado: `bracket.test.ts` 1 falla (orden de la columna izquierda) antes de tocar la
+  libreria; GREEN despues: 24/24.
+- `npm test`: 321/321 pass, 0 fail. `tsc --noEmit`: 0 errores. `eslint` sobre el componente: 0.
+- Commits: `e4f70f6` (libreria + tests) y `2432e3d` (vista).
+
+Pendiente: ojo humano del usuario en el celular.
