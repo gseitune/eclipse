@@ -406,3 +406,31 @@ Evidencia:
 - Commit: `e57a29a` (vista).
 
 Pendiente: ojo humano del usuario en el celular.
+
+
+### L13 - Ajuste fino 3: el ganador marca un poco mas su fondo (2026-10-15, verbatim)
+
+Pedido del usuario (verbatim):
+
+> "Bueno y tambien quiero que (excepto en repechaje) en cada cuadro al ganador marques un poco
+> mas el color de fondo de cuadro que tiene, un poquito mas nomas"
+
+Que cambia:
+- El fondo del ganador pasa a `bg-amber-100` en todos los cuadros menos el repechaje.
+- Dato que cambio la decision: los tokens `amber-soft-*` del `@theme` son casi blancos
+  (`amber-soft-100: #fefdf9`, `amber-soft-200: #fefcf3`), asi que subir un escalon ahi no se ve. La
+  app ya usa la paleta estandar de Tailwind para resaltar (`bg-amber-50` / `bg-amber-100`,
+  `border-amber-600`, `bg-amber-600`), asi que el ganador usa esa misma familia.
+- El repechaje queda como estaba (`bg-amber-soft-100`).
+- Hover: en una fila ganadora el hover pasa a `hover:bg-amber-200` en vez de `hover:bg-sand-50`,
+  porque `hover:` le gana a `bg-amber-100` y en el celular el tap deja el hover aplicado: sin esto
+  el resaltado desaparecia al tocar la fila.
+
+Evidencia:
+- `npm test`: 321/321 pass, 0 fail. `tsc --noEmit`: 0 errores. `eslint` sobre el componente: 0.
+- Sin test nuevo: cambio puramente de estilo (misma excepcion test-first registrada en L12).
+- Commit: `c81187d` (vista).
+
+Pendiente:
+- Ojo humano del usuario sobre el celular.
+- Si `bg-amber-100` resulta demasiado, el escalon anterior de esa familia es `bg-amber-50`.
