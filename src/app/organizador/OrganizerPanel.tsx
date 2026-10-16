@@ -8,6 +8,10 @@ import type { MatchPublic, StateSnapshot } from "@/lib/front/types";
 import { computeTimeEstimate } from "@/lib/time-estimate";
 import { stageLabel } from "@/lib/front/phase";
 import {
+  sectionTargetId,
+  sectionsFor,
+} from "@/lib/front/panel";
+import {
   CorregirResultadosPanel,
   ResultadoEntryPanel,
   MejoresTercerosPanel,
@@ -202,54 +206,6 @@ function CloseEtapaBanner({
   );
 }
 
-/* ── Section kind ── */
-type SectionKind = "actionable" | "disabled";
-
-interface SectionConfig {
-  readonly label: string;
-  readonly hint: string;
-  readonly kind: SectionKind;
-}
-
-const SECTIONS_DEFAULT: readonly SectionConfig[] = [
-  {
-    label: "Crear Etapa",
-    hint: "Crear y editar etapas con equipos",
-    kind: "actionable",
-  },
-  {
-    label: "Agenda de partidos",
-    hint: "Ver y modificar el orden de los partidos del día",
-    kind: "actionable",
-  },
-] as const;
-
-const SECTIONS_CANCELLED: readonly SectionConfig[] = [
-  {
-    label: "Crear Etapa",
-    hint: "Crear y editar etapas con equipos",
-    kind: "actionable",
-  },
-  {
-    label: "Agenda de partidos",
-    hint: "Etapa cancelada: sin acceso de edición",
-    kind: "disabled",
-  },
-] as const;
-
-const SECTIONS_CLOSED: readonly SectionConfig[] = [
-  {
-    label: "Crear Etapa",
-    hint: "Crear y editar etapas con equipos",
-    kind: "actionable",
-  },
-  {
-    label: "Agenda de partidos",
-    hint: "Etapa finalizada: sólo consulta",
-    kind: "actionable",
-  },
-] as const;
-
 /* ── Props ── */
 export interface OrganizerPanelProps {
   readonly email: string;
@@ -329,7 +285,7 @@ function ResultsCard({
   readonly disabled?: boolean;
   readonly closed?: boolean;
 }) {
-  if (disabled) {
+  if (disabled || closed) {
     return (
       <div
         role="group"
@@ -342,7 +298,9 @@ function ResultsCard({
             Resultados
           </span>
           <span className="mt-0.5 block text-xs text-stone-400">
-            Etapa cancelada — sin acceso
+            {closed
+              ? "Etapa finalizada: sólo consulta"
+              : "Etapa cancelada — sin acceso"}
           </span>
         </span>
       </div>
@@ -358,22 +316,15 @@ function ResultsCard({
         Resultados
       </span>
       <span className="mt-0.5 block text-xs text-stone-500">
-        {closed
-          ? "Etapa finalizada: ya no se pueden cargar ni editar resultados."
-          : "Cargar o corregir resultados"}
+        Cargar o corregir resultados
       </span>
-      {!closed && (
-        <div className="mt-4">
-          <ResultadoEntryPanel
-            state={state}
-            loading={loading}
-            error={error}
-            refetch={refetch}
-          />
-        </div>
-      )}
       <div className="mt-4">
-        <CorregirResultadosPanel refetch={refetch} readOnly={closed} />
+        <ResultadoEntryPanel
+          state={state}
+          loading={loading}
+          error={error}
+          refetch={refetch}
+        />
       </div>
     </div>
   );
@@ -508,23 +459,11 @@ export function OrganizerPanel({
     return map;
   }, [liveState?.brackets]);
 
-  const sections = isCancelled
-    ? SECTIONS_CANCELLED
-    : isClosed
-      ? SECTIONS_CLOSED
-      : SECTIONS_DEFAULT;
+  const sections = sectionsFor({ isCancelled, isClosed });
 
   function handleSectionClick(label: string) {
-    switch (label) {
-      case "Equipos":
-        setActiveSection("circuitos");
-        break;
-      case "Agenda de partidos":
-        setActiveSection("reagendar");
-        break;
-      default:
-        setActiveSection(null);
-    }
+    const target = sectionTargetId(label);
+    setActiveSection(target);
   }
 
   async function handleLogout() {
