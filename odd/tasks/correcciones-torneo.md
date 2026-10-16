@@ -381,3 +381,28 @@ Evidencia:
 - Commits: `e4f70f6` (libreria + tests) y `2432e3d` (vista).
 
 Pendiente: ojo humano del usuario en el celular.
+
+
+### L12 - Ajuste fino 2: tamanos unificados y final alineada con las semis (2026-10-15, verbatim)
+
+Pedido del usuario (verbatim):
+
+> "Quedo muy bien ahora quiero un par de cosas
+> * Viste el cuadro de repechaje? bueno quiero que todos los cuadros, excepto la final tengan ese tamaño y que el repechaje sea aun mas chico
+> * y Quiero que los cuadros de final y tercer/cuarto puesto quede en el medio de los cuadros de semi (se entiende?) no quiero que los muevas de columna sino que los alinees"
+
+Que cambia (solo presentacion: no toca la libreria ni el spec de columnas):
+- El tamano pasa a ser una regla por ronda (`slotSize`): cuartos, semis y 3er/4to usan el tamano
+  compacto (el que tenia el repechaje), el repechaje baja un escalon mas (`tiny`) y la final se
+  queda con el tamano grande.
+- La columna de la derecha (final + 3er/4to) se centra sobre las filas de los cuartos/semis y no
+  sobre todo el tablero: `gridRow: 2 / span (filas - 1)`. Asi la final queda en el medio entre las
+  dos semis y la fila del repechaje no la empuja hacia arriba. No se movio ninguna columna.
+
+Evidencia:
+- `npm test`: 321/321 pass, 0 fail. `tsc --noEmit`: 0 errores. `eslint` sobre el componente: 0.
+- Sin test nuevo: cambio puramente de estilo y el repo no tiene infra de tests de UI (excepcion
+  explicita a la politica test-first). La verificacion es la suite + tipos + lint + ojo del usuario.
+- Commit: `e57a29a` (vista).
+
+Pendiente: ojo humano del usuario en el celular.
