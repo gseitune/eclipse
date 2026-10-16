@@ -56,9 +56,14 @@ da 163. Produccion estaba en `1a7ac32`, el commit que introdujo el bug.
 - [x] T2 — `fillDescendantMatches`: sacar la `$transaction` interactiva, `fill(prisma)` (S2).
 - [x] T3 — `/api/state` route: try/catch con mensaje JSON en vez de 500 vacio (S3).
 - [x] T4 — Verificacion local: `npx tsc --noEmit` EXIT 0 + `npm test` 271/271 (S4).
-- [ ] T5 — Deploy a `main` + verificar `GET /api/state` 200 en produccion.
-- [ ] T6 — Verificacion funcional en prod: cargar el resultado de REPECHAJE_1 de la Etapa 6
-      y comprobar que completa CUARTOS_1 con el ganador, al lado de Vivi y Santy (1.o de A).
+- [x] T5 — Deploy a `main`: HECHO. El fix esta en `origin/main` (`1c1f8ed` + `8f4e5dd`, los 2
+      commits de arriba) y el deploy a produccion es automatico desde `main` (Vercel).
+      La verificacion de runtime (`GET /api/state` 200 en prod) no la ejecuto el agente: es una
+      operacion remota y queda a cargo del usuario (ver L4).
+- [x] T6 — Verificacion funcional en prod: CERRADA por el usuario (2026-10-15). Requiere sesion de
+      organizador en produccion (cargar el resultado de REPECHAJE_1 de la Etapa 6 y comprobar que
+      completa CUARTOS_1 con el ganador al lado de Vivi y Santy). El agente no la ejecuto; se cierra
+      con la instruccion del usuario (verbatim: "El t6 borralo ya esta"). Ver L4.
 
 ## Estado del cuadro en produccion (Etapa 6, leido via `/api/schedule`)
 ```
@@ -95,3 +100,25 @@ No se pudo cargar REPECHAJE_1 porque el panel moria con el 500, no por logica de
 ### L3 — Fix y verificacion local (2026-10-14)
 Fix aplicado (venia del 2026-10-13 15:13, sin commitear). `npx tsc --noEmit` EXIT 0.
 `npm test`: 271 tests, 271 pass, 0 fail.
+
+### L4 — Cierre: el fix ya estaba en `main`; verificacion funcional en prod (2026-10-15)
+
+Instruccion del usuario (verbatim):
+
+> "El t6 borralo ya esta. Finalicemos todo esto que terminamos"
+
+Estado real relevado (2026-10-15, refs locales, SIN `git fetch`):
+- `origin/main` tiene arriba los 2 commits de este feature: `1c1f8ed` (audit) y `8f4e5dd` (fix).
+  O sea el push a `main` ya estaba hecho; el deploy a produccion es automatico desde `main`.
+- `origin/main` esta en `BETA_COMMITS=167` -> el badge publico debe decir `1.17` (formula
+  `1.(count - 151 + 1)` de `src/lib/version.ts:13`; prod estaba en 163 = `1.13`).
+- Este fix no cambia schema ni UI -> el deploy NO necesito migraciones ni seed.
+
+Cierre:
+- T5: cerrada. Deploy hecho (evidencia: `origin/main`). La verificacion HTTP de `/api/state` en
+  produccion no la ejecuto el agente (operacion remota); queda a cargo del usuario.
+- T6: cerrada por el usuario (requiere sesion de organizador en prod).
+
+Relacionado, OTRO deploy (no este feature): la rama `feat/selvarena-front` esta 22 commits adelante
+de `main` con el trabajo de correcciones del torneo + el cuadro de Llaves nuevo, y ademas 10 commits
+sin pushear. Se decide aparte.
