@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { auditWrite } from "./audit";
+import { canonicalPlayerName, canonicalTeamName } from "./player-names";
 import { publishSse } from "./events";
 import { computeZoneStandings, type StandingRow } from "./standings";
 import {
@@ -232,48 +233,6 @@ export const MIN_TEAMS_PER_ETAPA = 6;
  * Mixto fijo: every team must carry exactly one male and one female player
  * name — the per-sex individual ranking depends on them.
  */
-/**
- * Confirmed player-name aliases. This is a WHITELIST on purpose: an alias is
- * collapsed only when it is an explicit, confirmed equivalence. Any other name
- * keeps its exact form, so similar-but-different people (Cami vs CamiC) never
- * merge by accident. Keys are accent-stripped lowercase; values are the
- * canonical display form that gets stored.
- */
-const PLAYER_ALIASES: Readonly<Record<string, string>> = {
-  sebita: "Seba",
-  sebi: "Seba",
-  seba: "Seba",
-  gon: "Gonza",
-  gonz: "Gonza",
-  gonza: "Gonza",
-  gaso: "Gastón",
-  gaston: "Gastón",
-};
-
-/**
- * Canonical display form of a single player name: trims, and rewrites only the
- * whitelisted aliases. Everything else is returned untouched (case and accents
- * are preserved), so no accidental lowercasing or merging happens.
- */
-function canonicalPlayerName(raw: string): string {
-  const trimmed = raw.trim();
-  const key = trimmed.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
-  return PLAYER_ALIASES[key] ?? trimmed;
-}
-
-/**
- * Canonical team name: canonicalizes each side of the "X y Y" pair and leaves
- * any other shape untouched. Keeps the original order and separator, only
- * swapping whitelisted aliases for their canonical form.
- */
-function canonicalTeamName(raw: string): string {
-  return raw
-    .trim()
-    .split(/\s+y\s+/i)
-    .map((token) => canonicalPlayerName(token))
-    .join(" y ");
-}
-
 export async function createEtapa(input: CreateEtapaInput, _opts?: { rng?: () => number }) {
   const name = input.name.trim();
   if (!name) throw new BackError("Etapa name is required.", 400, "name_required");

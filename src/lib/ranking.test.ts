@@ -254,17 +254,17 @@ describe("aggregateRankedPlayers", () => {
   it("both players of a team earn the same position points", () => {
     const etapas = [
       etapaPositions("e1", "Etapa 1", 1, [
-        { teamId: "tA1", position: 1, maleName: "Sebita", femaleName: "Roxi" },
+        { teamId: "tA1", position: 1, maleName: "Enzo", femaleName: "Roxi" },
         { teamId: "tA2", position: 2, maleName: "Santy", femaleName: "Vivi" },
       ]),
     ];
     const { female, male } = aggregateRankedPlayers(etapas);
     const roxi = female.find((p) => p.name === "Roxi");
-    const sebita = male.find((p) => p.name === "Sebita");
+    const enzo = male.find((p) => p.name === "Enzo");
     assert.ok(roxi, "Roxi in female ranking");
-    assert.ok(sebita, "Sebita in male ranking");
+    assert.ok(enzo, "Enzo in male ranking");
     assert.equal(roxi!.points, 100, "1st = 100 pts for female");
-    assert.equal(sebita!.points, 100, "1st = 100 pts for male");
+    assert.equal(enzo!.points, 100, "1st = 100 pts for male");
     assert.equal(roxi!.bestPosition, 1);
     assert.equal(roxi!.appearances, 1);
     assert.equal(roxi!.etapas[0].etapaName, "Etapa 1");
@@ -273,19 +273,58 @@ describe("aggregateRankedPlayers", () => {
   it("same player across etapas accumulates points under one name", () => {
     const etapas = [
       etapaPositions("e1", "Etapa 1", 1, [
-        { teamId: "tA1", position: 1, maleName: "Sebita", femaleName: null },
+        { teamId: "tA1", position: 1, maleName: "Enzo", femaleName: null },
       ]),
       etapaPositions("e2", "Etapa 2", 2, [
-        { teamId: "tB1", position: 2, maleName: "Sebita", femaleName: null },
+        { teamId: "tB1", position: 2, maleName: "Enzo", femaleName: null },
       ]),
     ];
     const { male } = aggregateRankedPlayers(etapas);
-    const sebita = male.find((p) => p.name === "Sebita");
-    assert.ok(sebita, "Sebita appears once");
-    assert.equal(sebita!.points, 180, "100 + 80 accumulated");
-    assert.equal(sebita!.appearances, 2);
-    assert.equal(sebita!.bestPosition, 1, "best position tracked");
-    assert.equal(sebita!.etapas.length, 2);
+    const enzo = male.find((p) => p.name === "Enzo");
+    assert.ok(enzo, "Enzo appears once");
+    assert.equal(enzo!.points, 180, "100 + 80 accumulated");
+    assert.equal(enzo!.appearances, 2);
+    assert.equal(enzo!.bestPosition, 1, "best position tracked");
+    assert.equal(enzo!.etapas.length, 2);
+  });
+
+  it("sums confirmed aliases into their canonical player (Sebita/Seba, Gaso/Gastón, Gon/Gonza)", () => {
+    const etapas = [
+      etapaPositions("e1", "Etapa 1", 1, [
+        { teamId: "tA1", position: 1, maleName: "Sebita", femaleName: "Roxi" },
+        { teamId: "tA2", position: 2, maleName: "Gaso", femaleName: null },
+        { teamId: "tA3", position: 3, maleName: "Gon", femaleName: null },
+      ]),
+      etapaPositions("e2", "Etapa 2", 2, [
+        { teamId: "tB1", position: 2, maleName: "Seba", femaleName: "Roxi" },
+        { teamId: "tB2", position: 3, maleName: "Gastón", femaleName: null },
+        { teamId: "tB3", position: 4, maleName: "Gonza", femaleName: null },
+      ]),
+    ];
+    const { female, male } = aggregateRankedPlayers(etapas);
+
+    assert.equal(male.length, 3, "each alias group opens a single entry");
+    const seba = male.find((p) => p.name === "Seba");
+    const gaston = male.find((p) => p.name === "Gastón");
+    const gonza = male.find((p) => p.name === "Gonza");
+    assert.ok(seba && gaston && gonza, "the canonical names are the ones displayed");
+    assert.equal(seba!.points, 100 + 80, "Sebita + Seba accumulate");
+    assert.equal(gaston!.points, 80 + 65, "Gaso + Gastón accumulate");
+    assert.equal(gonza!.points, 65 + 50, "Gon + Gonza accumulate");
+
+    assert.equal(female.length, 1, "Roxi stays one entry");
+    assert.equal(female[0].points, 180, "Roxi accumulates across etapas");
+  });
+
+  it("does not merge similar-but-different players (Cami vs Cami C)", () => {
+    const etapas = [
+      etapaPositions("e1", "Etapa 1", 1, [
+        { teamId: "tA1", position: 1, maleName: null, femaleName: "Cami" },
+        { teamId: "tA2", position: 2, maleName: null, femaleName: "Cami C" },
+      ]),
+    ];
+    const { female } = aggregateRankedPlayers(etapas);
+    assert.equal(female.length, 2, "Cami and Cami C stay apart");
   });
 
   it("null-name positions are skipped", () => {

@@ -2,6 +2,7 @@ import { prisma } from "./prisma";
 import type { StandingRow } from "./standings";
 import type { Zone } from "../generated/prisma/client";
 import { getStandings } from "./back";
+import { canonicalPlayerName } from "./player-names";
 
 // POSITION_POINTS[i] = points for position i+1 (1-indexed). Positions > 10 floor at 10.
 export const POSITION_POINTS: number[] = [100, 80, 65, 50, 40, 40, 30, 25, 10, 10];
@@ -307,6 +308,9 @@ export async function getEtapaRanking(etapaId: string): Promise<EtapaPositions |
  * accumulating points from every finished etapa they appeared in.
  * Both players of a team earn the pair's position points per etapa.
  * Entries with null name are skipped (historical etapas without players).
+ * Confirmed aliases are collapsed to their canonical player name (see
+ * player-names.ts), so a variant stored in a frozen etapa sums instead of
+ * opening a second entry; any other name is kept verbatim.
  */
 export function aggregateRankedPlayers(etapas: EtapaPositions[]): {
   female: RankedPlayer[];
@@ -328,10 +332,11 @@ export function aggregateRankedPlayers(etapas: EtapaPositions[]): {
       };
 
       if (pos.femaleName !== null) {
-        const existing = femaleMap.get(pos.femaleName);
+        const name = canonicalPlayerName(pos.femaleName);
+        const existing = femaleMap.get(name);
         if (!existing) {
-          femaleMap.set(pos.femaleName, {
-            name: pos.femaleName,
+          femaleMap.set(name, {
+            name,
             points: pos.points,
             appearances: 1,
             bestPosition: pos.position,
@@ -348,10 +353,11 @@ export function aggregateRankedPlayers(etapas: EtapaPositions[]): {
       }
 
       if (pos.maleName !== null) {
-        const existing = maleMap.get(pos.maleName);
+        const name = canonicalPlayerName(pos.maleName);
+        const existing = maleMap.get(name);
         if (!existing) {
-          maleMap.set(pos.maleName, {
-            name: pos.maleName,
+          maleMap.set(name, {
+            name,
             points: pos.points,
             appearances: 1,
             bestPosition: pos.position,
