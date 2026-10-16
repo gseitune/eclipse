@@ -1,24 +1,15 @@
 import { PrismaClient } from "@/generated/prisma/client";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
+import { resolveDbConfig } from "./db-config";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-function nonEmpty(value: string | undefined): string | undefined {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : undefined;
-}
+const { databaseUrl, authToken, source } = resolveDbConfig(process.env);
 
-// Vercel's Turso storage creates TURSO_DATABASE_URL / TURSO_AUTH_TOKEN.
-// DATABASE_URL is the local sqlite var and may be present-but-empty on the
-// server, so empty strings are skipped instead of short-circuiting the chain.
-const databaseUrl =
-  nonEmpty(process.env.TURSO_DATABASE_URL) ??
-  nonEmpty(process.env.DATABASE_URL) ??
-  "file:./dev.db";
-const authToken =
-  nonEmpty(process.env.TURSO_AUTH_TOKEN) ??
-  nonEmpty(process.env.DATABASE_AUTH_TOKEN);
+// Surface which env var won the resolution so a wrong database in production
+// is visible in the Vercel logs at a glance (never log the URL or token).
+console.log(`[DB] connection source: ${source}`);
 
 // Local SQLite keeps the zero-setup path; remote libsql:// URLs (Turso on
 // Vercel) go through the libSQL adapter so the exact same code serves both.
