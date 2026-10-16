@@ -5,4 +5,4 @@
  * because a Vercel build has no git history to count, which collapsed the badge
  * to the `1.1` baseline on every deploy.
  */
-export const BETA_COMMITS = 190;
+export const BETA_COMMITS = 191;

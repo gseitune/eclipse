@@ -32,7 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <img
             src="/jungle-bg.jpg"
             alt=""
-            className="h-full w-full object-cover opacity-70"
+            className="h-full w-full object-cover saturate-150"
             draggable={false}
           />
           <div className="absolute inset-0 bg-gradient-to-b from-sand-50/30 via-sand-100/10 to-sand-200/30" />
