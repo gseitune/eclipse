@@ -80,24 +80,42 @@ function matchRows(match: MatchPublic | null): MatchRow[] {
   ];
 }
 
+type BoxSize = "tiny" | "compact" | "regular";
+
+/**
+ * Every box is compact, except the final. The repechaje is one step smaller
+ * again, because it is a single play-in game.
+ */
+const BOX_SIZE_CLASS: Record<BoxSize, string> = {
+  tiny: "px-1 py-0 text-[0.55rem]",
+  compact: "px-1.5 py-0.5 text-[0.62rem]",
+  regular: "px-1.5 py-1.5 text-[0.72rem]",
+};
+
+function slotSize(stage: Stage): BoxSize {
+  if (stage === "FINAL") return "regular";
+  if (stage === "REPECHAJE_1" || stage === "REPECHAJE_2") return "tiny";
+  return "compact";
+}
+
 function MatchBox({
   match,
   live,
   emphasis,
-  compact = false,
+  size,
   onOpenTeam,
 }: {
   match: MatchPublic | null;
   live: boolean;
   emphasis: boolean;
-  compact?: boolean;
+  size: BoxSize;
   onOpenTeam: OpenTeam;
 }) {
   const zone = match?.zone ?? "";
   let border = "border-sand-300";
   if (emphasis) border = "border-sun-500";
   if (live) border = "border-ember-500 ring-2 ring-ember-500/30";
-  const sizing = compact ? "px-1.5 py-0.5 text-[0.62rem]" : "px-1.5 py-1.5 text-[0.72rem]";
+  const sizing = BOX_SIZE_CLASS[size];
 
   return (
     <div className={`flex w-full flex-col overflow-hidden rounded-lg border bg-white shadow-sm ${border}`}>
@@ -126,12 +144,10 @@ function MatchBox({
 
 function SlotView({
   slot,
-  compact = false,
   liveIds,
   onOpenTeam,
 }: {
   slot: BracketSlot;
-  compact?: boolean;
   liveIds: Set<string>;
   onOpenTeam: OpenTeam;
 }) {
@@ -144,7 +160,7 @@ function SlotView({
         match={slot.match}
         live={Boolean(slot.match && liveIds.has(slot.match.id))}
         emphasis={slot.stage === "FINAL"}
-        compact={compact}
+        size={slotSize(slot.stage)}
         onOpenTeam={onOpenTeam}
       />
     </div>
@@ -214,7 +230,7 @@ function CuartosBoard({
     >
       {repechaje ? (
         <div style={{ gridColumn: 1, gridRow: 1 }}>
-          <SlotView slot={repechaje} compact liveIds={liveIds} onOpenTeam={onOpenTeam} />
+          <SlotView slot={repechaje} liveIds={liveIds} onOpenTeam={onOpenTeam} />
         </div>
       ) : null}
 
@@ -240,9 +256,11 @@ function CuartosBoard({
         );
       })}
 
+      {/* Centered between the two semis, not on the whole board: the repechaje
+          row on top must not push the final down. */}
       <div
         className="flex min-w-0 flex-col justify-center gap-2"
-        style={{ gridColumn: 3, gridRow: `1 / span ${rows}` }}
+        style={{ gridColumn: 3, gridRow: `2 / span ${rows - 1}` }}
       >
         {columns.right.map((slot) => (
           <SlotView key={slot.stage} slot={slot} liveIds={liveIds} onOpenTeam={onOpenTeam} />
