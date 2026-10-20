@@ -277,7 +277,6 @@ export function PublicHome({
                 brackets={state?.brackets ?? []}
                 nextMatch={state?.nextMatch ?? null}
                 desempate={state?.desempate ?? { needed: false, pending: false, match: null }}
-                matchMinutes={state?.matchMinutes ?? 20}
               />
             )}
 
