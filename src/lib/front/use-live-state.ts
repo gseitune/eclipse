@@ -22,7 +22,7 @@ const DEBOUNCE_MS = 250;
 const RECONNECT_INITIAL_MS = 1000;
 const RECONNECT_MAX_MS = 15000;
 /** Safety-net refresh: SSE events can be published from another instance. */
-const POLL_MS = 20000;
+const POLL_MS = 10000;
 
 export function useLiveState(options?: {
   initial?: StateSnapshot | null;
