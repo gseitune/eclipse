@@ -7,7 +7,9 @@ import type {
   EtapaMeta,
   CreateEtapaInput,
   ScheduleBoardRow,
+  Circuit,
 } from "./types";
+import type { FotoGaleria } from "./galeria";
 import { ApiError } from "./types";
 
 export { ApiError };
@@ -26,8 +28,9 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return body as T;
 }
 
-export async function fetchState(): Promise<StateSnapshot> {
-  const res = await fetch(`${BASE}/state`, { cache: "no-store" });
+export async function fetchState(circuit?: Circuit): Promise<StateSnapshot> {
+  const qs = circuit ? `?circuit=${circuit}` : "";
+  const res = await fetch(`${BASE}/state${qs}`, { cache: "no-store" });
   return handleResponse<StateSnapshot>(res);
 }
 
@@ -152,14 +155,29 @@ export async function logout(): Promise<{ ok: true }> {
   return handleResponse<{ ok: true }>(res);
 }
 
-export async function fetchRanking(): Promise<RankingResponse> {
-  const res = await fetch(`${BASE}/ranking`, { cache: "no-store" });
+export async function fetchRanking(circuit?: Circuit, season?: number | null): Promise<RankingResponse> {
+  const params = new URLSearchParams();
+  if (circuit) params.set("circuit", circuit);
+  if (season !== undefined && season !== null) params.set("season", String(season));
+  const qs = params.toString();
+  const res = await fetch(`${BASE}/ranking${qs ? `?${qs}` : ""}`, { cache: "no-store" });
   return handleResponse<RankingResponse>(res);
 }
 
-export async function fetchEtapas(): Promise<{ etapas: EtapaMeta[] }> {
-  const res = await fetch(`${BASE}/etapas`, { cache: "no-store" });
+export async function fetchEtapas(circuit?: Circuit): Promise<{ etapas: EtapaMeta[] }> {
+  const qs = circuit ? `?circuit=${circuit}` : "";
+  const res = await fetch(`${BASE}/etapas${qs}`, { cache: "no-store" });
   return handleResponse<{ etapas: EtapaMeta[] }>(res);
+}
+
+/** Public gallery of one circuit: the photos and the album link. */
+export async function fetchGallery(
+  circuit: Circuit,
+): Promise<{ fotos: FotoGaleria[]; albumUrl: string }> {
+  const res = await fetch(`${BASE}/gallery?circuit=${circuit}`, {
+    cache: "no-store",
+  });
+  return handleResponse<{ fotos: FotoGaleria[]; albumUrl: string }>(res);
 }
 
 /** Organizer edits an etapa's metadata (name/date). Only while open and unplayed. */
@@ -245,6 +263,40 @@ export async function cancelEtapa(
   return handleResponse(res);
 }
 
+/** Removes a cancelled etapa so its number can be loaded again. */
+export async function deleteEtapa(etapaId: string): Promise<{ id: string }> {
+  const res = await fetch(`${BASE}/etapas/${etapaId}`, {
+    method: "DELETE",
+    credentials: "same-origin",
+    cache: "no-store",
+  });
+  return handleResponse<{ id: string }>(res);
+}
+
+/** Drive folder stored for a circuit's public gallery (null = default album). */
+export async function fetchGalleryFolder(
+  circuit: Circuit,
+): Promise<{ circuit: Circuit; folder: string | null }> {
+  const res = await fetch(`${BASE}/settings/gallery?circuit=${circuit}`, {
+    cache: "no-store",
+  });
+  return handleResponse(res);
+}
+
+export async function saveGalleryFolder(
+  circuit: Circuit,
+  url: string,
+): Promise<{ circuit: Circuit; folder: string | null }> {
+  const res = await fetch(`${BASE}/settings/gallery`, {
+    method: "PATCH",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+    body: JSON.stringify({ circuit, url }),
+  });
+  return handleResponse(res);
+}
+
 export async function createEtapa(input: CreateEtapaInput): Promise<{ etapa: { id: string; name: string } }> {
   const res = await fetch(`${BASE}/etapas`, {
     method: "POST",
@@ -256,8 +308,29 @@ export async function createEtapa(input: CreateEtapaInput): Promise<{ etapa: { i
   return handleResponse(res);
 }
 
-export async function fetchScheduleBoard(): Promise<{ schedule: ScheduleBoardRow[] }> {
-  const res = await fetch(`${BASE}/schedule`, { cache: "no-store" });
+/**
+ * Registers a fecha suspended by weather: only number, date and circuit, with no
+ * teams and no fixture. It is born cancelled.
+ */
+export async function createCancelledEtapa(input: {
+  name: string;
+  date: string;
+  circuit?: Circuit;
+  season?: number;
+}): Promise<{ etapa: { id: string; name: string } }> {
+  const res = await fetch(`${BASE}/etapas`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...input, cancelled: true }),
+    cache: "no-store",
+  });
+  return handleResponse(res);
+}
+
+export async function fetchScheduleBoard(etapaId?: string | null): Promise<{ schedule: ScheduleBoardRow[] }> {
+  const qs = etapaId ? `?etapa=${encodeURIComponent(etapaId)}` : "";
+  const res = await fetch(`${BASE}/schedule${qs}`, { cache: "no-store" });
   return handleResponse(res);
 }
 

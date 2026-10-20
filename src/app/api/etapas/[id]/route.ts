@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { sessionCookieName, verifySessionToken } from "@/lib/auth";
-import { updateEtapaMeta } from "@/lib/back";
+import { deleteEtapa, updateEtapaMeta } from "@/lib/back";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +36,36 @@ export async function PATCH(
 
     const etapa = await updateEtapaMeta(id, body);
     return NextResponse.json({ etapa });
+  } catch (error) {
+    const status = (error as { status?: number }).status ?? 500;
+    const message = error instanceof Error ? error.message : "Unexpected error";
+    const reason = (error as { reason?: string }).reason;
+    return NextResponse.json(
+      reason ? { error: message, reason } : { error: message },
+      { status },
+    );
+  }
+}
+
+/**
+ * DELETE /api/etapas/:id — organizer-only: removes a cancelled etapa so its
+ * number can be loaded again. Any other state is refused by the back layer.
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const session = verifySessionToken(
+    request.cookies.get(sessionCookieName)?.value,
+  );
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await params;
+
+  try {
+    return NextResponse.json(await deleteEtapa(id));
   } catch (error) {
     const status = (error as { status?: number }).status ?? 500;
     const message = error instanceof Error ? error.message : "Unexpected error";

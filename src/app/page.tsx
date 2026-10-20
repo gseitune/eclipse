@@ -9,6 +9,7 @@ import {
 } from "@/lib/front/galeria";
 import { PublicHome } from "@/components/public/PublicHome";
 import { betaVersion } from "@/lib/version";
+import { getGalleryFolder } from "@/lib/back";
 
 export default async function Home({
   searchParams,
@@ -26,7 +27,15 @@ export default async function Home({
 
   // La galería se pide EN PARALELO al estado: si Google tarda, no frena la
   // home (tiene timeout propio y devuelve [] ante cualquier problema).
-  const carpetaGaleria = process.env.GALERIA_FOLDER_ID ?? GALERIA_FOLDER_POR_DEFECTO;
+  // La carpeta puede venir del panel del organizador; si no hay ninguna
+  // configurada, manda la env var y después el álbum por defecto.
+  let carpetaGaleria = process.env.GALERIA_FOLDER_ID ?? GALERIA_FOLDER_POR_DEFECTO;
+  try {
+    const carpetaConfigurada = await getGalleryFolder("PRINCIPIANTES");
+    if (carpetaConfigurada) carpetaGaleria = carpetaConfigurada;
+  } catch {
+    // Una lectura de configuración nunca puede tumbar la home.
+  }
   const fotosGaleria = listarFotosGaleria(carpetaGaleria, 12);
 
   let initial: StateSnapshot | null = null;
