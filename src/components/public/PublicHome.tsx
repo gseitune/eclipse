@@ -4,10 +4,10 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useLiveState } from "@/lib/front/use-live-state";
 import { phaseLabel, isKnownPhase, hasBracketResult } from "@/lib/front/phase";
-import { liveMatchIds } from "@/lib/front/live";
+import { liveMatchIdsForEtapa } from "@/lib/front/live";
 import { useChime } from "@/lib/front/chime";
-import { fetchRanking } from "@/lib/front/api";
-import type { StateSnapshot, ZoneId, TeamPublic, StandingRow, RankingResponse } from "@/lib/front/types";
+import { fetchGallery, fetchRanking } from "@/lib/front/api";
+import type { Circuit, StateSnapshot, ZoneId, TeamPublic, StandingRow, RankingResponse } from "@/lib/front/types";
 import type { FotoGaleria } from "@/lib/front/galeria";
 import { Hero } from "./Hero";
 import { TournamentSwitch, type TournamentId } from "./TournamentSwitch";
@@ -38,7 +38,13 @@ export function PublicHome({
   /** Link a la carpeta completa del fotógrafo en Drive. */
   albumUrl: string;
 }) {
-  const { state, loading, error } = useLiveState({ initial });
+  // Which circuit the viewer follows. The switch at the top decides it and the
+  // whole page follows: state, annual table and gallery.
+  const [tournament, setTournament] = useState<TournamentId>("principiantes");
+  const circuit: Circuit =
+    tournament === "intermedios" ? "INTERMEDIOS" : "PRINCIPIANTES";
+
+  const { state, loading, error } = useLiveState({ initial, circuit });
 
   // Mount chime hook — triggers audio on new live matches
   useChime({ state, matchMinutes: state?.matchMinutes ?? 20 });
@@ -48,7 +54,7 @@ export function PublicHome({
   const [ranking, setRanking] = useState<RankingResponse | null>(null);
   useEffect(() => {
     let cancelled = false;
-    fetchRanking()
+    fetchRanking(circuit)
       .then((resp) => {
         if (!cancelled) setRanking(resp);
       })
@@ -58,7 +64,27 @@ export function PublicHome({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [circuit]);
+
+  // Photos follow the same circuit: the server sends the initial album of
+  // Principiantes, and every switch asks for the folder of the selected one.
+  const [galeria, setGaleria] = useState<{
+    fotos: FotoGaleria[];
+    albumUrl: string;
+  }>({ fotos, albumUrl });
+  useEffect(() => {
+    let cancelled = false;
+    fetchGallery(circuit)
+      .then((resp) => {
+        if (!cancelled) setGaleria(resp);
+      })
+      .catch(() => {
+        // The gallery is decorative: a failure keeps the previous photos.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [circuit]);
 
   const phase = state?.phase ?? "GROUPS";
 
@@ -67,7 +93,9 @@ export function PublicHome({
       return { liveIds: new Set<string>(), liveTeamIds: new Set<string>(), initialZone: "A" as ZoneId };
     }
 
-    const ids = liveMatchIds(state.schedule, state.matchMinutes);
+    // A closed or cancelled etapa can never have live matches: its schedule
+    // windows are time-of-day only, so they keep matching on every later day.
+    const ids = liveMatchIdsForEtapa(state.schedule, state.matchMinutes, state.etapa);
 
     const next = state.nextMatch;
     const nextLive = next !== null && ids.has(next.id);
@@ -86,11 +114,6 @@ export function PublicHome({
   // Lifted openTeam state — shared between StandingsTables and EliminatoriesView
   const [openTeam, setOpenTeam] = useState<{ id: string; name: string; zone: string } | null>(null);
 
-  // Which circuit the viewer follows. Only Principiantes has data today; the
-  // Intermedios backend is not loaded yet, so it renders a "coming soon" panel.
-  const [tournament, setTournament] = useState<TournamentId>("principiantes");
-  const isIntermedios = tournament === "intermedios";
-
   function handleOpenTeam(team: { id: string; name: string; zone: string }) {
     setOpenTeam(team);
   }
@@ -108,10 +131,11 @@ export function PublicHome({
   // ELIMINATORIES — the home keeps showing groups (Marcador + Posiciones).
   const showBrackets = isEliminatories && hasBracketResult(state?.brackets ?? []);
 
-  // Galería del fotógrafo. Se dibuja en las dos ramas del circuito para que no
-  // desaparezca al cambiar a Intermedios, y va sin recuadro propio: la enmarca
-  // el contenedor de la home.
-  const galeria = <GaleriaCarrusel fotos={fotos} albumUrl={albumUrl} />;
+  // Galería del fotógrafo: fotos de la carpeta del circuito elegido, sin
+  // recuadro propio (la enmarca el contenedor de la home).
+  const galeriaJsx = (
+    <GaleriaCarrusel fotos={galeria.fotos} albumUrl={galeria.albumUrl} />
+  );
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -165,27 +189,20 @@ export function PublicHome({
 
       {/* Hero */}
       <Hero
-        circuit={
-          isIntermedios
-            ? "Circuito Mixto Intermedios 2026"
-            : "Circuito Mixto Principiantes 2026"
-        }
-        etapaName={
-          isIntermedios
-            ? "PRÓXIMAMENTE"
-            : state?.etapa?.name?.toUpperCase() ?? "ETAPA 5"
-        }
-        live={!isIntermedios && liveIds.size > 0}
+        circuit={`Circuito Mixto ${
+          circuit === "INTERMEDIOS" ? "Intermedios" : "Principiantes"
+        } ${state?.etapa?.season ?? 2026}`}
+        etapaName={state?.etapa?.name?.toUpperCase() ?? "—"}
+        live={liveIds.size > 0}
         finished={
-          !isIntermedios &&
-          (ranking?.etapas.some(
-            (e) => e.id === state?.etapaId && e.finished,
-          ) ?? false)
+          ranking?.etapas.some((e) => e.id === state?.etapaId && e.finished) ??
+          false
         }
       />
 
-      {/* Connection-lost banner — only when live stream drops */}
-      {error && (
+      {/* Connection-lost banner — only when live stream drops. A circuit with no
+          etapas is not a connection problem: it has its own empty state. */}
+      {error && error !== "No etapas yet." && (
         <div className="mx-auto w-full max-w-3xl px-6 py-3">
           <div className="flex items-center gap-1.5 rounded-2xl border border-ember-200 bg-ember-50/60 px-4 py-2 text-xs text-ember-600">
             <span className="h-1.5 w-1.5 rounded-full bg-ember-500" />
@@ -215,16 +232,18 @@ export function PublicHome({
           <TournamentSwitch value={tournament} onChange={setTournament} />
         </div>
 
-        {isIntermedios ? (
+        {!state && !loading ? (
           <div className="rounded-2xl border border-sand-300 bg-white/40 p-8 text-center backdrop-blur ring-1 ring-inset ring-sand-200">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-400">
-              Circuito Mixto Intermedios 2026
+              Circuito Mixto{" "}
+              {circuit === "INTERMEDIOS" ? "Intermedios" : "Principiantes"}
             </p>
             <p className="mt-2 text-lg font-semibold text-stone-900">
-              Próximamente
+              Todavía no hay fechas
             </p>
             <p className="mt-1 text-sm text-stone-500">
-              Fechas y resultados se publican acá cuando arranque el circuito.
+              Las fechas y resultados se publican acá cuando se cargue la primera
+              etapa.
             </p>
           </div>
         ) : (
@@ -264,10 +283,10 @@ export function PublicHome({
             />
 
             {/* Galería del fotógrafo — fotos del Drive público, sin recuadro */}
-            {galeria}
+            {galeriaJsx}
 
             {/* Combined points panel (S3) */}
-            <RankingPanel />
+            <RankingPanel circuit={circuit} />
 
             {/* Unknown phase fallback — keep standings/ticker working */}
             {!known && (
@@ -280,10 +299,6 @@ export function PublicHome({
             )}
           </>
         )}
-
-        {/* En Intermedios no hay pestañas ni ranking, así que la galería cierra
-            la card de "Próximamente". */}
-        {isIntermedios && galeria}
       </div>
 
       {/* TeamSheet modal — rendered at PublicHome level */}

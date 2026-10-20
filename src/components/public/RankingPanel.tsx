@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { fetchRanking } from "@/lib/front/api";
-import type { RankingResponse } from "@/lib/front/types";
+import type { Circuit, RankingResponse } from "@/lib/front/types";
 import { ApiError } from "@/lib/front/types";
 
 /* ── Podium star (gold / silver / bronze) ── */
@@ -18,7 +18,7 @@ function MedalStar({
       ? "text-yellow-400"
       : tier === "silver"
         ? "text-slate-400"
-        : "text-amber-700";
+        : "text-amber-700"; /* bronze — reserved, do not use for UI */
   const label = tier === "gold" ? "Oro" : tier === "silver" ? "Plata" : "Bronce";
   return (
     <span
@@ -67,14 +67,14 @@ function RankBadge({
  * Annual circuit ranking by player. The per-etapa final standings now live in
  * the home's "Posiciones finales" tab (see FinalStandings).
  */
-export function RankingPanel() {
+export function RankingPanel({ circuit }: { readonly circuit: Circuit }) {
   const [data, setData] = useState<RankingResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    fetchRanking()
+    fetchRanking(circuit)
       .then((resp) => {
         if (!cancelled) {
           setData(resp);
@@ -91,7 +91,7 @@ export function RankingPanel() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [circuit]);
 
   if (loading) {
     return (
