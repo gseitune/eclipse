@@ -1873,13 +1873,13 @@ async function reconcileAfterMatch(
                 teamIds: selection.teamIds,
               });
             } else {
-              const res = await finalizeBrackets(standings, etapaId);
+              const res = await finalizeBrackets(standings, etapaId, undefined, fmt);
               phaseChanged = res.ok;
               bracketsChanged = res.ok;
             }
           }
         } else {
-          const res = await finalizeBrackets(standings, etapaId);
+          const res = await finalizeBrackets(standings, etapaId, undefined, fmt);
           phaseChanged = res.ok;
           bracketsChanged = res.ok;
         }
