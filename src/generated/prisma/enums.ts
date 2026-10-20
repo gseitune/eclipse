@@ -57,10 +57,19 @@ export type ResultStatus = (typeof ResultStatus)[keyof typeof ResultStatus]
 export const SetFormat = {
   SINGLE_21: 'SINGLE_21',
   TWO_15_TIEBREAK: 'TWO_15_TIEBREAK',
+  TWO_21_TIEBREAK_15: 'TWO_21_TIEBREAK_15',
   BEST_OF_3_21: 'BEST_OF_3_21'
 } as const
 
 export type SetFormat = (typeof SetFormat)[keyof typeof SetFormat]
+
+
+export const Circuit = {
+  PRINCIPIANTES: 'PRINCIPIANTES',
+  INTERMEDIOS: 'INTERMEDIOS'
+} as const
+
+export type Circuit = (typeof Circuit)[keyof typeof Circuit]
 
 
 export const Phase = {

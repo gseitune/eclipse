@@ -397,6 +397,7 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 
 export const ModelName = {
+  CircuitSetting: 'CircuitSetting',
   User: 'User',
   Etapa: 'Etapa',
   TournamentState: 'TournamentState',
@@ -417,10 +418,84 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "etapa" | "tournamentState" | "team" | "match"
+    modelProps: "circuitSetting" | "user" | "etapa" | "tournamentState" | "team" | "match"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
+    CircuitSetting: {
+      payload: Prisma.$CircuitSettingPayload<ExtArgs>
+      fields: Prisma.CircuitSettingFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.CircuitSettingFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CircuitSettingPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.CircuitSettingFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CircuitSettingPayload>
+        }
+        findFirst: {
+          args: Prisma.CircuitSettingFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CircuitSettingPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.CircuitSettingFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CircuitSettingPayload>
+        }
+        findMany: {
+          args: Prisma.CircuitSettingFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CircuitSettingPayload>[]
+        }
+        create: {
+          args: Prisma.CircuitSettingCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CircuitSettingPayload>
+        }
+        createMany: {
+          args: Prisma.CircuitSettingCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.CircuitSettingCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CircuitSettingPayload>[]
+        }
+        delete: {
+          args: Prisma.CircuitSettingDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CircuitSettingPayload>
+        }
+        update: {
+          args: Prisma.CircuitSettingUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CircuitSettingPayload>
+        }
+        deleteMany: {
+          args: Prisma.CircuitSettingDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.CircuitSettingUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.CircuitSettingUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CircuitSettingPayload>[]
+        }
+        upsert: {
+          args: Prisma.CircuitSettingUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CircuitSettingPayload>
+        }
+        aggregate: {
+          args: Prisma.CircuitSettingAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateCircuitSetting>
+        }
+        groupBy: {
+          args: Prisma.CircuitSettingGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CircuitSettingGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.CircuitSettingCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CircuitSettingCountAggregateOutputType> | number
+        }
+      }
+    }
     User: {
       payload: Prisma.$UserPayload<ExtArgs>
       fields: Prisma.UserFieldRefs
@@ -827,6 +902,16 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
 
 
+export const CircuitSettingScalarFieldEnum = {
+  id: 'id',
+  circuit: 'circuit',
+  galleryFolder: 'galleryFolder',
+  updatedAt: 'updatedAt'
+} as const
+
+export type CircuitSettingScalarFieldEnum = (typeof CircuitSettingScalarFieldEnum)[keyof typeof CircuitSettingScalarFieldEnum]
+
+
 export const UserScalarFieldEnum = {
   id: 'id',
   email: 'email',
@@ -843,8 +928,11 @@ export const EtapaScalarFieldEnum = {
   id: 'id',
   name: 'name',
   date: 'date',
+  circuit: 'circuit',
+  season: 'season',
   sortOrder: 'sortOrder',
   bracketFormat: 'bracketFormat',
+  setFormat: 'setFormat',
   closedAt: 'closedAt',
   cancelledAt: 'cancelledAt',
   createdAt: 'createdAt',
@@ -959,6 +1047,13 @@ export type StringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 
 
 
 /**
+ * Reference to a field of type 'Circuit'
+ */
+export type EnumCircuitFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Circuit'>
+    
+
+
+/**
  * Reference to a field of type 'DateTime'
  */
 export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
@@ -976,6 +1071,13 @@ export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'In
  * Reference to a field of type 'BracketFormat'
  */
 export type EnumBracketFormatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'BracketFormat'>
+    
+
+
+/**
+ * Reference to a field of type 'SetFormat'
+ */
+export type EnumSetFormatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SetFormat'>
     
 
 
@@ -1018,13 +1120,6 @@ export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'J
  * Reference to a field of type 'QueryMode'
  */
 export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
-    
-
-
-/**
- * Reference to a field of type 'SetFormat'
- */
-export type EnumSetFormatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'SetFormat'>
     
 
 
@@ -1192,6 +1287,7 @@ export interface PrismaClientOptionsWithAdapter extends PrismaClientBaseOptions 
  */
 export type PrismaClientOptions = PrismaClientOptionsWithAccelerateUrl | PrismaClientOptionsWithAdapter
 export type GlobalOmitConfig = {
+  circuitSetting?: Prisma.CircuitSettingOmit
   user?: Prisma.UserOmit
   etapa?: Prisma.EtapaOmit
   tournamentState?: Prisma.TournamentStateOmit

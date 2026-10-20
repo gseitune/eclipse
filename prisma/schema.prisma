@@ -43,13 +43,34 @@ enum ResultStatus {
 enum SetFormat {
   SINGLE_21
   TWO_15_TIEBREAK
+  TWO_21_TIEBREAK_15
   BEST_OF_3_21
+}
+
+/**
+ * Circuit = annual season. (circuit, season) together identify one circuit:
+ * Principiantes 2026 and Intermedios 2026 are different circuits, and
+ * Intermedios 2027 is a new one that starts from zero.
+ */
+enum Circuit {
+  PRINCIPIANTES
+  INTERMEDIOS
 }
 
 enum Phase {
   GROUPS
   DESEMPATE
   ELIMINATORIES
+}
+
+/// Per-circuit configuration the organizer edits from the panel.
+model CircuitSetting {
+  id            String   @id @default(cuid())
+  circuit       Circuit  @unique
+  /// Drive folder the public gallery reads for this circuit. Null falls back to
+  /// the deployment default (GALERIA_FOLDER_ID / the hardcoded folder).
+  galleryFolder String?
+  updatedAt     DateTime @updatedAt
 }
 
 model User {
@@ -65,8 +86,18 @@ model Etapa {
   id           String            @id @default(cuid())
   name         String
   date         DateTime?
+  /// Circuit (annual season) this etapa belongs to. Existing rows stay
+  /// Principiantes because that is the only circuit that ever ran here.
+  circuit      Circuit           @default(PRINCIPIANTES)
+  /// Season year inside the circuit; the annual table and the etapa numbering
+  /// both restart every season.
+  season       Int               @default(2026)
+  /// Stage number INSIDE the circuit: Etapa 1 exists once per circuit.
   sortOrder    Int               @default(1)
   bracketFormat BracketFormat    @default(STANDARD)
+  /// Set format chosen when the etapa is created. Null keeps the per-stage
+  /// convention (groups 21, semis 2x15, final best-of-3) for old etapas.
+  setFormat    SetFormat?
   teams        Team[]
   matches      Match[]
   state        TournamentState?
@@ -74,6 +105,8 @@ model Etapa {
   cancelledAt  DateTime?         /// organizer can cancel (weather suspension) with password
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
+
+  @@unique([circuit, season, sortOrder])
 }
 
 model TournamentState {

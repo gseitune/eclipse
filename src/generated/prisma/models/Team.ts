@@ -455,10 +455,6 @@ export type EnumZoneFieldUpdateOperationsInput = {
   set?: $Enums.Zone
 }
 
-export type NullableStringFieldUpdateOperationsInput = {
-  set?: string | null
-}
-
 export type TeamCreateNestedOneWithoutMatchesAInput = {
   create?: Prisma.XOR<Prisma.TeamCreateWithoutMatchesAInput, Prisma.TeamUncheckedCreateWithoutMatchesAInput>
   connectOrCreate?: Prisma.TeamCreateOrConnectWithoutMatchesAInput

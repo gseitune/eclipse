@@ -51,6 +51,7 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
+  CircuitSetting: 'CircuitSetting',
   User: 'User',
   Etapa: 'Etapa',
   TournamentState: 'TournamentState',
@@ -71,6 +72,16 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
 
 
+export const CircuitSettingScalarFieldEnum = {
+  id: 'id',
+  circuit: 'circuit',
+  galleryFolder: 'galleryFolder',
+  updatedAt: 'updatedAt'
+} as const
+
+export type CircuitSettingScalarFieldEnum = (typeof CircuitSettingScalarFieldEnum)[keyof typeof CircuitSettingScalarFieldEnum]
+
+
 export const UserScalarFieldEnum = {
   id: 'id',
   email: 'email',
@@ -87,8 +98,11 @@ export const EtapaScalarFieldEnum = {
   id: 'id',
   name: 'name',
   date: 'date',
+  circuit: 'circuit',
+  season: 'season',
   sortOrder: 'sortOrder',
   bracketFormat: 'bracketFormat',
+  setFormat: 'setFormat',
   closedAt: 'closedAt',
   cancelledAt: 'cancelledAt',
   createdAt: 'createdAt',

@@ -801,10 +801,6 @@ export type NullableEnumZoneFieldUpdateOperationsInput = {
   set?: $Enums.Zone | null
 }
 
-export type NullableEnumSetFormatFieldUpdateOperationsInput = {
-  set?: $Enums.SetFormat | null
-}
-
 export type EnumResultStatusFieldUpdateOperationsInput = {
   set?: $Enums.ResultStatus
 }

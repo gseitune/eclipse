@@ -27,10 +27,12 @@ export type AggregateEtapa = {
 }
 
 export type EtapaAvgAggregateOutputType = {
+  season: number | null
   sortOrder: number | null
 }
 
 export type EtapaSumAggregateOutputType = {
+  season: number | null
   sortOrder: number | null
 }
 
@@ -38,8 +40,11 @@ export type EtapaMinAggregateOutputType = {
   id: string | null
   name: string | null
   date: Date | null
+  circuit: $Enums.Circuit | null
+  season: number | null
   sortOrder: number | null
   bracketFormat: $Enums.BracketFormat | null
+  setFormat: $Enums.SetFormat | null
   closedAt: Date | null
   cancelledAt: Date | null
   createdAt: Date | null
@@ -50,8 +55,11 @@ export type EtapaMaxAggregateOutputType = {
   id: string | null
   name: string | null
   date: Date | null
+  circuit: $Enums.Circuit | null
+  season: number | null
   sortOrder: number | null
   bracketFormat: $Enums.BracketFormat | null
+  setFormat: $Enums.SetFormat | null
   closedAt: Date | null
   cancelledAt: Date | null
   createdAt: Date | null
@@ -62,8 +70,11 @@ export type EtapaCountAggregateOutputType = {
   id: number
   name: number
   date: number
+  circuit: number
+  season: number
   sortOrder: number
   bracketFormat: number
+  setFormat: number
   closedAt: number
   cancelledAt: number
   createdAt: number
@@ -73,10 +84,12 @@ export type EtapaCountAggregateOutputType = {
 
 
 export type EtapaAvgAggregateInputType = {
+  season?: true
   sortOrder?: true
 }
 
 export type EtapaSumAggregateInputType = {
+  season?: true
   sortOrder?: true
 }
 
@@ -84,8 +97,11 @@ export type EtapaMinAggregateInputType = {
   id?: true
   name?: true
   date?: true
+  circuit?: true
+  season?: true
   sortOrder?: true
   bracketFormat?: true
+  setFormat?: true
   closedAt?: true
   cancelledAt?: true
   createdAt?: true
@@ -96,8 +112,11 @@ export type EtapaMaxAggregateInputType = {
   id?: true
   name?: true
   date?: true
+  circuit?: true
+  season?: true
   sortOrder?: true
   bracketFormat?: true
+  setFormat?: true
   closedAt?: true
   cancelledAt?: true
   createdAt?: true
@@ -108,8 +127,11 @@ export type EtapaCountAggregateInputType = {
   id?: true
   name?: true
   date?: true
+  circuit?: true
+  season?: true
   sortOrder?: true
   bracketFormat?: true
+  setFormat?: true
   closedAt?: true
   cancelledAt?: true
   createdAt?: true
@@ -207,8 +229,11 @@ export type EtapaGroupByOutputType = {
   id: string
   name: string
   date: Date | null
+  circuit: $Enums.Circuit
+  season: number
   sortOrder: number
   bracketFormat: $Enums.BracketFormat
+  setFormat: $Enums.SetFormat | null
   closedAt: Date | null
   cancelledAt: Date | null
   createdAt: Date
@@ -242,8 +267,11 @@ export type EtapaWhereInput = {
   id?: Prisma.StringFilter<"Etapa"> | string
   name?: Prisma.StringFilter<"Etapa"> | string
   date?: Prisma.DateTimeNullableFilter<"Etapa"> | Date | string | null
+  circuit?: Prisma.EnumCircuitFilter<"Etapa"> | $Enums.Circuit
+  season?: Prisma.IntFilter<"Etapa"> | number
   sortOrder?: Prisma.IntFilter<"Etapa"> | number
   bracketFormat?: Prisma.EnumBracketFormatFilter<"Etapa"> | $Enums.BracketFormat
+  setFormat?: Prisma.EnumSetFormatNullableFilter<"Etapa"> | $Enums.SetFormat | null
   closedAt?: Prisma.DateTimeNullableFilter<"Etapa"> | Date | string | null
   cancelledAt?: Prisma.DateTimeNullableFilter<"Etapa"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Etapa"> | Date | string
@@ -257,8 +285,11 @@ export type EtapaOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
   date?: Prisma.SortOrderInput | Prisma.SortOrder
+  circuit?: Prisma.SortOrder
+  season?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
   bracketFormat?: Prisma.SortOrder
+  setFormat?: Prisma.SortOrderInput | Prisma.SortOrder
   closedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   cancelledAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -270,13 +301,17 @@ export type EtapaOrderByWithRelationInput = {
 
 export type EtapaWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  circuit_season_sortOrder?: Prisma.EtapaCircuitSeasonSortOrderCompoundUniqueInput
   AND?: Prisma.EtapaWhereInput | Prisma.EtapaWhereInput[]
   OR?: Prisma.EtapaWhereInput[]
   NOT?: Prisma.EtapaWhereInput | Prisma.EtapaWhereInput[]
   name?: Prisma.StringFilter<"Etapa"> | string
   date?: Prisma.DateTimeNullableFilter<"Etapa"> | Date | string | null
+  circuit?: Prisma.EnumCircuitFilter<"Etapa"> | $Enums.Circuit
+  season?: Prisma.IntFilter<"Etapa"> | number
   sortOrder?: Prisma.IntFilter<"Etapa"> | number
   bracketFormat?: Prisma.EnumBracketFormatFilter<"Etapa"> | $Enums.BracketFormat
+  setFormat?: Prisma.EnumSetFormatNullableFilter<"Etapa"> | $Enums.SetFormat | null
   closedAt?: Prisma.DateTimeNullableFilter<"Etapa"> | Date | string | null
   cancelledAt?: Prisma.DateTimeNullableFilter<"Etapa"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Etapa"> | Date | string
@@ -284,14 +319,17 @@ export type EtapaWhereUniqueInput = Prisma.AtLeast<{
   teams?: Prisma.TeamListRelationFilter
   matches?: Prisma.MatchListRelationFilter
   state?: Prisma.XOR<Prisma.TournamentStateNullableScalarRelationFilter, Prisma.TournamentStateWhereInput> | null
-}, "id">
+}, "id" | "circuit_season_sortOrder">
 
 export type EtapaOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
   date?: Prisma.SortOrderInput | Prisma.SortOrder
+  circuit?: Prisma.SortOrder
+  season?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
   bracketFormat?: Prisma.SortOrder
+  setFormat?: Prisma.SortOrderInput | Prisma.SortOrder
   closedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   cancelledAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -310,8 +348,11 @@ export type EtapaScalarWhereWithAggregatesInput = {
   id?: Prisma.StringWithAggregatesFilter<"Etapa"> | string
   name?: Prisma.StringWithAggregatesFilter<"Etapa"> | string
   date?: Prisma.DateTimeNullableWithAggregatesFilter<"Etapa"> | Date | string | null
+  circuit?: Prisma.EnumCircuitWithAggregatesFilter<"Etapa"> | $Enums.Circuit
+  season?: Prisma.IntWithAggregatesFilter<"Etapa"> | number
   sortOrder?: Prisma.IntWithAggregatesFilter<"Etapa"> | number
   bracketFormat?: Prisma.EnumBracketFormatWithAggregatesFilter<"Etapa"> | $Enums.BracketFormat
+  setFormat?: Prisma.EnumSetFormatNullableWithAggregatesFilter<"Etapa"> | $Enums.SetFormat | null
   closedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Etapa"> | Date | string | null
   cancelledAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Etapa"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Etapa"> | Date | string
@@ -322,8 +363,11 @@ export type EtapaCreateInput = {
   id?: string
   name: string
   date?: Date | string | null
+  circuit?: $Enums.Circuit
+  season?: number
   sortOrder?: number
   bracketFormat?: $Enums.BracketFormat
+  setFormat?: $Enums.SetFormat | null
   closedAt?: Date | string | null
   cancelledAt?: Date | string | null
   createdAt?: Date | string
@@ -337,8 +381,11 @@ export type EtapaUncheckedCreateInput = {
   id?: string
   name: string
   date?: Date | string | null
+  circuit?: $Enums.Circuit
+  season?: number
   sortOrder?: number
   bracketFormat?: $Enums.BracketFormat
+  setFormat?: $Enums.SetFormat | null
   closedAt?: Date | string | null
   cancelledAt?: Date | string | null
   createdAt?: Date | string
@@ -352,8 +399,11 @@ export type EtapaUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  circuit?: Prisma.EnumCircuitFieldUpdateOperationsInput | $Enums.Circuit
+  season?: Prisma.IntFieldUpdateOperationsInput | number
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   bracketFormat?: Prisma.EnumBracketFormatFieldUpdateOperationsInput | $Enums.BracketFormat
+  setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -367,8 +417,11 @@ export type EtapaUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  circuit?: Prisma.EnumCircuitFieldUpdateOperationsInput | $Enums.Circuit
+  season?: Prisma.IntFieldUpdateOperationsInput | number
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   bracketFormat?: Prisma.EnumBracketFormatFieldUpdateOperationsInput | $Enums.BracketFormat
+  setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -382,8 +435,11 @@ export type EtapaCreateManyInput = {
   id?: string
   name: string
   date?: Date | string | null
+  circuit?: $Enums.Circuit
+  season?: number
   sortOrder?: number
   bracketFormat?: $Enums.BracketFormat
+  setFormat?: $Enums.SetFormat | null
   closedAt?: Date | string | null
   cancelledAt?: Date | string | null
   createdAt?: Date | string
@@ -394,8 +450,11 @@ export type EtapaUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  circuit?: Prisma.EnumCircuitFieldUpdateOperationsInput | $Enums.Circuit
+  season?: Prisma.IntFieldUpdateOperationsInput | number
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   bracketFormat?: Prisma.EnumBracketFormatFieldUpdateOperationsInput | $Enums.BracketFormat
+  setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -406,20 +465,32 @@ export type EtapaUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  circuit?: Prisma.EnumCircuitFieldUpdateOperationsInput | $Enums.Circuit
+  season?: Prisma.IntFieldUpdateOperationsInput | number
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   bracketFormat?: Prisma.EnumBracketFormatFieldUpdateOperationsInput | $Enums.BracketFormat
+  setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
+export type EtapaCircuitSeasonSortOrderCompoundUniqueInput = {
+  circuit: $Enums.Circuit
+  season: number
+  sortOrder: number
+}
+
 export type EtapaCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
   date?: Prisma.SortOrder
+  circuit?: Prisma.SortOrder
+  season?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
   bracketFormat?: Prisma.SortOrder
+  setFormat?: Prisma.SortOrder
   closedAt?: Prisma.SortOrder
   cancelledAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -427,6 +498,7 @@ export type EtapaCountOrderByAggregateInput = {
 }
 
 export type EtapaAvgOrderByAggregateInput = {
+  season?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
 }
 
@@ -434,8 +506,11 @@ export type EtapaMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
   date?: Prisma.SortOrder
+  circuit?: Prisma.SortOrder
+  season?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
   bracketFormat?: Prisma.SortOrder
+  setFormat?: Prisma.SortOrder
   closedAt?: Prisma.SortOrder
   cancelledAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -446,8 +521,11 @@ export type EtapaMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
   date?: Prisma.SortOrder
+  circuit?: Prisma.SortOrder
+  season?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
   bracketFormat?: Prisma.SortOrder
+  setFormat?: Prisma.SortOrder
   closedAt?: Prisma.SortOrder
   cancelledAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -455,6 +533,7 @@ export type EtapaMinOrderByAggregateInput = {
 }
 
 export type EtapaSumOrderByAggregateInput = {
+  season?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
 }
 
@@ -477,6 +556,10 @@ export type IntFieldUpdateOperationsInput = {
 
 export type EnumBracketFormatFieldUpdateOperationsInput = {
   set?: $Enums.BracketFormat
+}
+
+export type NullableEnumSetFormatFieldUpdateOperationsInput = {
+  set?: $Enums.SetFormat | null
 }
 
 export type EtapaCreateNestedOneWithoutStateInput = {
@@ -525,8 +608,11 @@ export type EtapaCreateWithoutStateInput = {
   id?: string
   name: string
   date?: Date | string | null
+  circuit?: $Enums.Circuit
+  season?: number
   sortOrder?: number
   bracketFormat?: $Enums.BracketFormat
+  setFormat?: $Enums.SetFormat | null
   closedAt?: Date | string | null
   cancelledAt?: Date | string | null
   createdAt?: Date | string
@@ -539,8 +625,11 @@ export type EtapaUncheckedCreateWithoutStateInput = {
   id?: string
   name: string
   date?: Date | string | null
+  circuit?: $Enums.Circuit
+  season?: number
   sortOrder?: number
   bracketFormat?: $Enums.BracketFormat
+  setFormat?: $Enums.SetFormat | null
   closedAt?: Date | string | null
   cancelledAt?: Date | string | null
   createdAt?: Date | string
@@ -569,8 +658,11 @@ export type EtapaUpdateWithoutStateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  circuit?: Prisma.EnumCircuitFieldUpdateOperationsInput | $Enums.Circuit
+  season?: Prisma.IntFieldUpdateOperationsInput | number
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   bracketFormat?: Prisma.EnumBracketFormatFieldUpdateOperationsInput | $Enums.BracketFormat
+  setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -583,8 +675,11 @@ export type EtapaUncheckedUpdateWithoutStateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  circuit?: Prisma.EnumCircuitFieldUpdateOperationsInput | $Enums.Circuit
+  season?: Prisma.IntFieldUpdateOperationsInput | number
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   bracketFormat?: Prisma.EnumBracketFormatFieldUpdateOperationsInput | $Enums.BracketFormat
+  setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -597,8 +692,11 @@ export type EtapaCreateWithoutTeamsInput = {
   id?: string
   name: string
   date?: Date | string | null
+  circuit?: $Enums.Circuit
+  season?: number
   sortOrder?: number
   bracketFormat?: $Enums.BracketFormat
+  setFormat?: $Enums.SetFormat | null
   closedAt?: Date | string | null
   cancelledAt?: Date | string | null
   createdAt?: Date | string
@@ -611,8 +709,11 @@ export type EtapaUncheckedCreateWithoutTeamsInput = {
   id?: string
   name: string
   date?: Date | string | null
+  circuit?: $Enums.Circuit
+  season?: number
   sortOrder?: number
   bracketFormat?: $Enums.BracketFormat
+  setFormat?: $Enums.SetFormat | null
   closedAt?: Date | string | null
   cancelledAt?: Date | string | null
   createdAt?: Date | string
@@ -641,8 +742,11 @@ export type EtapaUpdateWithoutTeamsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  circuit?: Prisma.EnumCircuitFieldUpdateOperationsInput | $Enums.Circuit
+  season?: Prisma.IntFieldUpdateOperationsInput | number
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   bracketFormat?: Prisma.EnumBracketFormatFieldUpdateOperationsInput | $Enums.BracketFormat
+  setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -655,8 +759,11 @@ export type EtapaUncheckedUpdateWithoutTeamsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  circuit?: Prisma.EnumCircuitFieldUpdateOperationsInput | $Enums.Circuit
+  season?: Prisma.IntFieldUpdateOperationsInput | number
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   bracketFormat?: Prisma.EnumBracketFormatFieldUpdateOperationsInput | $Enums.BracketFormat
+  setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -669,8 +776,11 @@ export type EtapaCreateWithoutMatchesInput = {
   id?: string
   name: string
   date?: Date | string | null
+  circuit?: $Enums.Circuit
+  season?: number
   sortOrder?: number
   bracketFormat?: $Enums.BracketFormat
+  setFormat?: $Enums.SetFormat | null
   closedAt?: Date | string | null
   cancelledAt?: Date | string | null
   createdAt?: Date | string
@@ -683,8 +793,11 @@ export type EtapaUncheckedCreateWithoutMatchesInput = {
   id?: string
   name: string
   date?: Date | string | null
+  circuit?: $Enums.Circuit
+  season?: number
   sortOrder?: number
   bracketFormat?: $Enums.BracketFormat
+  setFormat?: $Enums.SetFormat | null
   closedAt?: Date | string | null
   cancelledAt?: Date | string | null
   createdAt?: Date | string
@@ -713,8 +826,11 @@ export type EtapaUpdateWithoutMatchesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  circuit?: Prisma.EnumCircuitFieldUpdateOperationsInput | $Enums.Circuit
+  season?: Prisma.IntFieldUpdateOperationsInput | number
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   bracketFormat?: Prisma.EnumBracketFormatFieldUpdateOperationsInput | $Enums.BracketFormat
+  setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -727,8 +843,11 @@ export type EtapaUncheckedUpdateWithoutMatchesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  circuit?: Prisma.EnumCircuitFieldUpdateOperationsInput | $Enums.Circuit
+  season?: Prisma.IntFieldUpdateOperationsInput | number
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   bracketFormat?: Prisma.EnumBracketFormatFieldUpdateOperationsInput | $Enums.BracketFormat
+  setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
   closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -781,8 +900,11 @@ export type EtapaSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   id?: boolean
   name?: boolean
   date?: boolean
+  circuit?: boolean
+  season?: boolean
   sortOrder?: boolean
   bracketFormat?: boolean
+  setFormat?: boolean
   closedAt?: boolean
   cancelledAt?: boolean
   createdAt?: boolean
@@ -797,8 +919,11 @@ export type EtapaSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   id?: boolean
   name?: boolean
   date?: boolean
+  circuit?: boolean
+  season?: boolean
   sortOrder?: boolean
   bracketFormat?: boolean
+  setFormat?: boolean
   closedAt?: boolean
   cancelledAt?: boolean
   createdAt?: boolean
@@ -809,8 +934,11 @@ export type EtapaSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
   id?: boolean
   name?: boolean
   date?: boolean
+  circuit?: boolean
+  season?: boolean
   sortOrder?: boolean
   bracketFormat?: boolean
+  setFormat?: boolean
   closedAt?: boolean
   cancelledAt?: boolean
   createdAt?: boolean
@@ -821,15 +949,18 @@ export type EtapaSelectScalar = {
   id?: boolean
   name?: boolean
   date?: boolean
+  circuit?: boolean
+  season?: boolean
   sortOrder?: boolean
   bracketFormat?: boolean
+  setFormat?: boolean
   closedAt?: boolean
   cancelledAt?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type EtapaOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "date" | "sortOrder" | "bracketFormat" | "closedAt" | "cancelledAt" | "createdAt" | "updatedAt", ExtArgs["result"]["etapa"]>
+export type EtapaOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "date" | "circuit" | "season" | "sortOrder" | "bracketFormat" | "setFormat" | "closedAt" | "cancelledAt" | "createdAt" | "updatedAt", ExtArgs["result"]["etapa"]>
 export type EtapaInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   teams?: boolean | Prisma.Etapa$teamsArgs<ExtArgs>
   matches?: boolean | Prisma.Etapa$matchesArgs<ExtArgs>
@@ -850,8 +981,26 @@ export type $EtapaPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     id: string
     name: string
     date: Date | null
+    /**
+     * Circuit (annual season) this etapa belongs to. Existing rows stay
+     * Principiantes because that is the only circuit that ever ran here.
+     */
+    circuit: $Enums.Circuit
+    /**
+     * Season year inside the circuit; the annual table and the etapa numbering
+     * both restart every season.
+     */
+    season: number
+    /**
+     * Stage number INSIDE the circuit: Etapa 1 exists once per circuit.
+     */
     sortOrder: number
     bracketFormat: $Enums.BracketFormat
+    /**
+     * Set format chosen when the etapa is created. Null keeps the per-stage
+     * convention (groups 21, semis 2x15, final best-of-3) for old etapas.
+     */
+    setFormat: $Enums.SetFormat | null
     /**
      * inmutable: no results/zones edits after close
      */
@@ -1291,8 +1440,11 @@ export interface EtapaFieldRefs {
   readonly id: Prisma.FieldRef<"Etapa", 'String'>
   readonly name: Prisma.FieldRef<"Etapa", 'String'>
   readonly date: Prisma.FieldRef<"Etapa", 'DateTime'>
+  readonly circuit: Prisma.FieldRef<"Etapa", 'Circuit'>
+  readonly season: Prisma.FieldRef<"Etapa", 'Int'>
   readonly sortOrder: Prisma.FieldRef<"Etapa", 'Int'>
   readonly bracketFormat: Prisma.FieldRef<"Etapa", 'BracketFormat'>
+  readonly setFormat: Prisma.FieldRef<"Etapa", 'SetFormat'>
   readonly closedAt: Prisma.FieldRef<"Etapa", 'DateTime'>
   readonly cancelledAt: Prisma.FieldRef<"Etapa", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Etapa", 'DateTime'>

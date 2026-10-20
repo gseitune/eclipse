@@ -8,6 +8,7 @@
  *
  * 🟢 You can import this file directly.
  */
+export type * from './models/CircuitSetting'
 export type * from './models/User'
 export type * from './models/Etapa'
 export type * from './models/TournamentState'

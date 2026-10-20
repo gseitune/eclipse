@@ -18,6 +18,11 @@ export { Prisma }
 export * as $Enums from './enums'
 export * from './enums';
 /**
+ * Model CircuitSetting
+ * Per-circuit configuration the organizer edits from the panel.
+ */
+export type CircuitSetting = Prisma.CircuitSettingModel
+/**
  * Model User
  * 
  */
