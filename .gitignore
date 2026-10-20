@@ -57,3 +57,5 @@ summary*.txt
 
 # unused local asset (kept on disk, not committed)
 /public/sun.jpg
+# dev server log of the 3001 instance
+/dev-3001.log
