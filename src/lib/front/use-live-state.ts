@@ -40,6 +40,10 @@ export function useLiveState(options?: {
   const initialValue: StateSnapshot | null = hasInitial ? options.initial! : null;
   const circuit = options?.circuit;
   const [state, setState] = useState<StateSnapshot | null>(initialValue);
+  // Which circuit the data in `state` belongs to. The snapshot and the fetched
+  // stages are tagged, so a circuit switch can never render the other circuit's
+  // groups and brackets while the new ones are loading (or after a failure).
+  const [dataCircuit, setDataCircuit] = useState<Circuit | undefined>(circuit);
   const [loading, setLoading] = useState<boolean>(!hasInitial);
   const [error, setError] = useState<string | null>(null);
   const [lastEvent, setLastEvent] = useState<string | null>(null);
@@ -65,6 +69,7 @@ export function useLiveState(options?: {
         const snapshot = await fetchState(circuit);
         if (mountedRef.current) {
           setState(snapshot);
+          setDataCircuit(circuit);
           setError(null);
         }
       } catch (err) {
@@ -104,6 +109,7 @@ export function useLiveState(options?: {
         .then((snapshot) => {
           if (mountedRef.current) {
             setState(snapshot);
+            setDataCircuit(circuit);
             setLoading(false);
           }
         })
@@ -217,5 +223,16 @@ export function useLiveState(options?: {
     };
   }, [performRefetch, hasInitial, circuit]);
 
-  return { state, loading, error, lastEvent, refreshing, refetch };
+  // Data from another circuit is not "state": it is hidden until the matching
+  // one arrives, so Principiantes can never leak into the Intermedios view.
+  const sameCircuit = dataCircuit === circuit;
+
+  return {
+    state: sameCircuit ? state : null,
+    loading: loading || !sameCircuit,
+    error,
+    lastEvent,
+    refreshing,
+    refetch,
+  };
 }
