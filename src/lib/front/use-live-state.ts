@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import type { StateSnapshot } from "./types";
+import type { StateSnapshot, Circuit } from "./types";
 import { fetchState } from "./api";
 import { ApiError } from "./types";
 
@@ -15,13 +15,18 @@ const MEANINGFUL_EVENTS = [
   "brackets-generated",
   "brackets-blocked",
   "desempate-created",
+  "etapa-deleted",
 ] as const;
 
 const DEBOUNCE_MS = 250;
 const RECONNECT_INITIAL_MS = 1000;
 const RECONNECT_MAX_MS = 15000;
 
-export function useLiveState(options?: { initial?: StateSnapshot | null }): {
+export function useLiveState(options?: {
+  initial?: StateSnapshot | null;
+  /** Circuit (annual season) to read. Defaults to the API's own default. */
+  circuit?: Circuit;
+}): {
   state: StateSnapshot | null;
   loading: boolean;
   error: string | null;
@@ -31,6 +36,7 @@ export function useLiveState(options?: { initial?: StateSnapshot | null }): {
 } {
   const hasInitial = options?.initial !== undefined;
   const initialValue: StateSnapshot | null = hasInitial ? options.initial! : null;
+  const circuit = options?.circuit;
   const [state, setState] = useState<StateSnapshot | null>(initialValue);
   const [loading, setLoading] = useState<boolean>(!hasInitial);
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +50,7 @@ export function useLiveState(options?: { initial?: StateSnapshot | null }): {
   const refreshingRef = useRef<boolean>(false);
   const refreshPromiseRef = useRef<Promise<void> | null>(null);
   const mountedRef = useRef<boolean>(true);
+  const firstRunRef = useRef<boolean>(true);
 
   const performRefetch = useCallback(async () => {
     if (refreshingRef.current) {
@@ -53,7 +60,7 @@ export function useLiveState(options?: { initial?: StateSnapshot | null }): {
     setRefreshing(true);
     const promise = (async () => {
       try {
-        const snapshot = await fetchState();
+        const snapshot = await fetchState(circuit);
         if (mountedRef.current) {
           setState(snapshot);
           setError(null);
@@ -72,7 +79,7 @@ export function useLiveState(options?: { initial?: StateSnapshot | null }): {
     })();
     refreshPromiseRef.current = promise;
     return promise;
-  }, []);
+  }, [circuit]);
 
   const refetch = useCallback(async () => {
     if (debounceTimerRef.current) {
@@ -84,12 +91,14 @@ export function useLiveState(options?: { initial?: StateSnapshot | null }): {
 
   useEffect(() => {
     mountedRef.current = true;
+    const isFirstRun = firstRunRef.current;
+    firstRunRef.current = false;
 
-    // Initial fetch — skip when initial data provided
-    if (!hasInitial) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+    // Initial fetch — skip when initial data provided, except when the circuit
+    // changes: the SSR snapshot belongs to the previous circuit.
+    if (!hasInitial || !isFirstRun) {
       setLoading(true);
-      fetchState()
+      fetchState(circuit)
         .then((snapshot) => {
           if (mountedRef.current) {
             setState(snapshot);
@@ -173,7 +182,7 @@ export function useLiveState(options?: { initial?: StateSnapshot | null }): {
         debounceTimerRef.current = null;
       }
     };
-  }, [performRefetch, hasInitial]);
+  }, [performRefetch, hasInitial, circuit]);
 
   return { state, loading, error, lastEvent, refreshing, refetch };
 }

@@ -1,30 +1,48 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { fetchEtapas, createEtapa, cancelEtapa, updateEtapa } from "@/lib/front/api";
-import type { BracketFormat, EtapaMeta } from "@/lib/front/types";
+import { useState, useEffect, useMemo } from "react";
+import { fetchEtapas, createEtapa, createCancelledEtapa, cancelEtapa, updateEtapa, deleteEtapa } from "@/lib/front/api";
+import type { BracketFormat, Circuit, EtapaMeta, EtapaSetFormat } from "@/lib/front/types";
+import { availableEtapaNumbers } from "@/lib/front/etapa-numbers";
 import { ApiError } from "@/lib/front/types";
 
 function formatDateEs(dateStr: string | null): string {
   if (!dateStr) return "—";
   try {
     const d = new Date(dateStr);
+    // The etapa date is a calendar day, stored at UTC midnight: formatting it in
+    // the browser's timezone would show the previous day west of UTC.
     return d.toLocaleDateString("es-ES", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
+      timeZone: "UTC",
     });
   } catch {
     return dateStr;
   }
 }
 
+/** Today as the value a `<input type="date">` expects, in local time. */
+function todayInput(): string {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
 /* ── Props ── */
 export interface CircuitosSectionProps {
   readonly onBack: () => void;
+  /** Circuit (annual season) the organizer is working on. */
+  readonly circuit: Circuit;
+  readonly onCircuitChange: (circuit: Circuit) => void;
 }
 
-export function CircuitosSection({ onBack }: CircuitosSectionProps) {
+export function CircuitosSection({
+  onBack,
+  circuit,
+  onCircuitChange,
+}: CircuitosSectionProps) {
   const [etapas, setEtapas] = useState<EtapaMeta[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitMsg, setSubmitMsg] = useState<string | null>(null);
@@ -36,6 +54,11 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
   const [cancelMsg, setCancelMsg] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
+  // Delete (a cancelled etapa only) modal state
+  const [deleteTarget, setDeleteTarget] = useState<EtapaMeta | null>(null);
+  const [deleteMsg, setDeleteMsg] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   // Edit (name/date) modal state — only for open, unplayed etapas
   const [editTarget, setEditTarget] = useState<EtapaMeta | null>(null);
   const [editName, setEditName] = useState("");
@@ -45,34 +68,55 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
 
   // Form state
   const [nombre, setNombre] = useState("");
+  const [fecha, setFecha] = useState(() => todayInput());
   const [equipos, setEquipos] = useState<TeamRow[]>([]);
   const [formato, setFormato] = useState<BracketFormat>("STANDARD");
+  // "STAGE" keeps the per-stage convention (groups 21, semis 2x15, final
+  // best-of-3) used by the etapas created before the choice existed.
+  const [formatoSet, setFormatoSet] = useState<EtapaSetFormat | "STAGE">(
+    circuit === "INTERMEDIOS" ? "TWO_21_TIEBREAK_15" : "STAGE",
+  );
 
   interface TeamRow {
     maleName: string;
     femaleName: string;
   }
 
-  // CUARTOS needs 3 zones, which only happens from 11 teams on.
-  const cuartosNeedsMoreTeams = formato === "CUARTOS" && (equipos.length < 11 || equipos.length > 12);
+  // The valid bracket formats depend on the team count: 6-10 teams split into
+  // 2 zones (direct semis or repechaje); 11-12 split into 3 zones (direct semis
+  // or quarterfinals). Nothing else is offered, so no invalid combination can
+  // be picked and then rejected by the back.
+  const threeZones = equipos.length >= 11;
+  const validFormats: BracketFormat[] = threeZones
+    ? ["STANDARD", "CUARTOS"]
+    : ["STANDARD", "REPECHAJE"];
+  // Derived instead of synced in an effect: a format that stops being valid
+  // falls back to direct semis on its own when the team count changes.
+  const effectiveFormato: BracketFormat = validFormats.includes(formato)
+    ? formato
+    : "STANDARD";
 
-  // Etapa numbers allowed: 1..8, starting after the last existing one
-  const ETAPA_MIN = 1;
-  const ETAPA_MAX = 8;
-  const existingNumbers = new Set(
-    etapas
-      .map((etapa) => {
-        const m = /^Etapa\s+(\d+)$/.exec(etapa.name.trim());
-        return m ? parseInt(m[1], 10) : null;
-      })
-      .filter((n): n is number => n !== null),
-  );
-  const lastNumber =
-    existingNumbers.size > 0 ? Math.max(...existingNumbers) : ETAPA_MIN - 1;
-  const availableNumbers = Array.from(
-    { length: ETAPA_MAX - lastNumber },
-    (_, i) => lastNumber + 1 + i,
-  ).filter((n) => n >= ETAPA_MIN && n <= ETAPA_MAX);
+  function formatLabel(value: BracketFormat): string {
+    if (value === "REPECHAJE") return "Con repechaje (2.º y 3.º juegan su pase)";
+    if (value === "CUARTOS") return "Cuartos de final (clasifican 8)";
+    return threeZones
+      ? "Semifinales directas: tres primeros + mejor segundo"
+      : "Semifinales directas: 1.º y 2.º de cada zona";
+  }
+
+  // Etapa numbers come from the gaps of this circuit: a skipped number can be
+  // loaded later (only 6 loaded → 1,2,3,4,5,7,8 are offered).
+  const availableNumbers = availableEtapaNumbers(etapas.map((etapa) => etapa.name));
+
+  // The number in the name is the identity of the etapa inside the circuit, so
+  // the list reads 1,2,3… even when a gap is filled after the last one.
+  const etapasPorNumero = useMemo(() => {
+    const numero = (name: string) => {
+      const match = /^Etapa\s+(\d+)$/.exec(name.trim());
+      return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER;
+    };
+    return [...etapas].sort((a, b) => numero(a.name) - numero(b.name));
+  }, [etapas]);
 
   function updateEquipo(index: number, patch: Partial<TeamRow>) {
     setEquipos((rows) =>
@@ -88,12 +132,12 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
     equipos.length > 0 &&
     equipos.every((row) => row.maleName.trim() && row.femaleName.trim());
 
-  // Load data
+  // Load data — the list belongs to the selected circuit (annual season).
   useEffect(() => {
     let cancelled = false;
     async function load() {
       try {
-        const etapasResp = await fetchEtapas();
+        const etapasResp = await fetchEtapas(circuit);
         if (!cancelled) {
           setEtapas(etapasResp.etapas);
         }
@@ -112,18 +156,27 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [circuit]);
+
+  // The section is remounted on circuit change (key={circuit} in the panel), so
+  // the form, the numbering list and the format default start clean.
+  function handleCircuitChange(next: Circuit) {
+    onCircuitChange(next);
+  }
 
   // Create etapa
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setSubmitMsg(null);
-    if (!nombre || !allRowsFilled) return;
+    if (!nombre || !fecha || !allRowsFilled) return;
     setSubmitting(true);
     try {
       await createEtapa({
         name: nombre,
-        bracketFormat: formato,
+        date: fecha,
+        bracketFormat: effectiveFormato,
+        circuit,
+        setFormat: formatoSet === "STAGE" ? null : formatoSet,
         teams: equipos.map((row) => ({
           name: deriveTeamName(row),
           maleName: row.maleName.trim(),
@@ -131,10 +184,11 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
         })),
       });
       // Reload list
-      const resp = await fetchEtapas();
+      const resp = await fetchEtapas(circuit);
       setEtapas(resp.etapas);
       // Clear form
       setNombre("");
+      setFecha(todayInput());
       setEquipos([]);
       setSubmitMsg("Etapa creada");
     } catch (err) {
@@ -152,6 +206,42 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
   async function reloadEtapas() {
     const resp = await fetchEtapas();
     setEtapas(resp.etapas);
+  }
+
+  // A fecha suspended by weather: only number and date, no roster at all.
+  async function handleCreateCancelled() {
+    if (!nombre || !fecha) return;
+    setSubmitMsg(null);
+    setSubmitting(true);
+    try {
+      await createCancelledEtapa({ name: nombre, date: fecha, circuit });
+      await reloadEtapas();
+      setNombre("");
+      setFecha(todayInput());
+      setEquipos([]);
+      setSubmitMsg("Etapa cancelada registrada");
+    } catch (err) {
+      setSubmitMsg(err instanceof ApiError ? err.message : String(err));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // Delete a cancelled etapa: its number becomes available again.
+  async function handleDeleteConfirm() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setDeleteMsg(null);
+    try {
+      await deleteEtapa(deleteTarget.id);
+      setDeleteTarget(null);
+      await reloadEtapas();
+      setSubmitMsg("Etapa eliminada");
+    } catch (err) {
+      setDeleteMsg(err instanceof ApiError ? err.message : String(err));
+    } finally {
+      setDeleting(false);
+    }
   }
 
   // Cancel an etapa (weather suspension) after password confirmation
@@ -303,6 +393,42 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
         </h3>
         <form onSubmit={handleCreate} className="rounded-xl border border-sand-200 bg-sand-50 p-5 space-y-4">
           <div>
+            <label htmlFor="circuito-tipo" className="block text-xs font-medium text-stone-600 mb-1">
+              Circuito
+            </label>
+            <select
+              id="circuito-tipo"
+              value={circuit}
+              onChange={(e) => handleCircuitChange(e.target.value as Circuit)}
+              disabled={submitting}
+              className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+            >
+              <option value="PRINCIPIANTES">Principiantes</option>
+              <option value="INTERMEDIOS">Intermedios</option>
+            </select>
+            <p className="mt-1 text-xs text-stone-400">
+              Cada circuito tiene su propia numeración y su propia tabla anual.
+            </p>
+          </div>
+          <div>
+            <label htmlFor="circuito-fecha" className="block text-xs font-medium text-stone-600 mb-1">
+              Fecha de la etapa
+            </label>
+            <input
+              id="circuito-fecha"
+              type="date"
+              required
+              value={fecha}
+              onChange={(e) => setFecha(e.target.value)}
+              disabled={submitting}
+              className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+            />
+            <p className="mt-1 text-xs text-stone-400">
+              Ordena el circuito: la etapa más reciente es la que se muestra
+              como actual.
+            </p>
+          </div>
+          <div>
             <label htmlFor="circuito-nombre" className="block text-xs font-medium text-stone-600 mb-1">
               Número del circuito (Etapa)
             </label>
@@ -340,15 +466,49 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
             </label>
             <select
               id="circuito-formato"
-              value={formato}
+              value={effectiveFormato}
               onChange={(e) => setFormato(e.target.value as BracketFormat)}
               disabled={submitting}
               className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
             >
-              <option value="STANDARD">2 zonas — semis y final</option>
-              <option value="REPECHAJE">2 zonas — repechaje, semifinales y final</option>
-              <option value="CUARTOS">3 zonas — repechaje, cuartos, semis, bronce y final</option>
+              {validFormats.map((value) => (
+                <option key={value} value={value}>
+                  {formatLabel(value)}
+                </option>
+              ))}
             </select>
+            <p className="mt-1 text-xs text-stone-400">
+              El partido por el tercer puesto se juega siempre.
+            </p>
+          </div>
+          <div>
+            <label
+              htmlFor="circuito-formato-set"
+              className="block text-xs font-medium text-stone-600 mb-1"
+            >
+              Formato de los partidos
+            </label>
+            <select
+              id="circuito-formato-set"
+              value={formatoSet}
+              onChange={(e) =>
+                setFormatoSet(e.target.value as EtapaSetFormat | "STAGE")
+              }
+              disabled={submitting}
+              className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+            >
+              <option value="STAGE">
+                Por instancia (zonas a 21, semis 2×15, final mejor de 3)
+              </option>
+              <option value="SINGLE_21">1 set a 21</option>
+              <option value="TWO_21_TIEBREAK_15">
+                2 sets a 21 (tercer set a 15 si quedan 1-1)
+              </option>
+            </select>
+            <p className="mt-1 text-xs text-stone-400">
+              El formato elegido se aplica a todos los partidos de la etapa,
+              incluida la final.
+            </p>
           </div>
           <div>
             <span className="block text-xs font-medium text-stone-600 mb-1">
@@ -414,20 +574,29 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
             </button>
             <p className="mt-2 text-xs text-stone-500">
               {equipos.length} {equipos.length === 1 ? "equipo" : "equipos"}
+              {equipos.length > 0 &&
+                ` · ${threeZones ? "3 zonas" : "2 zonas"}`}
             </p>
-            {cuartosNeedsMoreTeams && (
-              <p className="mt-1 text-xs font-medium text-red-600" role="alert">
-                El formato de 3 zonas necesita 11 o 12 parejas.
-              </p>
-            )}
           </div>
           <button
             type="submit"
-            disabled={submitting || !nombre || !allRowsFilled || cuartosNeedsMoreTeams}
+            disabled={submitting || !nombre || !fecha || !allRowsFilled}
             className="w-full rounded-lg bg-amber-600 px-4 py-3 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50 transition-colors min-h-[44px]"
           >
             {submitting ? "Creando…" : "Crear etapa"}
           </button>
+          <button
+            type="button"
+            onClick={handleCreateCancelled}
+            disabled={submitting || !nombre || !fecha}
+            className="w-full rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50 transition-colors min-h-[44px]"
+          >
+            🚫 Registrar etapa cancelada por clima
+          </button>
+          <p className="text-center text-xs text-stone-400">
+            Una etapa cancelada por clima se registra solo con número y fecha: no
+            necesita equipos ni genera fixture.
+          </p>
         </form>
       </section>
 
@@ -456,7 +625,7 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
           </p>
         ) : (
           <ul className="space-y-3">
-            {etapas.map((etapa) => (
+            {etapasPorNumero.map((etapa) => (
               <li
                 key={etapa.id}
                 className="flex items-center justify-between rounded-xl border border-sand-200 bg-white/40 px-4 py-3"
@@ -495,6 +664,20 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
                       className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors min-h-[44px]"
                     >
                       🚫 Cancelar fecha
+                    </button>
+                  </div>
+                )}
+                {etapa.cancelledAt && (
+                  <div className="ml-3 flex shrink-0 items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeleteMsg(null);
+                        setDeleteTarget(etapa);
+                      }}
+                      className="rounded-lg border border-red-300 bg-white px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 transition-colors min-h-[44px]"
+                    >
+                      🗑️ Eliminar
                     </button>
                   </div>
                 )}
@@ -580,6 +763,52 @@ export function CircuitosSection({ onBack }: CircuitosSectionProps) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete-etapa modal (cancelled etapas only) */}
+      {deleteTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Eliminar etapa"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-sand-300 bg-white p-6 shadow-xl">
+            <h3 className="text-base font-semibold text-stone-900">
+              Eliminar {deleteTarget.name}
+            </h3>
+            <p className="mt-2 text-sm text-stone-600">
+              Se borra la etapa cancelada con sus equipos y partidos, y el número
+              vuelve a quedar disponible. <strong>No se puede deshacer.</strong>
+            </p>
+            {deleteMsg && (
+              <p
+                className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700 border border-red-200"
+                role="alert"
+              >
+                {deleteMsg}
+              </p>
+            )}
+            <div className="mt-5 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+                className="rounded-lg border border-sand-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 hover:bg-sand-50 transition-colors min-h-[44px]"
+              >
+                Volver
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteConfirm}
+                disabled={deleting}
+                className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50 transition-colors min-h-[44px]"
+              >
+                {deleting ? "Eliminando…" : "Sí, eliminar"}
+              </button>
+            </div>
           </div>
         </div>
       )}

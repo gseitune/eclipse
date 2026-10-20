@@ -3,8 +3,8 @@
 import { logout, closeEtapa } from "@/lib/front/api";
 import { useState, useEffect, useMemo } from "react";
 import { useLiveState } from "@/lib/front/use-live-state";
-import { closeEtapaUi, type CloseEtapaUi } from "@/lib/etapa-close";
-import type { MatchPublic, StateSnapshot } from "@/lib/front/types";
+import { closeEtapaUi, closedBannerVisible, CLOSED_BANNER_MS, type CloseEtapaUi } from "@/lib/etapa-close";
+import type { Circuit, MatchPublic, StateSnapshot } from "@/lib/front/types";
 import { computeTimeEstimate } from "@/lib/time-estimate";
 import { stageLabel } from "@/lib/front/phase";
 import {
@@ -18,6 +18,7 @@ import {
   RotationPanel,
 } from "./ResultadosSection";
 import { CircuitosSection } from "./CircuitosSection";
+import { GaleriaSection } from "./GaleriaSection";
 import { ReagendarSection } from "./ReagendarSection";
 
 /* ── Lock icon (inline SVG, no emoji, no external dependency) ── */
@@ -124,16 +125,21 @@ function CheckIcon() {
 /* ── Close-etapa banner: unlocks only once the FINAL has a result ── */
 function CloseEtapaBanner({
   uiState,
+  showClosed,
   busy,
   message,
   onRequestClose,
 }: {
   readonly uiState: CloseEtapaUi;
+  readonly showClosed: boolean;
   readonly busy: boolean;
   readonly message: string | null;
   readonly onRequestClose: () => void;
 }) {
   if (uiState === "closed") {
+    // The confirmation is a 15-minute receipt: once the window closes the
+    // banner slot stays empty instead of turning into a permanent badge.
+    if (!showClosed) return null;
     return (
       <div className="mx-auto w-full max-w-3xl px-6 pt-4">
         <div className="flex w-full items-center gap-3 rounded-xl border border-emerald-300 bg-emerald-50 px-5 py-4">
@@ -412,6 +418,10 @@ export function OrganizerPanel({
   >(null);
   const [view, setView] = useState<"panel" | "public">("panel");
 
+  // Circuit = annual season. The organizer works one circuit at a time; the
+  // selector lives in "Crear Etapa" but the whole panel follows it.
+  const [circuit, setCircuit] = useState<Circuit>("PRINCIPIANTES");
+
   // Reactive clock for the counters card (recomputes every 30s)
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
@@ -419,7 +429,7 @@ export function OrganizerPanel({
     return () => clearInterval(id);
   }, []);
 
-  const { state: liveState, loading, error: liveStateError, refetch } = useLiveState();
+  const { state: liveState, loading, error: liveStateError, refetch } = useLiveState({ circuit });
   const nextMatch = liveState?.nextMatch ?? null;
   const isCancelled = !!liveState?.etapa?.cancelledAt;
   // Bell notice: only a match whose teams are already defined can be loaded.
@@ -429,6 +439,27 @@ export function OrganizerPanel({
   // Closing is irreversible and only allowed once the FINAL has a result.
   const closeState = closeEtapaUi(liveState?.etapa, liveState?.brackets);
   const isClosed = closeState === "closed";
+
+  // The "Etapa finalizada" card is a transient receipt (CLOSED_BANNER_MS): a
+  // local clock decides when it leaves the screen because no server event fires
+  // at that boundary. The clock is `null` until the first timer tick, so the
+  // server HTML and the first client paint always agree (no hydration drift).
+  const closedAt = liveState?.etapa?.closedAt ?? null;
+  const [closedBannerNow, setClosedBannerNow] = useState<number | null>(null);
+  useEffect(() => {
+    if (!closedAt) return;
+    const sync = () => setClosedBannerNow(Date.now());
+    const firstPaint = setTimeout(sync, 0);
+    const hideIn = Date.parse(closedAt) + CLOSED_BANNER_MS - Date.now();
+    const expiry =
+      Number.isFinite(hideIn) && hideIn > 0 ? setTimeout(sync, hideIn) : null;
+    return () => {
+      clearTimeout(firstPaint);
+      if (expiry !== null) clearTimeout(expiry);
+    };
+  }, [closedAt]);
+  const showClosedBanner =
+    closedBannerNow !== null && closedBannerVisible(closedAt, closedBannerNow);
 
   const [closingEtapa, setClosingEtapa] = useState(false);
   const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
@@ -488,9 +519,35 @@ export function OrganizerPanel({
             <h1 className="text-lg font-semibold text-stone-900">
               Panel organizador
             </h1>
-            <span className="text-xs text-stone-400 mt-0.5">{email}</span>
+            <span className="text-xs text-stone-400 mt-0.5">
+              {email}
+              {liveState?.etapa
+                ? ` · ${circuit === "INTERMEDIOS" ? "Intermedios" : "Principiantes"} ${liveState.etapa.season} · ${liveState.etapa.name}`
+                : ` · ${circuit === "INTERMEDIOS" ? "Intermedios" : "Principiantes"}`}
+            </span>
+            {(liveState?.etapa?.closedAt || liveState?.etapa?.cancelledAt) && (
+              <span className="text-xs text-amber-700 mt-0.5">
+                {liveState.etapa.cancelledAt
+                  ? "Etapa cancelada: sin acceso de edición"
+                  : "Etapa finalizada: sólo consulta"}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2">
+            {/* Circuit lives in memory, so without this the panel falls back to
+                Principiantes on every reload and a closed stage locks results. */}
+            <label htmlFor="panel-circuito" className="sr-only">
+              Circuito
+            </label>
+            <select
+              id="panel-circuito"
+              value={circuit}
+              onChange={(e) => setCircuit(e.target.value as Circuit)}
+              className="rounded-lg border border-sand-300 bg-white px-2 py-2 text-xs font-medium text-stone-700 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[40px]"
+            >
+              <option value="PRINCIPIANTES">Principiantes</option>
+              <option value="INTERMEDIOS">Intermedios</option>
+            </select>
             {view === "panel" ? (
               <>
                 <button
@@ -526,6 +583,7 @@ export function OrganizerPanel({
         <>
           <CloseEtapaBanner
             uiState={closeState}
+            showClosed={showClosedBanner}
             busy={closingEtapa}
             message={closeMsg}
             onRequestClose={() => {
@@ -587,7 +645,12 @@ export function OrganizerPanel({
         matchMinutes={liveState?.matchMinutes ?? 20}
       />
       {activeSection === "circuitos" ? (
-        <CircuitosSection onBack={() => setActiveSection(null)} />
+        <CircuitosSection
+          key={circuit}
+          circuit={circuit}
+          onCircuitChange={setCircuit}
+          onBack={() => setActiveSection(null)}
+        />
       ) : activeSection === "reagendar" ? (
         <ReagendarSection onBack={() => setActiveSection(null)} readOnly={isClosed} />
       ) : (
@@ -613,7 +676,11 @@ export function OrganizerPanel({
             <ResultsCard
               state={liveState}
               loading={loading}
-              error={liveStateError}
+              error={
+                liveStateError === "No etapas yet."
+                  ? "Todavía no hay etapas en este circuito."
+                  : liveStateError
+              }
               refetch={refetch}
               disabled={isCancelled}
               closed={isClosed}
@@ -624,6 +691,13 @@ export function OrganizerPanel({
             {!isCancelled && !isClosed && (
               <RotationPanel state={liveState} refetch={refetch} />
             )}
+            {!isCancelled && !isClosed && (
+              <CorregirResultadosPanel
+                refetch={refetch}
+                etapaId={liveState?.etapaId ?? null}
+              />
+            )}
+            <GaleriaSection key={circuit} circuit={circuit} />
           </nav>
         </main>
       )}

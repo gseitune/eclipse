@@ -11,6 +11,11 @@ import {
   createBestThirdDesempate,
   reslotEtapa,
 } from "../../lib/front/api";
+import {
+  STAGE_FORMATS,
+  describeSetProblem,
+  type SetFormatId,
+} from "@/lib/result-format";
 import type {
   ScheduleBoardRow,
   ScheduleRow,
@@ -20,6 +25,33 @@ import type {
 import { ApiError } from "../../lib/front/types";
 import { stageLabel } from "../../lib/front/phase";
 import { cascadeImpact, matchScore } from "../../lib/front/bracket";
+
+/* ── Set-format labels for the organizer result form ── */
+function setFormatLabel(format: SetFormatId): string {
+  switch (format) {
+    case "SINGLE_21":
+      return "1 set a 21";
+    case "TWO_15_TIEBREAK":
+      return "2 sets a 15";
+    case "TWO_21_TIEBREAK_15":
+      return "2 sets a 21";
+    case "BEST_OF_3_21":
+      return "Mejor de 3 a 21";
+  }
+}
+
+function setFormatHint(format: SetFormatId): string {
+  switch (format) {
+    case "SINGLE_21":
+      return "Un set a 21, con 2 de ventaja.";
+    case "TWO_15_TIEBREAK":
+      return "Dos sets a 15; si van 1-1, el tercero a 15.";
+    case "TWO_21_TIEBREAK_15":
+      return "Dos sets a 21; si van 1-1, el tercero a 15.";
+    case "BEST_OF_3_21":
+      return "Mejor de 3 sets a 21.";
+  }
+}
 
 /* ── Check icon (inline SVG, no emoji) ── */
 function CheckIcon() {
@@ -137,6 +169,13 @@ export function ResultadoEntryPanel({
   const [activeTab, setActiveTab] = useState<EntryTab>("sets");
   const [setAScore, setSetAScore] = useState("");
   const [setBScore, setSetBScore] = useState("");
+  const [set2A, setSet2A] = useState("");
+  const [set2B, setSet2B] = useState("");
+  const [set3A, setSet3A] = useState("");
+  const [set3B, setSet3B] = useState("");
+  // Only used when the etapa keeps the per-stage convention and the stage
+  // allows more than one format (semifinals: 1 set to 21 or 2 sets to 15).
+  const [formatChoice, setFormatChoice] = useState<SetFormatId | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitMsg, setSubmitMsg] = useState<string | null>(null);
 
@@ -150,6 +189,33 @@ export function ResultadoEntryPanel({
   const nextMatch = state?.nextMatch ?? null;
   const schedule = useMemo(() => state?.schedule ?? [], [state?.schedule]);
 
+  // The etapa can fix one format for every match; otherwise the stage decides
+  // which formats are legal (semifinals allow both).
+  const etapaFormat = state?.etapa?.setFormat ?? null;
+  const allowedFormats = useMemo<readonly SetFormatId[]>(() => {
+    if (!nextMatch) return [];
+    if (etapaFormat) return [etapaFormat];
+    return STAGE_FORMATS[nextMatch.stage] ?? [];
+  }, [nextMatch, etapaFormat]);
+  const activeFormat: SetFormatId =
+    formatChoice && allowedFormats.includes(formatChoice)
+      ? formatChoice
+      : (allowedFormats[0] ?? "SINGLE_21");
+  const needsSecondSet = activeFormat !== "SINGLE_21";
+
+  // The third set appears only after a real 1-1 split.
+  const firstTwo = [
+    parseInt(setAScore, 10),
+    parseInt(setBScore, 10),
+    parseInt(set2A, 10),
+    parseInt(set2B, 10),
+  ];
+  const firstTwoFilled = firstTwo.every((n) => !Number.isNaN(n));
+  const showThirdSet =
+    needsSecondSet &&
+    firstTwoFilled &&
+    (firstTwo[0] > firstTwo[1]) !== (firstTwo[2] > firstTwo[3]);
+
   // Handle record result with error classification
   const handleRecord = useCallback(
     async (input: { matchId: string; setFormat?: string; sets?: { teamA: number; teamB: number }[]; winnerId?: string }) => {
@@ -161,6 +227,10 @@ export function ResultadoEntryPanel({
         // Reset form
         setSetAScore("");
         setSetBScore("");
+        setSet2A("");
+        setSet2B("");
+        setSet3A("");
+        setSet3B("");
         setActiveTab("sets");
         // Refetch state via live hook
         await refetch();
@@ -179,6 +249,10 @@ export function ResultadoEntryPanel({
           setSubmitMsg("Resultado cargado");
           setSetAScore("");
           setSetBScore("");
+          setSet2A("");
+          setSet2B("");
+          setSet3A("");
+          setSet3B("");
           setActiveTab("sets");
         } else if (err instanceof ApiError) {
           switch (err.status) {
@@ -207,21 +281,51 @@ export function ResultadoEntryPanel({
     if (!nextMatch) return;
     const a = parseInt(setAScore, 10);
     const b = parseInt(setBScore, 10);
-    // Client-side validation
-    if (isNaN(a) || isNaN(b) || a <= 0 || b <= 0) {
-      setSubmitMsg("Ambos sets deben ser números positivos.");
+    const sets = [{ teamA: a, teamB: b }];
+
+    if (needsSecondSet) {
+      const a2 = parseInt(set2A, 10);
+      const b2 = parseInt(set2B, 10);
+      if (!Number.isNaN(a2) && !Number.isNaN(b2)) {
+        sets.push({ teamA: a2, teamB: b2 });
+      }
+      // The third set only exists after a 1-1 split.
+      const firstTwoFilled =
+        !Number.isNaN(a) && !Number.isNaN(b) && !Number.isNaN(a2) && !Number.isNaN(b2);
+      const splitOneOne =
+        firstTwoFilled && (a > b) !== (a2 > b2);
+      if (splitOneOne) {
+        const a3 = parseInt(set3A, 10);
+        const b3 = parseInt(set3B, 10);
+        if (!Number.isNaN(a3) && !Number.isNaN(b3)) {
+          sets.push({ teamA: a3, teamB: b3 });
+        }
+      }
+    }
+
+    const problem = describeSetProblem(activeFormat, sets);
+    if (problem) {
+      setSubmitMsg(problem);
       return;
     }
-    if (a === b) {
-      setSubmitMsg("Los sets no pueden ser iguales.");
-      return;
-    }
+
     handleRecord({
       matchId: nextMatch.id,
-      setFormat: nextMatch.setFormat ?? "SINGLE_21",
-      sets: [{ teamA: a, teamB: b }],
+      setFormat: activeFormat,
+      sets,
     });
-  }, [nextMatch, setAScore, setBScore, handleRecord]);
+  }, [
+    nextMatch,
+    setAScore,
+    setBScore,
+    set2A,
+    set2B,
+    set3A,
+    set3B,
+    needsSecondSet,
+    activeFormat,
+    handleRecord,
+  ]);
 
   // Winner submission (WINNER_ONLY: no invented scores, just the winner)
   const handleWinnerSubmit = useCallback(
@@ -429,6 +533,116 @@ export function ResultadoEntryPanel({
                   </div>
                 </div>
 
+                {allowedFormats.length > 1 && (
+                  <div>
+                    <label
+                      htmlFor="resultado-formato"
+                      className="block text-xs font-medium text-stone-600 mb-1"
+                    >
+                      Formato del partido
+                    </label>
+                    <select
+                      id="resultado-formato"
+                      value={activeFormat}
+                      onChange={(e) =>
+                        setFormatChoice(e.target.value as SetFormatId)
+                      }
+                      disabled={submitting}
+                      className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                    >
+                      {allowedFormats.map((format) => (
+                        <option key={format} value={format}>
+                          {setFormatLabel(format)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <p className="text-[11px] text-stone-500">
+                  {setFormatHint(activeFormat)}
+                </p>
+
+                {needsSecondSet && (
+                  <div className="space-y-3 rounded-lg border border-sand-200 bg-white/60 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-xs font-medium text-stone-600">
+                        Segundo set
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <label htmlFor="set2-a" className="sr-only">
+                          Segundo set del equipo A
+                        </label>
+                        <input
+                          id="set2-a"
+                          type="number"
+                          inputMode="numeric"
+                          min="1"
+                          value={set2A}
+                          onChange={(e) => setSet2A(e.target.value)}
+                          disabled={submitting}
+                          placeholder="0"
+                          className="w-16 rounded-lg border border-sand-300 bg-white px-2 py-2 text-center text-base font-bold text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                        />
+                        <span className="text-stone-400 font-bold">:</span>
+                        <label htmlFor="set2-b" className="sr-only">
+                          Segundo set del equipo B
+                        </label>
+                        <input
+                          id="set2-b"
+                          type="number"
+                          inputMode="numeric"
+                          min="1"
+                          value={set2B}
+                          onChange={(e) => setSet2B(e.target.value)}
+                          disabled={submitting}
+                          placeholder="0"
+                          className="w-16 rounded-lg border border-sand-300 bg-white px-2 py-2 text-center text-base font-bold text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                        />
+                      </div>
+                    </div>
+
+                    {showThirdSet && (
+                      <div className="flex items-center justify-between gap-3 border-t border-sand-200 pt-3">
+                        <span className="text-xs font-medium text-stone-600">
+                          Tercer set (van 1-1)
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <label htmlFor="set3-a" className="sr-only">
+                            Tercer set del equipo A
+                          </label>
+                          <input
+                            id="set3-a"
+                            type="number"
+                            inputMode="numeric"
+                            min="1"
+                            value={set3A}
+                            onChange={(e) => setSet3A(e.target.value)}
+                            disabled={submitting}
+                            placeholder="0"
+                            className="w-16 rounded-lg border border-sand-300 bg-white px-2 py-2 text-center text-base font-bold text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                          />
+                          <span className="text-stone-400 font-bold">:</span>
+                          <label htmlFor="set3-b" className="sr-only">
+                            Tercer set del equipo B
+                          </label>
+                          <input
+                            id="set3-b"
+                            type="number"
+                            inputMode="numeric"
+                            min="1"
+                            value={set3B}
+                            onChange={(e) => setSet3B(e.target.value)}
+                            disabled={submitting}
+                            placeholder="0"
+                            className="w-16 rounded-lg border border-sand-300 bg-white px-2 py-2 text-center text-base font-bold text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <button
                   type="button"
                   onClick={handleSetsSubmit}
@@ -624,14 +838,19 @@ type CorrTab = "sets" | "winner";
  */
 export function CorregirResultadosPanel({
   refetch,
+  etapaId = null,
   readOnly = false,
-}: CorregirResultadosPanelProps) {
+}: CorregirResultadosPanelProps & { readonly etapaId?: string | null }) {
   const [board, setBoard] = useState<ScheduleBoardRow[] | null>(null);
   const [boardError, setBoardError] = useState<string | null>(null);
   const [openRow, setOpenRow] = useState<ScheduleBoardRow | null>(null);
   const [corrTab, setCorrTab] = useState<CorrTab>("sets");
   const [corrA, setCorrA] = useState("");
   const [corrB, setCorrB] = useState("");
+  const [corr2A, setCorr2A] = useState("");
+  const [corr2B, setCorr2B] = useState("");
+  const [corr3A, setCorr3A] = useState("");
+  const [corr3B, setCorr3B] = useState("");
   const [corrWinner, setCorrWinner] = useState<string | null>(null);
   const [corrSaving, setCorrSaving] = useState(false);
   const [corrMsg, setCorrMsg] = useState<string | null>(null);
@@ -639,7 +858,7 @@ export function CorregirResultadosPanel({
 
   const reload = useCallback(async () => {
     try {
-      const res = await fetchScheduleBoard();
+      const res = await fetchScheduleBoard(etapaId);
       setBoard(res.schedule);
       setBoardError(null);
     } catch (err) {
@@ -650,19 +869,55 @@ export function CorregirResultadosPanel({
           : "Error al cargar los partidos jugados.",
       );
     }
-  }, []);
+  }, [etapaId]);
 
   useEffect(() => {
+    // `reload` only sets state after its await, but the rule cannot see through
+    // the async boundary: this is a data fetch on mount, not a render cascade.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void reload();
   }, [reload]);
 
   const blocked = useMemo(
-    () =>
-      (board ?? []).filter(
-        (row) => row.resultStatus !== "PENDING" && !row.editable,
-      ),
+    () => (board ?? []).filter((row) => row.resultStatus !== "PENDING"),
     [board],
   );
+
+  // The stored format of the match decides how many sets the correction needs.
+  const corrFormat: SetFormatId = (openRow?.setFormat ?? "SINGLE_21") as SetFormatId;
+
+  const corrFirstTwo = [
+    parseInt(corrA, 10),
+    parseInt(corrB, 10),
+    parseInt(corr2A, 10),
+    parseInt(corr2B, 10),
+  ];
+  const showCorrThird =
+    corrFormat !== "SINGLE_21" &&
+    corrFirstTwo.every((n) => !Number.isNaN(n)) &&
+    (corrFirstTwo[0] > corrFirstTwo[1]) !== (corrFirstTwo[2] > corrFirstTwo[3]);
+
+  const corrSets = useMemo(() => {
+    if (corrTab !== "sets") return [];
+    const sets = [
+      { teamA: parseInt(corrA, 10), teamB: parseInt(corrB, 10) },
+    ];
+    if (corrFormat !== "SINGLE_21") {
+      const a2 = parseInt(corr2A, 10);
+      const b2 = parseInt(corr2B, 10);
+      if (!Number.isNaN(a2) && !Number.isNaN(b2)) {
+        sets.push({ teamA: a2, teamB: b2 });
+      }
+      if (showCorrThird) {
+        const a3 = parseInt(corr3A, 10);
+        const b3 = parseInt(corr3B, 10);
+        if (!Number.isNaN(a3) && !Number.isNaN(b3)) {
+          sets.push({ teamA: a3, teamB: b3 });
+        }
+      }
+    }
+    return sets;
+  }, [corrTab, corrA, corrB, corr2A, corr2B, corr3A, corr3B, corrFormat, showCorrThird]);
 
   const impact = useMemo(
     () => (openRow ? cascadeImpact(openRow.stage, board ?? []) : null),
@@ -674,6 +929,10 @@ export function CorregirResultadosPanel({
     setCorrTab("sets");
     setCorrA("");
     setCorrB("");
+    setCorr2A("");
+    setCorr2B("");
+    setCorr3A("");
+    setCorr3B("");
     setCorrWinner(null);
     setCorrMsg(null);
   }
@@ -688,13 +947,7 @@ export function CorregirResultadosPanel({
     !corrSaving &&
     openRow !== null &&
     (corrTab === "sets"
-      ? (() => {
-          const a = parseInt(corrA, 10);
-          const b = parseInt(corrB, 10);
-          return (
-            !isNaN(a) && !isNaN(b) && a > 0 && b > 0 && a !== b
-          );
-        })()
+      ? describeSetProblem(corrFormat, corrSets) === null
       : corrWinner !== null);
 
   async function handleCorregir() {
@@ -705,13 +958,8 @@ export function CorregirResultadosPanel({
       if (corrTab === "sets") {
         await editResult({
           matchId: openRow.id,
-          setFormat: openRow.setFormat ?? "SINGLE_21",
-          sets: [
-            {
-              teamA: parseInt(corrA, 10),
-              teamB: parseInt(corrB, 10),
-            },
-          ],
+          setFormat: corrFormat,
+          sets: corrSets,
           cascade: true,
         });
       } else if (corrWinner) {
@@ -772,7 +1020,7 @@ export function CorregirResultadosPanel({
           <span className="mt-0.5 block text-xs text-stone-500">
             {readOnly
               ? "Etapa finalizada: los resultados quedan sólo para consulta."
-              : "Partidos que quedaron trabados porque la llave ya avanzó. Corregirlos borra solo la cadena afectada y la vuelve a calcular."}
+              : "Todos los partidos jugados de esta etapa. Corregir uno borra solo la cadena afectada y la vuelve a calcular."}
           </span>
         </div>
 
@@ -872,7 +1120,8 @@ export function CorregirResultadosPanel({
             </div>
 
             {corrTab === "sets" ? (
-              <div className="flex items-center justify-center gap-2">
+              <div className="space-y-3">
+                <div className="flex items-center justify-center gap-2">
                 <label htmlFor="corr-set-a" className="sr-only">
                   Sets del equipo A
                 </label>
@@ -902,6 +1151,91 @@ export function CorregirResultadosPanel({
                   placeholder="0"
                   className="w-16 rounded-lg border border-sand-300 bg-white px-2 py-2.5 text-center text-lg font-bold text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
                 />
+                </div>
+
+                {corrFormat !== "SINGLE_21" && (
+                  <div className="space-y-2 rounded-lg border border-sand-200 bg-stone-50 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-xs font-medium text-stone-600">
+                        Segundo set
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <label htmlFor="corr-set2-a" className="sr-only">
+                          Segundo set del equipo A
+                        </label>
+                        <input
+                          id="corr-set2-a"
+                          type="number"
+                          inputMode="numeric"
+                          min="1"
+                          value={corr2A}
+                          onChange={(e) => setCorr2A(e.target.value)}
+                          disabled={corrSaving}
+                          placeholder="0"
+                          className="w-16 rounded-lg border border-sand-300 bg-white px-2 py-2 text-center text-base font-bold text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                        />
+                        <span className="text-stone-400 font-bold">:</span>
+                        <label htmlFor="corr-set2-b" className="sr-only">
+                          Segundo set del equipo B
+                        </label>
+                        <input
+                          id="corr-set2-b"
+                          type="number"
+                          inputMode="numeric"
+                          min="1"
+                          value={corr2B}
+                          onChange={(e) => setCorr2B(e.target.value)}
+                          disabled={corrSaving}
+                          placeholder="0"
+                          className="w-16 rounded-lg border border-sand-300 bg-white px-2 py-2 text-center text-base font-bold text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                        />
+                      </div>
+                    </div>
+
+                    {showCorrThird && (
+                      <div className="flex items-center justify-between gap-3 border-t border-sand-200 pt-2">
+                        <span className="text-xs font-medium text-stone-600">
+                          Tercer set (van 1-1)
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <label htmlFor="corr-set3-a" className="sr-only">
+                            Tercer set del equipo A
+                          </label>
+                          <input
+                            id="corr-set3-a"
+                            type="number"
+                            inputMode="numeric"
+                            min="1"
+                            value={corr3A}
+                            onChange={(e) => setCorr3A(e.target.value)}
+                            disabled={corrSaving}
+                            placeholder="0"
+                            className="w-16 rounded-lg border border-sand-300 bg-white px-2 py-2 text-center text-base font-bold text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                          />
+                          <span className="text-stone-400 font-bold">:</span>
+                          <label htmlFor="corr-set3-b" className="sr-only">
+                            Tercer set del equipo B
+                          </label>
+                          <input
+                            id="corr-set3-b"
+                            type="number"
+                            inputMode="numeric"
+                            min="1"
+                            value={corr3B}
+                            onChange={(e) => setCorr3B(e.target.value)}
+                            disabled={corrSaving}
+                            placeholder="0"
+                            className="w-16 rounded-lg border border-sand-300 bg-white px-2 py-2 text-center text-base font-bold text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <p className="text-center text-[11px] text-stone-500">
+                  {setFormatHint(corrFormat)}
+                </p>
               </div>
             ) : (
               <div className="flex gap-3">
