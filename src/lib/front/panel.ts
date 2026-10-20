@@ -54,7 +54,7 @@ export function sectionsFor(flags: SectionFlags): readonly SectionConfig[] {
   return [
     {
       label: CREATE_ETAPA_LABEL,
-      hint: "Crear y editar etapas con equipos",
+      hint: "Crear, editar, cancelar o eliminar etapas",
       kind: "actionable",
     },
     {

@@ -21,6 +21,8 @@ const MEANINGFUL_EVENTS = [
 const DEBOUNCE_MS = 250;
 const RECONNECT_INITIAL_MS = 1000;
 const RECONNECT_MAX_MS = 15000;
+/** Safety-net refresh: SSE events can be published from another instance. */
+const POLL_MS = 20000;
 
 export function useLiveState(options?: {
   initial?: StateSnapshot | null;
@@ -167,8 +169,39 @@ export function useLiveState(options?: {
 
     createSource();
 
+    // Serverless makes SSE unreliable: a write can land in another instance than
+    // the one holding this connection, so its event never arrives. Poll as a
+    // safety net, and refetch as soon as the tab comes back to the front.
+    const poll = setInterval(() => {
+      if (!mountedRef.current) return;
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        return;
+      }
+      performRefetch();
+    }, POLL_MS);
+
+    const onWake = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        return;
+      }
+      performRefetch();
+    };
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onWake);
+    }
+    if (typeof window !== "undefined") {
+      window.addEventListener("focus", onWake);
+    }
+
     return () => {
       mountedRef.current = false;
+      clearInterval(poll);
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onWake);
+      }
+      if (typeof window !== "undefined") {
+        window.removeEventListener("focus", onWake);
+      }
       if (esRef.current) {
         esRef.current.close();
         esRef.current = null;

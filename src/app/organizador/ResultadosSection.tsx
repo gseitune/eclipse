@@ -857,6 +857,12 @@ export function CorregirResultadosPanel({
   const [doneMsg, setDoneMsg] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
+    // Without an etapa there is nothing to correct; never fall back to the
+    // default circuit or the list would show another etapa's matches.
+    if (!etapaId) {
+      setBoard([]);
+      return;
+    }
     try {
       const res = await fetchScheduleBoard(etapaId);
       setBoard(res.schedule);

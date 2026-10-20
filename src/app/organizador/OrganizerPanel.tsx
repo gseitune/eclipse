@@ -691,10 +691,10 @@ export function OrganizerPanel({
             {!isCancelled && !isClosed && (
               <RotationPanel state={liveState} refetch={refetch} />
             )}
-            {!isCancelled && !isClosed && (
+            {!isCancelled && !isClosed && liveState?.etapaId && (
               <CorregirResultadosPanel
                 refetch={refetch}
-                etapaId={liveState?.etapaId ?? null}
+                etapaId={liveState.etapaId}
               />
             )}
             <GaleriaSection key={circuit} circuit={circuit} />
