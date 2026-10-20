@@ -5,6 +5,19 @@
 
 export type ZoneId = "A" | "B" | "C";
 
+/** Circuit = annual season. Two circuits run per year, each with its own table. */
+export type Circuit = "PRINCIPIANTES" | "INTERMEDIOS";
+
+/**
+ * Set format chosen when the etapa is created. `null` keeps the per-stage
+ * convention used by etapas created before the choice existed.
+ */
+export type EtapaSetFormat =
+  | "SINGLE_21"
+  | "TWO_15_TIEBREAK"
+  | "TWO_21_TIEBREAK_15"
+  | "BEST_OF_3_21";
+
 export type PhaseName = "GROUPS" | "DESEMPATE" | "ELIMINATORIES";
 
 export type ResultStatus = "PENDING" | "WINNER_ONLY" | "COMPLETE";
@@ -147,8 +160,13 @@ export interface EtapaMeta {
   id: string;
   name: string;
   date: string | null;
+  /** Circuit = annual season: (circuit, season) identifies one circuit. */
+  circuit: Circuit;
+  season: number;
   sortOrder: number;
   teamCount: number;
+  /** Set format fixed for the whole etapa; null = per-stage convention. */
+  setFormat: EtapaSetFormat | null;
   closedAt: string | null;
   cancelledAt: string | null;
   /** True once any match of the etapa has a recorded result (fixture frozen). */
@@ -221,6 +239,12 @@ export interface CreateEtapaInput {
   date?: string | null;
   teams: CreateTeamInput[];
   bracketFormat?: BracketFormat;
+  /** Circuit to create the etapa in; defaults to Principiantes. */
+  circuit?: Circuit;
+  /** Annual season; defaults to the current year. */
+  season?: number;
+  /** Set format for every match of the etapa; null keeps the stage convention. */
+  setFormat?: EtapaSetFormat | null;
 }
 
 export class ApiError extends Error {

@@ -426,12 +426,13 @@ describe("createEtapa (integration) â€” mixto fijo", () => {
     assert.equal(rows.length, MIN_TEAMS);
     assert.equal(rows[0].maleName, "Hombre 1");
     assert.equal(rows[0].femaleName, "Mujer 1");
-    // 6 teams â†’ 2 zones of 3 â†’ 3+3 intra-zone round-robin + 3 bracket slots
+    // 6 teams → 2 zones of 3 → 3+3 intra-zone round-robin + 4 bracket slots
+    // (two semis, the always-played third-place match and the final).
     assert.equal(
       await prisma.match.count({ where: { etapaId: etapa.id } }),
-      9,
+      10,
     );
-    assert.equal(etapa.matchCount, 9, "summary reflects the real fixture size");
+    assert.equal(etapa.matchCount, 10, "summary reflects the real fixture size");
   });
 
   it("rejects a team missing the male or female player (team_players_required)", async () => {

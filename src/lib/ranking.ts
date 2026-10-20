@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import type { StandingRow } from "./standings";
 import type { Zone } from "../generated/prisma/client";
+import type { Circuit } from "../generated/prisma/client";
 import { getStandings } from "./back";
 import { canonicalPlayerName } from "./player-names";
 
@@ -393,11 +394,16 @@ export function aggregateRankedPlayers(etapas: EtapaPositions[]): {
 }
 
 /**
- * Computes the annual ranking across all etapas.
+ * Computes the annual ranking of one circuit. Etapas of other circuits never
+ * enter the table: each circuit (categoría + temporada) has its own points.
  */
-export async function getAnnualRanking(): Promise<RankingResponse> {
+export async function getAnnualRanking(
+  circuit: Circuit = "PRINCIPIANTES",
+  season?: number | null,
+): Promise<RankingResponse> {
   const etapas = await prisma.etapa.findMany({
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    where: season === undefined || season === null ? { circuit } : { circuit, season },
+    orderBy: [{ season: "asc" }, { sortOrder: "asc" }, { createdAt: "asc" }],
     select: { id: true, name: true, sortOrder: true },
   });
 

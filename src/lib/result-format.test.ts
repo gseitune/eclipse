@@ -3,7 +3,10 @@ import { describe, it } from "node:test";
 
 import {
   InvalidResultError,
+  describeSetProblem,
+  isValidFinalSet,
   resolveResultPayload,
+  setCapFor,
   type ResultPayload,
 } from "./result-format";
 
@@ -346,5 +349,153 @@ describe("resolveResultPayload", () => {
         reason: "invalid_set_score",
       });
     });
+  });
+});
+
+/**
+ * Intermedios plays two sets to 21 and, on a 1-1 split, a third set to 15: the
+ * cap depends on the set position, not only on the format.
+ */
+describe("setCapFor (2x21 + tercero a 15)", () => {
+  it("caps the first two sets at 21 and the third at 15", () => {
+    assert.equal(setCapFor("TWO_21_TIEBREAK_15", 0), 21);
+    assert.equal(setCapFor("TWO_21_TIEBREAK_15", 1), 21);
+    assert.equal(setCapFor("TWO_21_TIEBREAK_15", 2), 15);
+  });
+
+  it("leaves the existing formats unchanged", () => {
+    assert.equal(setCapFor("SINGLE_21", 0), 21);
+    assert.equal(setCapFor("BEST_OF_3_21", 0), 21);
+    assert.equal(setCapFor("BEST_OF_3_21", 2), 21);
+    assert.equal(setCapFor("TWO_15_TIEBREAK", 0), 15);
+    assert.equal(setCapFor("TWO_15_TIEBREAK", 2), 15);
+  });
+});
+
+/**
+ * The organizer fills the scoreboard set by set; these are the messages that
+ * stop an incomplete match from being submitted.
+ */
+describe("describeSetProblem", () => {
+  const one = (a: number, b: number) => ({ teamA: a, teamB: b });
+
+  it("accepts a single valid set for SINGLE_21", () => {
+    assert.equal(describeSetProblem("SINGLE_21", [one(21, 19)]), null);
+  });
+
+  it("asks for the first set when nothing is loaded", () => {
+    assert.match(describeSetProblem("SINGLE_21", []) ?? "", /set/i);
+  });
+
+  it("asks for the second set in a two-set format", () => {
+    assert.match(
+      describeSetProblem("TWO_21_TIEBREAK_15", [one(21, 19)]) ?? "",
+      /segundo/i,
+    );
+  });
+
+  it("requires the third set when the first two split 1-1", () => {
+    assert.match(
+      describeSetProblem("TWO_21_TIEBREAK_15", [one(21, 19), one(18, 21)]) ?? "",
+      /tercer/i,
+    );
+  });
+
+  it("accepts a 2-0 sweep without a third set", () => {
+    assert.equal(
+      describeSetProblem("TWO_21_TIEBREAK_15", [one(21, 19), one(21, 15)]),
+      null,
+    );
+  });
+
+  it("accepts a decided third set", () => {
+    assert.equal(
+      describeSetProblem("TWO_21_TIEBREAK_15", [
+        one(21, 19),
+        one(18, 21),
+        one(15, 12),
+      ]),
+      null,
+    );
+  });
+
+  it("rejects a third set without the 2-point lead", () => {
+    assert.match(
+      describeSetProblem("TWO_21_TIEBREAK_15", [
+        one(21, 19),
+        one(18, 21),
+        one(15, 14),
+      ]) ?? "",
+      /2 de ventaja|2-point|ventaja/i,
+    );
+  });
+
+  it("rejects a third set when the match was already decided", () => {
+    assert.match(
+      describeSetProblem("TWO_21_TIEBREAK_15", [
+        one(21, 19),
+        one(21, 15),
+        one(15, 12),
+      ]) ?? "",
+      /ya/i,
+    );
+  });
+});
+
+/**
+ * A set is won at the cap with a 2-point lead. Only a deuce can push it past
+ * the cap, and there it always ends by exactly 2. Nothing above 30 is a real
+ * score, so a typo like 10000-5 must be refused.
+ */
+describe("isValidFinalSet (21 con 2 de ventaja, deuce hasta 30)", () => {
+  it("accepts a set closed at the cap with 2+ points of lead", () => {
+    assert.equal(isValidFinalSet(21, 19, 21), true);
+    assert.equal(isValidFinalSet(21, 5, 21), true);
+    assert.equal(isValidFinalSet(15, 13, 15), true);
+  });
+
+  it("accepts a deuce that ends by exactly 2", () => {
+    assert.equal(isValidFinalSet(22, 20, 21), true);
+    assert.equal(isValidFinalSet(26, 24, 21), true);
+    assert.equal(isValidFinalSet(30, 28, 21), true);
+    assert.equal(isValidFinalSet(16, 14, 15), true);
+  });
+
+  it("rejects a set that never reached the cap", () => {
+    assert.equal(isValidFinalSet(20, 18, 21), false);
+    assert.equal(isValidFinalSet(14, 12, 15), false);
+  });
+
+  it("rejects a 1-point lead", () => {
+    assert.equal(isValidFinalSet(21, 20, 21), false);
+    assert.equal(isValidFinalSet(15, 14, 15), false);
+  });
+
+  it("rejects impossible big margins past the cap", () => {
+    assert.equal(isValidFinalSet(25, 2, 21), false);
+    assert.equal(isValidFinalSet(50, 10, 21), false);
+    assert.equal(isValidFinalSet(43, 1, 21), false);
+  });
+
+  it("rejects anything above 30", () => {
+    assert.equal(isValidFinalSet(31, 29, 21), false);
+    assert.equal(isValidFinalSet(10000, 5, 21), false);
+  });
+
+  it("is wired into the payload validation", () => {
+    assert.throws(
+      () =>
+        resolveResultPayload(TEAM_A, TEAM_B, "GROUPS", {
+          setFormat: "SINGLE_21",
+          sets: [{ teamA: 25, teamB: 2 }],
+        }),
+      /invalid/i,
+    );
+    assert.doesNotThrow(() =>
+      resolveResultPayload(TEAM_A, TEAM_B, "GROUPS", {
+        setFormat: "SINGLE_21",
+        sets: [{ teamA: 26, teamB: 24 }],
+      }),
+    );
   });
 });

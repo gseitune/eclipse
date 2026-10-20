@@ -17,6 +17,12 @@ import type { ResultStatus, Zone } from "../generated/prisma/client";
  * Zone ties always resolve into positions (no unresolvedTie anymore): the
  * only still-open tie case is the cross-zone best-second fight, handled at
  * the bracket level (DESEMPATE match / 3+ blocked edge).
+ *
+ * PENDING (Andi): her Intermedios spreadsheet orders the zone by
+ * "diferencia de sets → diferencia de puntos → puntos a favor", while the
+ * order implemented here starts with wins and head-to-head. The sample she
+ * shared cannot tell them apart, so this stays as documented until she
+ * confirms which one rules.
  */
 
 export interface StandingInputTeam {

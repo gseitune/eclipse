@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import { auditWrite } from "./audit";
 import { canonicalPlayerName, canonicalTeamName } from "./player-names";
+import { parseDriveFolderId } from "./front/galeria";
 import { publishSse } from "./events";
 import { computeZoneStandings, type StandingRow } from "./standings";
 import {
@@ -22,7 +23,7 @@ import {
   type SetFormatId,
   type SetScore,
 } from "./result-format";
-import type { Stage, Zone, SetFormat } from "../generated/prisma/client";
+import type { Circuit, Stage, Zone, SetFormat } from "../generated/prisma/client";
 import { Prisma } from "../generated/prisma/client";
 
 /**
@@ -45,8 +46,18 @@ export class BackError extends Error {
   }
 }
 
-/** Resolves the requested etapa, defaulting to the latest when omitted. */
-export async function resolveEtapaId(etapaId?: string | null): Promise<string> {
+/**
+ * Resolves the requested etapa. Without an id it returns the most recent etapa
+ * of the requested circuit, ordered by the DATE the etapa is played: loading an
+ * old etapa later must not steal the "current" slot. Etapas without a date are
+ * treated as the oldest, and only when no etapa has a date do the creation order
+ * and the stage number decide.
+ */
+export async function resolveEtapaId(
+  etapaId?: string | null,
+  circuit: Circuit = "PRINCIPIANTES",
+  season?: number | null,
+): Promise<string> {
   if (etapaId) {
     const etapa = await prisma.etapa.findUnique({
       where: { id: etapaId },
@@ -55,20 +66,37 @@ export async function resolveEtapaId(etapaId?: string | null): Promise<string> {
     if (!etapa) throw new BackError("Etapa not found.", 404, "unknown_etapa");
     return etapa.id;
   }
-  const latest = await prisma.etapa.findFirst({
-    orderBy: [{ sortOrder: "desc" }, { createdAt: "desc" }],
-    select: { id: true },
+  const etapas = await prisma.etapa.findMany({
+    where: season === undefined || season === null ? { circuit } : { circuit, season },
+    select: { id: true, date: true, sortOrder: true, createdAt: true },
   });
-  if (!latest) throw new BackError("No etapas yet.", 404, "no_etapas");
+  if (etapas.length === 0) throw new BackError("No etapas yet.", 404, "no_etapas");
+  const latest = etapas.reduce((best, current) => {
+    const byDate = etapaDateValue(current) - etapaDateValue(best);
+    if (byDate !== 0) return byDate > 0 ? current : best;
+    if (current.sortOrder !== best.sortOrder) {
+      return current.sortOrder > best.sortOrder ? current : best;
+    }
+    return current.createdAt > best.createdAt ? current : best;
+  });
   return latest.id;
+}
+
+/** Missing dates are the oldest: the calendar decides, not the load order. */
+function etapaDateValue(etapa: { date: Date | null }): number {
+  return etapa.date ? etapa.date.getTime() : 0;
 }
 
 export interface EtapaMeta {
   id: string;
   name: string;
   date: string | null;
+  circuit: Circuit;
+  season: number;
   sortOrder: number;
   teamCount: number;
+  /** Set format fixed for the whole etapa; null = per-stage convention. */
+  setFormat: SetFormat | null;
   closedAt: string | null;
   cancelledAt: string | null;
   /** True once any match of the etapa has a recorded result. */
@@ -86,24 +114,42 @@ async function playedEtapaIds(etapaIds: string[]): Promise<Set<string>> {
   return new Set(rows.map((r) => r.etapaId));
 }
 
-export async function listEtapas(): Promise<EtapaMeta[]> {
+export async function listEtapas(
+  circuit: Circuit = "PRINCIPIANTES",
+  season?: number | null,
+): Promise<EtapaMeta[]> {
   const etapas = await prisma.etapa.findMany({
-     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+     where: season === undefined || season === null ? { circuit } : { circuit, season },
      select: {
        id: true,
        name: true,
        date: true,
+       circuit: true,
+       season: true,
+       setFormat: true,
        sortOrder: true,
        closedAt: true,
        cancelledAt: true,
+       createdAt: true,
        _count: { select: { teams: true } },
      },
    });
+   // Chronological by the date the etapa is played: a stage without a date is
+   // listed before the dated ones instead of jumping to the end.
+   etapas.sort(
+     (a, b) =>
+       etapaDateValue(a) - etapaDateValue(b) ||
+       a.sortOrder - b.sortOrder ||
+       a.createdAt.getTime() - b.createdAt.getTime(),
+   );
    const played = await playedEtapaIds(etapas.map((e) => e.id));
    return etapas.map((e) => ({
      id: e.id,
      name: e.name,
      date: e.date ? e.date.toISOString() : null,
+     circuit: e.circuit,
+     season: e.season,
+     setFormat: e.setFormat,
      sortOrder: e.sortOrder,
      teamCount: e._count.teams,
      closedAt: e.closedAt ? e.closedAt.toISOString() : null,
@@ -183,6 +229,9 @@ export async function updateEtapaMeta(
       id: true,
       name: true,
       date: true,
+      circuit: true,
+      season: true,
+      setFormat: true,
       sortOrder: true,
       closedAt: true,
       cancelledAt: true,
@@ -196,6 +245,9 @@ export async function updateEtapaMeta(
     id: updated.id,
     name: updated.name,
     date: updated.date ? updated.date.toISOString() : null,
+    circuit: updated.circuit,
+    season: updated.season,
+    setFormat: updated.setFormat,
     sortOrder: updated.sortOrder,
     teamCount: updated._count.teams,
     closedAt: updated.closedAt ? updated.closedAt.toISOString() : null,
@@ -216,6 +268,12 @@ export interface CreateEtapaInput {
   date?: string | null;
   teams: CreateTeamInput[];
   bracketFormat?: "STANDARD" | "REPECHAJE" | "CUARTOS";
+  /** Circuit to create the etapa in; defaults to Principiantes. */
+  circuit?: Circuit;
+  /** Annual season; defaults to the current year. */
+  season?: number;
+  /** Set format for every match of the etapa; null keeps the stage convention. */
+  setFormat?: SetFormat | null;
 }
 
 /** MAX teams per etapa: 12 keeps the one-day single-court fixture sane. */
@@ -239,6 +297,16 @@ export async function createEtapa(input: CreateEtapaInput, _opts?: { rng?: () =>
   if (name.length > 120) {
     throw new BackError("Etapa name is too long.", 400, "name_too_long");
   }
+
+  // The circuit is the annual season: (circuit, season) groups the etapas that
+  // share a numbering and an annual table. Defaults keep every existing caller
+  // on Principiantes before the UI can choose.
+  const circuit: Circuit = input.circuit ?? "PRINCIPIANTES";
+  const season = input.season ?? new Date().getFullYear();
+  if (!Number.isInteger(season) || season < 2000 || season > 2100) {
+    throw new BackError("Invalid season.", 400, "invalid_season");
+  }
+  const setFormat = input.setFormat ?? null;
 
   const uniqueTeams = new Map<string, CreateTeamInput>();
   for (const rawTeam of input.teams ?? []) {
@@ -337,11 +405,21 @@ export async function createEtapa(input: CreateEtapaInput, _opts?: { rng?: () =>
   const isCuartos = bracketFormat === "CUARTOS";
 
   const etapa = await prisma.$transaction(async (tx) => {
+    // Numbering restarts per circuit and follows the highest number in use, so
+    // a deleted stage never collides with the unique (circuit, season, number).
+    const last = await tx.etapa.findFirst({
+      where: { circuit, season },
+      orderBy: { sortOrder: "desc" },
+      select: { sortOrder: true },
+    });
     const created = await tx.etapa.create({
       data: {
         name,
         date,
-        sortOrder: (await tx.etapa.count()) + 1,
+        circuit,
+        season,
+        setFormat,
+        sortOrder: (last?.sortOrder ?? 0) + 1,
         bracketFormat: bracketFormat as import("../generated/prisma/client").BracketFormat,
         state: { create: {} },
         teams: {
@@ -378,7 +456,7 @@ export async function createEtapa(input: CreateEtapaInput, _opts?: { rng?: () =>
       timeLabel: null,
       teamAId,
       teamBId,
-      setFormat: "SINGLE_21" as SetFormat,
+      setFormat: (setFormat ?? "SINGLE_21") as SetFormat,
       resultStatus: "PENDING" as const,
     }));
     const bracketSlots = isRepechaje
@@ -405,6 +483,9 @@ export async function createEtapa(input: CreateEtapaInput, _opts?: { rng?: () =>
       : [
           { stage: "SEMIFINAL_1" as Stage, slot: slot++ },
           { stage: "SEMIFINAL_2" as Stage, slot: slot++ },
+          // The third-place match is always played, whatever the format: the
+          // bronze result is what decides 3rd and 4th in the annual table.
+          { stage: "BRONZE" as Stage, slot: slot++ },
           { stage: "FINAL" as Stage, slot: slot++ },
         ];
     const bracketSlotData = bracketSlots.map((m) => ({
@@ -415,7 +496,7 @@ export async function createEtapa(input: CreateEtapaInput, _opts?: { rng?: () =>
       timeLabel: null,
       teamAId: null,
       teamBId: null,
-      setFormat: null as SetFormat | null,
+      setFormat: (setFormat as SetFormat | null) ?? null,
       resultStatus: "PENDING" as const,
     }));
 
@@ -441,7 +522,7 @@ export async function createEtapa(input: CreateEtapaInput, _opts?: { rng?: () =>
   });
 
   // Real fixture size: intra-zone round-robin pairs + bracket slots.
-  const bracketSlotCount = isRepechaje ? 6 : isCuartos ? 9 : 3;
+  const bracketSlotCount = isRepechaje ? 6 : isCuartos ? 9 : 4;
   const groupMatchCount = groups.reduce(
     (acc, g) => acc + (g.teams.length * (g.teams.length - 1)) / 2,
     0,
@@ -451,10 +532,128 @@ export async function createEtapa(input: CreateEtapaInput, _opts?: { rng?: () =>
     id: etapa.id,
     name: etapa.name,
     date: etapa.date ? etapa.date.toISOString() : null,
+    circuit: etapa.circuit,
+    season: etapa.season,
     sortOrder: etapa.sortOrder,
     teamCount: etapa.teams.length,
     matchCount: groupMatchCount + bracketSlotCount,
   };
+}
+
+/**
+ * Registers an etapa that was suspended by weather before it could be played.
+ *
+ * It only carries its number and date: no teams, no fixture, no bracket. It
+ * keeps the circuit calendar complete (the fecha existed) without inventing
+ * data, and it can be deleted later so the number can be loaded again.
+ */
+export async function createCancelledEtapa(input: {
+  name: string;
+  date?: string | null;
+  circuit?: Circuit;
+  season?: number;
+}) {
+  const name = input.name.trim();
+  if (!name) throw new BackError("Etapa name is required.", 400, "name_required");
+  if (name.length > 120) {
+    throw new BackError("Etapa name is too long.", 400, "name_too_long");
+  }
+  if (!input.date) {
+    throw new BackError(
+      "La fecha es obligatoria para registrar una etapa cancelada.",
+      400,
+      "date_required",
+    );
+  }
+  const date = new Date(input.date);
+  if (Number.isNaN(date.getTime())) {
+    throw new BackError("Invalid etapa date.", 400, "invalid_date");
+  }
+
+  const circuit: Circuit = input.circuit ?? "PRINCIPIANTES";
+  const season = input.season ?? new Date().getFullYear();
+  if (!Number.isInteger(season) || season < 2000 || season > 2100) {
+    throw new BackError("Invalid season.", 400, "invalid_season");
+  }
+
+  const etapa = await prisma.$transaction(async (tx) => {
+    const last = await tx.etapa.findFirst({
+      where: { circuit, season },
+      orderBy: { sortOrder: "desc" },
+      select: { sortOrder: true },
+    });
+    return tx.etapa.create({
+      data: {
+        name,
+        date,
+        circuit,
+        season,
+        sortOrder: (last?.sortOrder ?? 0) + 1,
+        cancelledAt: new Date(),
+      },
+    });
+  });
+
+  auditWrite({
+    op: "createCancelledEtapa",
+    etapaId: etapa.id,
+    detail: { name, reason: "weather" },
+  });
+  publishSse("etapa-created", {
+    etapaId: etapa.id,
+    name: etapa.name,
+    teamCount: 0,
+  });
+
+  return {
+    id: etapa.id,
+    name: etapa.name,
+    date: etapa.date ? etapa.date.toISOString() : null,
+    circuit: etapa.circuit,
+    season: etapa.season,
+    sortOrder: etapa.sortOrder,
+    cancelledAt: etapa.cancelledAt ? etapa.cancelledAt.toISOString() : null,
+  };
+}
+
+/** Drive folder the public gallery reads for one circuit, or null when unset. */
+export async function getGalleryFolder(circuit: Circuit): Promise<string | null> {
+  const row = await prisma.circuitSetting.findUnique({
+    where: { circuit },
+    select: { galleryFolder: true },
+  });
+  return row?.galleryFolder ?? null;
+}
+
+/**
+ * Stores the Drive folder of one circuit's gallery. Accepts the full folder URL
+ * or the bare folder id; anything else is refused so the home never points at a
+ * bogus folder. An empty value clears the override and falls back to the default.
+ */
+export async function setGalleryFolder(
+  circuit: Circuit,
+  value: string | null,
+): Promise<string | null> {
+  let folder: string | null = null;
+  if (value !== null && value.trim() !== "") {
+    folder = parseDriveFolderId(value);
+    if (!folder) {
+      throw new BackError(
+        "El link de Drive no es una carpeta válida.",
+        400,
+        "invalid_folder",
+      );
+    }
+  }
+
+  await prisma.circuitSetting.upsert({
+    where: { circuit },
+    update: { galleryFolder: folder },
+    create: { circuit, galleryFolder: folder },
+  });
+  auditWrite({ op: "setGalleryFolder", detail: { circuit, folder } });
+  publishSse("gallery-changed", { circuit });
+  return folder;
 }
 
 export async function getState(etapaId?: string | null) {
@@ -512,9 +711,38 @@ export async function requireEtapaEditable(etapaId: string): Promise<void> {
   }
 }
 
+/**
+ * Deletes a CANCELLED etapa for good, so its number can be loaded again.
+ *
+ * Only a cancelled etapa qualifies: an open, played or closed etapa holds a
+ * fixture and results that must never disappear. Deleting cascades its teams,
+ * matches and tournament state (all relations are onDelete: Cascade).
+ */
+export async function deleteEtapa(etapaId: string): Promise<{ id: string }> {
+  const etapa = await prisma.etapa.findUnique({
+    where: { id: etapaId },
+    select: { id: true, name: true, cancelledAt: true },
+  });
+  if (!etapa) throw new BackError("Etapa not found.", 404, "unknown_etapa");
+  if (!etapa.cancelledAt) {
+    throw new BackError(
+      "Solo se puede eliminar una etapa cancelada.",
+      409,
+      "etapa_not_cancelled",
+    );
+  }
+
+  await prisma.etapa.delete({ where: { id: etapa.id } });
+  auditWrite({ op: "deleteEtapa", etapaId: etapa.id, detail: { name: etapa.name } });
+  publishSse("etapa-deleted", { etapaId: etapa.id });
+  return { id: etapa.id };
+}
+
 export async function generateZones(etapaId?: string | null): Promise<Record<string, string>> {
   const id = await resolveEtapaId(etapaId);
-  await requireEtapaOpen(id);
+  // Re-arming the zones with results already loaded would leave every match in
+  // its old zone and silently corrupt the standings.
+  await requireEtapaEditable(id);
   await requireUnconfirmed(
     "Zonification is confirmed: re-arming is forbidden after fixture generation.",
     etapaId,
@@ -544,7 +772,9 @@ export async function swapTeam(
   etapaId?: string | null,
 ): Promise<Record<string, string>> {
   const id = await resolveEtapaId(etapaId);
-  await requireEtapaOpen(id);
+  // Swapping a team after a result exists moves it out of the zone where it
+  // already scored: the standings lose those points without any warning.
+  await requireEtapaEditable(id);
   await requireUnconfirmed(
     "Zonification is confirmed: manual swaps are forbidden after fixture generation.",
     etapaId,
@@ -956,8 +1186,12 @@ export async function getBracketsSnapshot(etapaId?: string | null) {
  * flag + assigned match, plus the 3+ seconds blocked edge as a report.
  * Also carries the etapa meta + the full etapa list for the public selector.
  */
-export async function getStateSnapshot(etapaId?: string | null) {
-  const id = await resolveEtapaId(etapaId);
+export async function getStateSnapshot(
+  etapaId?: string | null,
+  circuit: Circuit = "PRINCIPIANTES",
+  season?: number | null,
+) {
+  const id = await resolveEtapaId(etapaId, circuit, season);
   // Heal any bracket hole before reading it, so a stuck tournament resumes on a
   // plain refresh instead of needing a reset. Idempotent and fill-only.
   const phaseRow = await prisma.tournamentState.findUnique({
@@ -986,7 +1220,7 @@ export async function getStateSnapshot(etapaId?: string | null) {
         include: { teamA: true, teamB: true },
         orderBy: { slot: "asc" },
       }),
-      listEtapas(),
+      listEtapas(circuit, season),
     ]);
   const etapa = etapas.find((e) => e.id === id) ?? null;
   const etapaRecord = await prisma.etapa.findUnique({
@@ -1647,7 +1881,7 @@ async function reconcileAfterMatch(
 export async function recordResult(input: RecordResultInput) {
   const match = await prisma.match.findUnique({
     where: { id: input.matchId },
-    include: { teamA: true, teamB: true },
+    include: { teamA: true, teamB: true, etapa: { select: { setFormat: true } } },
   });
   if (!match) throw new BackError("Match not found.", 404);
   if (match.resultStatus !== "PENDING") {
@@ -1664,6 +1898,7 @@ export async function recordResult(input: RecordResultInput) {
     match.teamBId,
     match.stage,
     input,
+    match.etapa?.setFormat,
   );
 
   await prisma.match.update({
@@ -1814,7 +2049,7 @@ async function clearCascadeResults(
 export async function editResult(input: EditResultInput) {
   const match = await prisma.match.findUnique({
     where: { id: input.matchId },
-    include: { teamA: true, teamB: true },
+    include: { teamA: true, teamB: true, etapa: { select: { setFormat: true } } },
   });
   if (!match) throw new BackError("Match not found.", 404);
   if (match.resultStatus === "PENDING") {
@@ -1857,6 +2092,7 @@ export async function editResult(input: EditResultInput) {
     match.teamBId,
     match.stage,
     input,
+    match.etapa?.setFormat,
   );
 
   const updateData = {

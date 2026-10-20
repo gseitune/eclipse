@@ -8,6 +8,7 @@ import {
   elegirAlAzar,
   extractFotosDrive,
   fotoThumbUrl,
+  parseDriveFolderId,
   urlAlbumDrive,
   urlFotoDrive,
   ventanaDeTiempo,
@@ -214,5 +215,40 @@ describe("elegirAlAzar", () => {
   it("devuelve [] con pool vacío o cantidad 0", () => {
     assert.deepEqual(elegirAlAzar([], 12, 1), []);
     assert.deepEqual(elegirAlAzar(POOL, 0, 1), []);
+  });
+});
+
+/**
+ * The organizer pastes a Drive link; the gallery needs the folder id. Anything
+ * that is not a folder link is rejected instead of pointing at a bogus folder.
+ */
+describe("parseDriveFolderId", () => {
+  const ID = "1BC3mU3_8do5q8AINhQ015eftZZd0h5P8";
+
+  it("acepta la URL completa de una carpeta", () => {
+    assert.equal(
+      parseDriveFolderId(`https://drive.google.com/drive/folders/${ID}`),
+      ID,
+    );
+  });
+
+  it("acepta la URL con /u/0 y con parámetros", () => {
+    assert.equal(
+      parseDriveFolderId(`https://drive.google.com/drive/u/0/folders/${ID}?usp=sharing`),
+      ID,
+    );
+  });
+
+  it("acepta el ID pelado", () => {
+    assert.equal(parseDriveFolderId(ID), ID);
+    assert.equal(parseDriveFolderId(`  ${ID}  `), ID);
+  });
+
+  it("rechaza cualquier otra cosa", () => {
+    assert.equal(parseDriveFolderId(""), null);
+    assert.equal(parseDriveFolderId("   "), null);
+    assert.equal(parseDriveFolderId("https://drive.google.com/file/d/abc"), null);
+    assert.equal(parseDriveFolderId("no es un link"), null);
+    assert.equal(parseDriveFolderId("https://example.com/folders/abc"), null);
   });
 });

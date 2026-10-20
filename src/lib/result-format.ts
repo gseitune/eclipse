@@ -23,7 +23,11 @@
  * sets when both are present.
  */
 
-export type SetFormatId = "SINGLE_21" | "TWO_15_TIEBREAK" | "BEST_OF_3_21";
+export type SetFormatId =
+  | "SINGLE_21"
+  | "TWO_15_TIEBREAK"
+  | "TWO_21_TIEBREAK_15"
+  | "BEST_OF_3_21";
 
 export interface SetScore {
   teamA: number;
@@ -72,11 +76,86 @@ export const STAGE_FORMATS: Record<string, readonly SetFormatId[]> = {
   CUARTOS_4: ["SINGLE_21"],
 };
 
-const FORMAT_CAP: Record<SetFormatId, number> = {
-  SINGLE_21: 21,
-  TWO_15_TIEBREAK: 15,
-  BEST_OF_3_21: 21,
-};
+/**
+ * Cap of each set, by its position inside the match.
+ *
+ * TWO_21_TIEBREAK_15 is the Intermedios format: two sets to 21 and, when the
+ * split is 1-1, a third set to 15. Every other format uses one cap for all its
+ * sets, so they ignore the index.
+ */
+export function setCapFor(format: SetFormatId, index: number): number {
+  if (format === "TWO_15_TIEBREAK") return 15;
+  if (format === "TWO_21_TIEBREAK_15") return index >= 2 ? 15 : 21;
+  return 21;
+}
+
+/** Hard ceiling for a set: a deuce cannot realistically reach this, and a
+ *  typo like 10000-5 must never be accepted as a score. */
+export const MAX_SET_POINTS = 30;
+
+/**
+ * A set closes at `cap` with a 2-point lead (21-19). Past the cap it only goes
+ * on while tied, so it always ends by exactly 2 (22-20, 26-24, 30-28). Any
+ * other combination is not a reachable score.
+ */
+export function isValidFinalSet(high: number, low: number, cap: number): boolean {
+  if (high > MAX_SET_POINTS) return false;
+  if (high < cap) return false;
+  const diff = high - low;
+  if (diff < 2) return false;
+  if (high === cap) return true;
+  return diff === 2 && low >= cap - 1;
+}
+
+/**
+ * Human-facing reason why a set list cannot be submitted, or null when it can.
+ *
+ * Mirrors resolveResultPayload's rules so the organizer sees the problem while
+ * typing instead of receiving a 400 after pressing the button.
+ */
+export function describeSetProblem(
+  format: SetFormatId,
+  sets: SetScore[],
+): string | null {
+  const single = format === "SINGLE_21";
+  const min = single ? 1 : 2;
+  const max = single ? 1 : 3;
+
+  if (sets.length === 0) {
+    return single ? "Cargá el set." : "Cargá los dos primeros sets.";
+  }
+  if (sets.length < min) return "Falta el segundo set.";
+  if (sets.length > max) return "Son demasiados sets para este formato.";
+
+  for (let i = 0; i < sets.length; i++) {
+    const { teamA, teamB } = sets[i];
+    if (
+      !Number.isInteger(teamA) ||
+      !Number.isInteger(teamB) ||
+      teamA <= 0 ||
+      teamB <= 0
+    ) {
+      return `Set ${i + 1}: cargá dos puntajes positivos.`;
+    }
+    const cap = setCapFor(format, i);
+    const high = Math.max(teamA, teamB);
+    const low = Math.min(teamA, teamB);
+    if (!isValidFinalSet(high, low, cap)) {
+      return `Set ${i + 1}: se gana a ${cap} con 2 de ventaja; si van ${cap - 1}-${cap - 1} sigue por 2 hasta ${MAX_SET_POINTS} (cargaste ${teamA}-${teamB}).`;
+    }
+  }
+
+  if (!single) {
+    const firstWinnerIsA = sets[0].teamA > sets[0].teamB;
+    const split = firstWinnerIsA !== (sets[1].teamA > sets[1].teamB);
+    if (split && sets.length === 2) return "Van 1-1: falta el tercer set.";
+    if (!split && sets.length === 3) {
+      return "El partido ya se definió en dos sets.";
+    }
+  }
+
+  return null;
+}
 
 function assertValidSet(score: SetScore, cap: number, index: number): void {
   const { teamA, teamB } = score;
@@ -93,9 +172,9 @@ function assertValidSet(score: SetScore, cap: number, index: number): void {
   }
   const high = Math.max(teamA, teamB);
   const low = Math.min(teamA, teamB);
-  if (high < cap || high - low < 2) {
+  if (!isValidFinalSet(high, low, cap)) {
     throw new InvalidResultError(
-      `Set ${index + 1} is invalid: it must reach ${cap} with a 2-point lead (got ${teamA}-${teamB}).`,
+      `Set ${index + 1} is invalid: it must reach ${cap} with a 2-point lead, and past ${cap - 1}-${cap - 1} it continues by 2 up to ${MAX_SET_POINTS} (got ${teamA}-${teamB}).`,
       "invalid_set_score",
     );
   }
@@ -132,6 +211,8 @@ export function resolveResultPayload(
   teamBId: string,
   stage: string,
   input: ResultPayload,
+  /** Set format fixed by the etapa. When present it overrides the stage rules. */
+  etapaSetFormat?: SetFormatId | null,
 ): ResolvedResult {
   const hasSets = input.sets !== null && input.sets !== undefined;
 
@@ -143,7 +224,10 @@ export function resolveResultPayload(
         "set_format_required",
       );
     }
-    if (!STAGE_FORMATS[stage]?.includes(setFormat)) {
+    const allowed: readonly SetFormatId[] = etapaSetFormat
+      ? [etapaSetFormat]
+      : (STAGE_FORMATS[stage] ?? []);
+    if (!allowed.includes(setFormat)) {
       throw new InvalidResultError(
         `setFormat ${setFormat} is not allowed for stage ${stage}.`,
         "format_not_allowed_for_stage",
@@ -162,9 +246,10 @@ export function resolveResultPayload(
       );
     }
 
-    const cap = FORMAT_CAP[setFormat];
     const sets = input.sets!;
-    sets.forEach((set, index) => assertValidSet(set, cap, index));
+    sets.forEach((set, index) =>
+      assertValidSet(set, setCapFor(setFormat, index), index),
+    );
 
     // Multi-set formats decide at 2 sets: the first two sets must either be
     // the same-winner sweep (2-set payload) or the 1-1 split that forces the

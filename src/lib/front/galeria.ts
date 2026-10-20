@@ -36,6 +36,22 @@ export type FotoGaleria = {
  */
 export const GALERIA_FOLDER_POR_DEFECTO = "1BC3mU3_8do5q8AINhQ015eftZZd0h5P8";
 
+const RE_CARPETA_ID = /^[A-Za-z0-9_-]{10,}$/;
+const RE_CARPETA_URL = /\/folders\/([A-Za-z0-9_-]{10,})/;
+
+/**
+ * Reads the folder id out of whatever the organizer pastes: the full Drive URL
+ * (with or without `/u/0`, with query string) or the bare id. Anything else is
+ * rejected instead of silently pointing the gallery at a bogus folder.
+ */
+export function parseDriveFolderId(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (RE_CARPETA_ID.test(trimmed)) return trimmed;
+  const match = RE_CARPETA_URL.exec(trimmed);
+  return match ? match[1] : null;
+}
+
 const ANCHO_MINIATURA = 400;
 const LIMITE_POR_DEFECTO = 12;
 const TIMEOUT_MS = 4000;
