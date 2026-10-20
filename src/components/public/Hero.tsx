@@ -34,7 +34,7 @@ export function Hero({
       </div>
 
       {/* Brand */}
-      <h1 className="bg-gradient-to-r from-emerald-950 via-emerald-700 to-green-600 bg-clip-text text-4xl font-bold tracking-tight text-transparent">
+      <h1 className="bg-gradient-to-r from-selva-950 via-selva-700 to-selva-600 bg-clip-text text-4xl font-bold tracking-tight text-transparent">
         SELVARENA
       </h1>
 
@@ -46,8 +46,8 @@ export function Hero({
 
       {/* Status pill — finished, or live only on competition day */}
       {finished ? (
-        <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-50/80 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-300">
-          <span className="h-2 w-2 rounded-full bg-emerald-500" />
+        <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-selva-50/80 px-3 py-1 text-xs font-semibold text-selva-700 ring-1 ring-inset ring-selva-300">
+          <span className="h-2 w-2 rounded-full bg-selva-500" />
           Etapa finalizada
         </div>
       ) : live ? (

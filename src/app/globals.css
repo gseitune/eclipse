@@ -7,12 +7,54 @@
   --color-sand-100: #fdf3e3;
   --color-sand-200: #faf2e4;
   --color-sand-300: #f6e8d2;
-  --color-sunset-400: #fbbf24;
+  /* sunset - THE brand accent ramp, and the only orange used for UI state and
+     action. Values are the Tailwind v3 orange scale, which is where the
+     original sunset-500 (#f97316) and sunset-600 (#ea580c) came from. The
+     ramp only ever declared 400/500/600, and its 400 was amber-400 (#fbbf24),
+     so it silently jumped amber -> orange. Same v3-vs-v4 trap as ember below.
+     roles: 50-200 soft surfaces | 400 indicator | 500 selected | 600 action
+     | 700 accent text, hover, focus. The body background glow is sunset-500. */
+  --color-sunset-50: #fff7ed;
+  --color-sunset-100: #ffedd5;
+  --color-sunset-200: #fed7aa;
+  --color-sunset-300: #fdba74;
+  --color-sunset-400: #fb923c;
   --color-sunset-500: #f97316;
   --color-sunset-600: #ea580c;
+  --color-sunset-700: #c2410c;
+  --color-sunset-800: #9a3412;
+  --color-sunset-900: #7c2d12;
+  --color-sunset-950: #431407;
+  /* ember: the live/alert accent. Values are the Tailwind v3 rose scale,
+     which is where the original #f43f5e came from. Only 500 was defined, so
+     every other ember-* utility used by the components (50/200/300/400/600)
+     was silently dropped by Tailwind and rendered unstyled. */
+  --color-ember-50: #fff1f2;
+  --color-ember-200: #fecdd3;
+  --color-ember-300: #fda4af;
+  --color-ember-400: #fb7185;
   --color-ember-500: #f43f5e;
-  /* sun: sampled from public/sun-transparent.png (dominant color of the hero sun) */
+  --color-ember-600: #e11d48;
+  /* sun: sampled from public/sun-transparent.png (dominant color of the hero
+     sun). Decorative warmth only - use sunset-* for state and action. */
   --color-sun-500: #fdaa42;
+  /* selva: the jungle green, sampled from public/jungle-bg.jpg (anchor
+     HSL(120, 17%, 65%) = #97b597). Used for the "finished" state. Every
+     Tailwind green is colder than this: emerald is hue ~165 (teal), which made
+     it the only cool hue on an otherwise warm page. */
+  --color-selva-50: #f5f9f5;
+  --color-selva-100: #e5f0e5;
+  --color-selva-200: #cce0cd;
+  --color-selva-300: #a8c7a8;
+  --color-selva-400: #88af88;
+  --color-selva-500: #679868;
+  --color-selva-600: #537f53;
+  --color-selva-700: #3e653f;
+  --color-selva-800: #2f5030;
+  --color-selva-900: #254125;
+  --color-selva-950: #172b18;
+  /* Reserved for medals - never for UI accents, state, hover or actions:
+       yellow-400 gold | slate-300/400 silver | amber-700 bronze */
   /* 90% lighter amber tones for card outlines (selection highlight, banners) */
   --color-amber-soft-100: #fefdf9;
   --color-amber-soft-200: #fefcf3;

@@ -13,10 +13,10 @@ function TrophyIcon({
       ? "text-yellow-400"
       : tier === "silver"
         ? "text-slate-300"
-        : "text-amber-700";
+        : "text-amber-700"; /* bronze — reserved, do not use for UI */
   const starClass =
     tier === "gold"
-      ? "fill-amber-50"
+      ? "fill-amber-50" /* metal decoration, not an accent */
       : tier === "silver"
         ? "fill-white"
         : "fill-amber-100";
