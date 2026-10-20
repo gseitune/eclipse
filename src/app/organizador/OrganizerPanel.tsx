@@ -217,6 +217,9 @@ export interface OrganizerPanelProps {
   readonly email: string;
 }
 
+/** Where the panel remembers the circuit the organizer was working on. */
+const CIRCUIT_KEY = "eclipse.organizer.circuit";
+
 /* ── Subcomponent: Actionable card ── */
 function SectionCard({
   label,
@@ -419,8 +422,21 @@ export function OrganizerPanel({
   const [view, setView] = useState<"panel" | "public">("panel");
 
   // Circuit = annual season. The organizer works one circuit at a time; the
-  // selector lives in "Crear Etapa" but the whole panel follows it.
+  // selector lives in "Crear Etapa" but the whole panel follows it. It is kept
+  // in localStorage so a reload does not drop the organizer back to Principiantes.
   const [circuit, setCircuit] = useState<Circuit>("PRINCIPIANTES");
+  useEffect(() => {
+    const saved = window.localStorage.getItem(CIRCUIT_KEY);
+    if (saved !== "INTERMEDIOS" && saved !== "PRINCIPIANTES") return;
+    // Deferred so the first paint stays identical to the server HTML.
+    const timer = setTimeout(() => setCircuit(saved), 0);
+    return () => clearTimeout(timer);
+  }, []);
+
+  function changeCircuit(next: Circuit) {
+    setCircuit(next);
+    window.localStorage.setItem(CIRCUIT_KEY, next);
+  }
 
   // Reactive clock for the counters card (recomputes every 30s)
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -542,7 +558,7 @@ export function OrganizerPanel({
             <select
               id="panel-circuito"
               value={circuit}
-              onChange={(e) => setCircuit(e.target.value as Circuit)}
+              onChange={(e) => changeCircuit(e.target.value as Circuit)}
               className="rounded-lg border border-sand-300 bg-white px-2 py-2 text-xs font-medium text-stone-700 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[40px]"
             >
               <option value="PRINCIPIANTES">Principiantes</option>
@@ -648,7 +664,7 @@ export function OrganizerPanel({
         <CircuitosSection
           key={circuit}
           circuit={circuit}
-          onCircuitChange={setCircuit}
+          onCircuitChange={changeCircuit}
           onBack={() => setActiveSection(null)}
         />
       ) : activeSection === "reagendar" ? (

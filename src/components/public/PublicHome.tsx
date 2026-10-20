@@ -25,12 +25,15 @@ const INSTAGRAM_DACOSTA = "https://www.instagram.com/dacosta.fotodeportiva/";
 
 export function PublicHome({
   initial,
+  initialCircuit,
   isPreview = false,
   version,
   fotos,
   albumUrl,
 }: {
   initial: StateSnapshot | null;
+  /** Circuit rendered by the server, taken from `?circuito=`. */
+  initialCircuit: Circuit;
   isPreview?: boolean;
   version: string;
   /** Fotos ya armadas por el servidor. Vacío = la galería no se dibuja. */
@@ -39,10 +42,22 @@ export function PublicHome({
   albumUrl: string;
 }) {
   // Which circuit the viewer follows. The switch at the top decides it and the
-  // whole page follows: state, annual table and gallery.
-  const [tournament, setTournament] = useState<TournamentId>("principiantes");
+  // whole page follows: state, annual table and gallery. The choice also goes
+  // into the URL, so a refresh (or a shared link) keeps the same circuit.
+  const [tournament, setTournament] = useState<TournamentId>(
+    initialCircuit === "INTERMEDIOS" ? "intermedios" : "principiantes",
+  );
   const circuit: Circuit =
     tournament === "intermedios" ? "INTERMEDIOS" : "PRINCIPIANTES";
+
+  function changeCircuit(id: TournamentId) {
+    setTournament(id);
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (id === "intermedios") url.searchParams.set("circuito", "intermedios");
+    else url.searchParams.delete("circuito");
+    window.history.replaceState({}, "", url.toString());
+  }
 
   const { state, loading, error } = useLiveState({ initial, circuit });
 
@@ -229,7 +244,7 @@ export function PublicHome({
       <div className="mx-auto w-full max-w-3xl px-6 py-6 space-y-6">
         {/* Circuit switch — below the hero, above the cards */}
         <div className="flex justify-center">
-          <TournamentSwitch value={tournament} onChange={setTournament} />
+          <TournamentSwitch value={tournament} onChange={changeCircuit} />
         </div>
 
         {!state && !loading ? (

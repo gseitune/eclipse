@@ -1,7 +1,7 @@
 import { connection } from "next/server";
 import { headers } from "next/headers";
 import Link from "next/link";
-import type { StateSnapshot } from "@/lib/front/types";
+import type { Circuit, StateSnapshot } from "@/lib/front/types";
 import {
   GALERIA_FOLDER_POR_DEFECTO,
   listarFotosGaleria,
@@ -14,12 +14,17 @@ import { getGalleryFolder } from "@/lib/back";
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ preview?: string }>;
+  searchParams: Promise<{ preview?: string; circuito?: string }>;
 }) {
   await connection();
 
   const params = await searchParams;
   const isPreview = params.preview === "1";
+
+  // El circuito viaja en la URL (`?circuito=intermedios`) para que un refresh no
+  // devuelva al visitante a Principiantes y para poder compartir el enlace.
+  const initialCircuit: Circuit =
+    params.circuito === "intermedios" ? "INTERMEDIOS" : "PRINCIPIANTES";
 
   const headersList = await headers();
   const proto = headersList.get("x-forwarded-proto") ?? "http";
@@ -31,7 +36,7 @@ export default async function Home({
   // configurada, manda la env var y después el álbum por defecto.
   let carpetaGaleria = process.env.GALERIA_FOLDER_ID ?? GALERIA_FOLDER_POR_DEFECTO;
   try {
-    const carpetaConfigurada = await getGalleryFolder("PRINCIPIANTES");
+    const carpetaConfigurada = await getGalleryFolder(initialCircuit);
     if (carpetaConfigurada) carpetaGaleria = carpetaConfigurada;
   } catch {
     // Una lectura de configuración nunca puede tumbar la home.
@@ -42,7 +47,10 @@ export default async function Home({
   let fetchError = false;
 
   try {
-    const res = await fetch(`${proto}://${host}/api/state`, { cache: "no-store" });
+    const res = await fetch(
+      `${proto}://${host}/api/state?circuit=${initialCircuit}`,
+      { cache: "no-store" },
+    );
     if (!res.ok) {
       fetchError = true;
     } else {
@@ -58,6 +66,7 @@ export default async function Home({
     <>
       <PublicHome
         initial={initial}
+        initialCircuit={initialCircuit}
         isPreview={isPreview}
         version={betaVersion()}
         fotos={fotos}

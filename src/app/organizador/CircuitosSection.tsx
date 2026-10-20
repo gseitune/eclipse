@@ -202,9 +202,11 @@ export function CircuitosSection({
   // Closing an etapa is only done programmatically (no UI action).
   // It cannot be undone once closed.
 
-  // Reload the etapa list (used after create and cancel)
+  // Reload the etapa list (used after create, cancel and delete). It must ask
+  // for THIS circuit: without the parameter the API answers Principiantes and
+  // the list silently swaps to the other circuit's etapas.
   async function reloadEtapas() {
-    const resp = await fetchEtapas();
+    const resp = await fetchEtapas(circuit);
     setEtapas(resp.etapas);
   }
 
