@@ -3,7 +3,7 @@
  * Front-only, no business logic.
  */
 
-import type { ScheduleRow } from "./types";
+import type { EtapaMeta, ScheduleRow } from "./types";
 
 /**
  * Parse a time string "HH:MM" into minutes-of-day.
@@ -63,4 +63,20 @@ export function liveMatchIds(
   }
 
   return live;
+}
+
+export function liveMatchIdsForEtapa(
+  schedule: ScheduleRow[],
+  matchMinutes: number,
+  etapa: Pick<EtapaMeta, "closedAt" | "cancelledAt"> | null | undefined,
+  nowMs?: number,
+): Set<string> {
+  // Closing or cancelling an etapa marks the competition day as over, so no
+  // match may still be reported as live. This guard is required because
+  // `liveMatchIds` compares time-of-day only — it has no notion of the date —
+  // and therefore keeps matching the same windows on every following day.
+  if (etapa && (etapa.closedAt != null || etapa.cancelledAt != null)) {
+    return new Set();
+  }
+  return liveMatchIds(schedule, matchMinutes, nowMs);
 }
