@@ -57,6 +57,12 @@ export interface ScheduleRow {
   /** Manual organizer times (ISO) — set via POST /api/matches/:id/times. */
   manualStartAt?: string | null;
   manualEndAt?: string | null;
+  /** Who plays and how it ended. Present on the public schedule. */
+  teamA?: { id: string; name: string } | null;
+  teamB?: { id: string; name: string } | null;
+  resultStatus?: string;
+  sets?: { teamA: number; teamB: number }[] | null;
+  winnerId?: string | null;
 }
 
 export interface TeamNamePair {

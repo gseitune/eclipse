@@ -19,10 +19,38 @@ interface MatchTickerProps {
  * DesempateMatchInfo is handled separately since it is a lighter shape.
  */
 function buildMatchMap(
+  schedule: ScheduleRow[],
   brackets: MatchPublic[],
   nextMatch: MatchPublic | null,
 ): Map<string, MatchPublic> {
   const map = new Map<string, MatchPublic>();
+  // The public schedule carries every match of the etapa (group stage included)
+  // with its teams and its result, so it is the primary source; the bracket
+  // payload then refines the knockout stages.
+  for (const row of schedule) {
+    map.set(row.id, {
+      id: row.id,
+      stage: row.stage as MatchPublic["stage"],
+      zone: null,
+      slot: row.slot,
+      timeLabel: null,
+      teamAId: row.teamA?.id ?? null,
+      teamBId: row.teamB?.id ?? null,
+      teamA: row.teamA ?? null,
+      teamB: row.teamB ?? null,
+      setFormat: null,
+      sets: row.sets ?? null,
+      resultStatus: (row.resultStatus ?? "PENDING") as MatchPublic["resultStatus"],
+      winnerId: row.winnerId ?? null,
+      winner:
+        row.winnerId && row.teamA?.id === row.winnerId
+          ? row.teamA
+          : row.winnerId && row.teamB?.id === row.winnerId
+            ? row.teamB
+            : null,
+      recordedAt: null,
+    });
+  }
   for (const b of brackets) map.set(b.id, b);
   if (nextMatch) map.set(nextMatch.id, nextMatch);
   return map;
@@ -79,8 +107,8 @@ export function MatchTicker({
   matchMinutes,
 }: MatchTickerProps) {
   const matchMap = useMemo(
-    () => buildMatchMap(brackets, nextMatch),
-    [brackets, nextMatch],
+    () => buildMatchMap(schedule, brackets, nextMatch),
+    [schedule, brackets, nextMatch],
   );
 
   const despMatch = desempate.match;

@@ -1018,7 +1018,22 @@ export async function reorderMatch(matchId: string, direction: "up" | "down"): P
   publishSse("schedule-changed", { matchId });
 }
 
-export async function getSchedule(etapaId?: string | null): Promise<ScheduleRow[]> {
+/**
+ * Public stage list. Beyond the timing, it carries who plays and how it ended,
+ * so the scoreboard can show the previous and next match of the group stage
+ * without depending on the bracket snapshot.
+ */
+export interface PublicScheduleRow extends ScheduleRow {
+  teamA: { id: string; name: string } | null;
+  teamB: { id: string; name: string } | null;
+  resultStatus: string;
+  sets: SetScore[] | null;
+  winnerId: string | null;
+}
+
+export async function getSchedule(
+  etapaId?: string | null,
+): Promise<PublicScheduleRow[]> {
   const id = await resolveEtapaId(etapaId);
   const [state, matches] = await Promise.all([
     getState(id),
@@ -1032,9 +1047,12 @@ export async function getSchedule(etapaId?: string | null): Promise<ScheduleRow[
         sets: true,
         setFormat: true,
         resultStatus: true,
+        winnerId: true,
         recordedAt: true,
         manualStartAt: true,
         manualEndAt: true,
+        teamA: { select: { id: true, name: true } },
+        teamB: { select: { id: true, name: true } },
       },
       orderBy: { slot: "asc" },
     }),
@@ -1051,7 +1069,20 @@ export async function getSchedule(etapaId?: string | null): Promise<ScheduleRow[
     manualStartAt: m.manualStartAt?.toISOString() ?? null,
     manualEndAt: m.manualEndAt?.toISOString() ?? null,
   }));
-  return computeSchedule(input, state.prepMinutes, state.matchMinutes);
+  const byId = new Map(matches.map((m) => [m.id, m]));
+  return computeSchedule(input, state.prepMinutes, state.matchMinutes).map(
+    (row) => {
+      const match = byId.get(row.id);
+      return {
+        ...row,
+        teamA: match?.teamA ? { id: match.teamA.id, name: match.teamA.name } : null,
+        teamB: match?.teamB ? { id: match.teamB.id, name: match.teamB.name } : null,
+        resultStatus: match?.resultStatus ?? "PENDING",
+        sets: (match?.sets ?? null) as SetScore[] | null,
+        winnerId: match?.winnerId ?? null,
+      };
+    },
+  );
 }
 
 export async function getNextMatch(etapaId?: string | null) {
