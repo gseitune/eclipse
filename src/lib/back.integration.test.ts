@@ -140,7 +140,7 @@ describe("recordResult/editResult (integration)", () => {
     assert.equal(m1?.setFormat, "SINGLE_21");
     assert.equal(m1?.resultStatus, "COMPLETE");
 
-    // Invert the score â†’ Beta wins zone A.
+    // Invert the score → Beta wins zone A.
     await editResult({ matchId: "m1", setFormat: "SINGLE_21", sets: [{ teamA: 19, teamB: 21 }] });
     standings = await getStandings();
     assert.equal(standings.A?.[0]?.teamId, "tA2", "standings recalculated after edit");
@@ -263,6 +263,36 @@ describe("recordResult/editResult (integration)", () => {
     assert.equal(m1?.winnerId, "tA1", "winner untouched");
   });
 
+  it("a correction that keeps the winner does not clear the descendant chain", async () => {
+    const fetchSemis = () =>
+      prisma.match.findMany({
+        where: { etapaId, stage: { in: ["SEMIFINAL_1", "SEMIFINAL_2"] } },
+        select: { id: true, resultStatus: true, sets: true, winnerId: true },
+        orderBy: { id: "asc" },
+      });
+
+    const before = await fetchSemis();
+    assert.ok(
+      before.every((m) => m.resultStatus !== "PENDING"),
+      "fixture precondition: the semis are already played",
+    );
+
+    // 21-19 -> 22-20 keeps Alpha as the winner, so no descendant is invalidated
+    // even though the caller passes cascade: true.
+    await editResult({
+      matchId: "m1",
+      setFormat: "SINGLE_21",
+      sets: [{ teamA: 22, teamB: 20 }],
+      cascade: true,
+    });
+
+    assert.deepEqual(
+      await fetchSemis(),
+      before,
+      "descendant results must survive a winner-preserving correction",
+    );
+  });
+
   it("rejects editing a match without a result", async () => {
     // FINAL is still pending.
     await assert.rejects(
@@ -303,7 +333,7 @@ describe("recordResult/editResult (integration)", () => {
     const quick = await prisma.match.findUnique({ where: { id: "m5" } });
     assert.equal(quick?.resultStatus, "WINNER_ONLY");
 
-    // The fix flow edits it into a full score later â€” all rejections first.
+    // The fix flow edits it into a full score later — all rejections first.
     await bad400(
       () =>
         editResult({
@@ -390,7 +420,7 @@ it("blocks editing a semifinal once the final played", async () => {
   });
 });
 
-describe("createEtapa (integration) â€” mixto fijo", () => {
+describe("createEtapa (integration) — mixto fijo", () => {
   const MIN_TEAMS = 6;
 
   before(async () => {
@@ -555,7 +585,7 @@ describe("reorderMatch and getScheduleBoard (integration)", () => {
 
 it("reorderMatch down swaps slots of two PENDING matches", async () => {
       await seedReorderTournament();
-      // rm1 at slot 1, rm2 at slot 2 â€” move rm1 down
+      // rm1 at slot 1, rm2 at slot 2 — move rm1 down
       await reorderMatch("rm1", "down");
       const m1 = await prisma.match.findUnique({ where: { id: "rm1" } });
       const m2 = await prisma.match.findUnique({ where: { id: "rm2" } });
@@ -565,7 +595,7 @@ it("reorderMatch down swaps slots of two PENDING matches", async () => {
 
     it("reorderMatch up swaps slots with nearest pending neighbor", async () => {
       await seedReorderTournament();
-      // rm2 at slot 2, rm1 at slot 1 â€” move rm2 up
+      // rm2 at slot 2, rm1 at slot 1 — move rm2 up
       await reorderMatch("rm2", "up");
       const m1 = await prisma.match.findUnique({ where: { id: "rm1" } });
       const m2 = await prisma.match.findUnique({ where: { id: "rm2" } });
@@ -613,7 +643,7 @@ it("reorderMatch down swaps slots of two PENDING matches", async () => {
  * - recordResult/editResult throw etapa_cancelled
  * - requireEtapaOpen blocks all modifications (tested indirectly)
  */
-describe("cancel etapa (integration) â€” weather suspension", () => {
+describe("cancel etapa (integration) — weather suspension", () => {
   before(async () => {
     // The previous describe's after() deleted the throwaway db dir.
     // Recreate it and push the schema again.

@@ -60,7 +60,7 @@ export function OrganizerLogin() {
       </div>
 
       <div>
-        <label htmlFor="org-username" className="block text-sm font-medium text-stone-700 mb-1">
+        <label htmlFor="org-username" className="block text-[15px] sm:text-sm font-medium text-stone-700 mb-1">
           Usuario
         </label>
         <input
@@ -70,12 +70,12 @@ export function OrganizerLogin() {
           onChange={(e) => setUsername(e.target.value)}
           autoComplete="username"
           required
-          className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[44px]"
+          className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-[15px] sm:text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[44px]"
         />
       </div>
 
       <div>
-        <label htmlFor="org-password" className="block text-sm font-medium text-stone-700 mb-1">
+        <label htmlFor="org-password" className="block text-[15px] sm:text-sm font-medium text-stone-700 mb-1">
           Contraseña
         </label>
         <input
@@ -85,12 +85,12 @@ export function OrganizerLogin() {
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="current-password"
           required
-          className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[44px]"
+          className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-[15px] sm:text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[44px]"
         />
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700">
+        <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-[15px] sm:text-sm text-red-700">
           {error}
         </div>
       )}
@@ -98,7 +98,7 @@ export function OrganizerLogin() {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-lg bg-amber-600/70 px-4 py-3 text-sm font-semibold text-white hover:bg-amber-700/70 disabled:opacity-50 transition-colors min-h-[44px]"
+        className="w-full rounded-lg bg-tierra-900 px-4 py-3 text-[15px] sm:text-sm font-semibold text-white hover:bg-tierra-950 disabled:opacity-50 transition-colors min-h-[44px]"
       >
         {pending ? "Iniciando…" : "Iniciar sesión"}
       </button>

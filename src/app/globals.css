@@ -53,6 +53,22 @@
   --color-selva-800: #2f5030;
   --color-selva-900: #254125;
   --color-selva-950: #172b18;
+  /* tierra: the neutral surface ramp for selected/action fills. A warm
+     sand-brown taken from the page's own cream family, dark enough to anchor
+     (7.0:1 against sand-50 text) without reading as black ink. Replaces the
+     dark green that used to fill the circuit switch, the tabs and the buttons. */
+  --color-tierra-50: #f7f3ec;
+  --color-tierra-200: #e4dccd;
+  --color-tierra-700: #7a6c59;
+  --color-tierra-800: #6b5f4e;
+  --color-tierra-900: #5f5548;
+  --color-tierra-950: #4a4136;
+  /* metal: la versión apagada de oro, plata y bronce. Solo para marcar los tres
+     primeros de un ranking; nunca para acciones, estado ni texto. Son tonos
+     claros a propósito (el número va en tierra-950 encima). */
+  --color-oro-200: #e2c98d;
+  --color-plata-200: #d5d2cc;
+  --color-bronce-200: #d8b393;
   /* Reserved for medals - never for UI accents, state, hover or actions:
        yellow-400 gold | slate-300/400 silver | amber-700 bronze */
   /* 90% lighter amber tones for card outlines (selection highlight, banners) */
@@ -60,13 +76,23 @@
   --color-amber-soft-200: #fefcf3;
   --color-amber-soft-400: #fef8e9;
   --color-amber-soft-500: #fef5e6;
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-source);
+  --font-mono: var(--font-source);
+  --font-display: var(--font-bebas);
 }
 
 :root {
   --background: #fffaf2;
   --foreground: #1c1917;
+}
+
+/* Solo el titular de marca lleva la condensada: un único gesto fuerte.
+   Los h2 y h3 de las secciones quedan en la sans para no gritar todo. */
+@layer base {
+  h1 {
+    font-family: var(--font-display);
+    letter-spacing: 0.01em;
+  }
 }
 
 @keyframes spin-slow {
@@ -86,4 +112,9 @@ body {
     var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+}
+/* La condensada respira mejor con un poco de aire entre letras: es la misma
+   medida en la marca, el switch, la etapa y los numeros. */
+.font-display {
+  letter-spacing: 0.08em;
 }

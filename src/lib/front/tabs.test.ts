@@ -40,28 +40,9 @@ describe("tabLockReason", () => {
     );
   });
 
-  it("locks the final standings tab until the etapa is closed", () => {
-    assert.equal(
-      tabLockReason("final", { phase: "ELIMINATORIES", etapaClosed: false }),
-      "Se habilita al finalizar la etapa",
-    );
-    assert.equal(
-      tabLockReason("final", { phase: "GROUPS", etapaClosed: false }),
-      "Se habilita al finalizar la etapa",
-    );
-    assert.equal(
-      tabLockReason("final", { phase: "ELIMINATORIES", etapaClosed: true }),
-      null,
-    );
-  });
-
-  it("locks each tab independently", () => {
+  it("locks the bracket tab independently", () => {
     const ctx = { phase: "ELIMINATORIES", etapaClosed: false };
     assert.equal(tabLockReason("llaves", ctx), null);
-    assert.equal(
-      tabLockReason("final", ctx),
-      "Se habilita al finalizar la etapa",
-    );
   });
 });
 

@@ -10,7 +10,7 @@
  * or another etapa's podium mid-tournament reads as wrong data.
  */
 
-export type TournamentTabId = "grupos" | "llaves" | "final";
+export type TournamentTabId = "grupos" | "llaves";
 
 export interface TabLockContext {
   phase: string;
@@ -18,7 +18,6 @@ export interface TabLockContext {
 }
 
 export const BRACKET_LOCK_REASON = "Se habilita al terminar la fase de grupos";
-export const FINAL_LOCK_REASON = "Se habilita al finalizar la etapa";
 
 /**
  * Reason the tab stays locked, or null when it can be opened. The bracket tab
@@ -35,8 +34,6 @@ export function tabLockReason(
       return null;
     case "llaves":
       return ctx.phase === "ELIMINATORIES" ? null : BRACKET_LOCK_REASON;
-    case "final":
-      return ctx.etapaClosed ? null : FINAL_LOCK_REASON;
   }
 }
 

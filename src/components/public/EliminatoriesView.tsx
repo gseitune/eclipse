@@ -1,36 +1,27 @@
-"use client";
+﻿"use client";
 
-import { Fragment, useMemo, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 
 import {
   buildBracketColumns,
   matchScore,
-  type BracketColumns,
   type BracketSlot,
 } from "@/lib/front/bracket";
-import { liveMatchIds } from "@/lib/front/live";
 import { isKnownPhase, phaseLabel } from "@/lib/front/phase";
-import type { MatchPlayer, MatchPublic, ScheduleRow, Stage } from "@/lib/front/types";
+import type { MatchPlayer, MatchPublic, Stage } from "@/lib/front/types";
 
 interface EliminatoriesViewProps {
   brackets: MatchPublic[];
   phase: string;
-  schedule: ScheduleRow[];
-  matchMinutes: number;
-  onOpenTeam: (team: { id: string; name: string; zone: string }) => void;
+  /**
+   * Live match ids, already resolved by the page with the etapa guard
+   * (`liveMatchIdsForEtapa`): a closed fecha never reports a match as live,
+   * even when the clock still falls inside its window on a later day.
+   */
+  liveIds: Set<string>;
 }
 
-type OpenTeam = (team: { id: string; name: string; zone: string }) => void;
 
-/**
- * Fixed column layout per format (spec S9 / E6). The boxes are always in the
- * same place so the bracket reads the same on every phone, and the whole board
- * fits the screen width without horizontal scrolling:
- *
- *   left   -> repechaje on top of the cuartos boxes
- *   middle -> semifinals
- *   right  -> final, with the 3rd/4th place match below it
- */
 const STAGE_LABEL: Partial<Record<Stage, string>> = {
   REPECHAJE_1: "Repechaje",
   REPECHAJE_2: "Repechaje",
@@ -46,7 +37,7 @@ const STAGE_LABEL: Partial<Record<Stage, string>> = {
 
 function NoticeBox({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-xl border border-sand-200 bg-sand-50 px-4 py-6 text-center text-sm text-stone-500">
+    <div className="rounded-xl border border-selva-200 bg-selva-50 px-4 py-6 text-center text-[15px] sm:text-sm text-stone-500">
       {children}
     </div>
   );
@@ -82,14 +73,10 @@ function matchRows(match: MatchPublic | null): MatchRow[] {
 
 type BoxSize = "tiny" | "compact" | "regular";
 
-/**
- * Every box is compact, except the final. The repechaje is one step smaller
- * again, because it is a single play-in game.
- */
 const BOX_SIZE_CLASS: Record<BoxSize, string> = {
-  tiny: "px-1 py-0 text-[0.55rem]",
-  compact: "px-1.5 py-0.5 text-[0.62rem]",
-  regular: "px-1.5 py-1.5 text-[0.72rem]",
+  tiny: "px-1.5 py-1 text-[0.76rem] sm:text-[0.66rem]",
+  compact: "px-2 py-1.5 text-[0.82rem] sm:text-[0.72rem]",
+  regular: "px-2.5 py-2 text-[0.9rem] sm:text-[0.8rem]",
 };
 
 function slotSize(stage: Stage): BoxSize {
@@ -103,44 +90,43 @@ function MatchBox({
   live,
   emphasis,
   size,
-  onOpenTeam,
 }: {
   match: MatchPublic | null;
   live: boolean;
   emphasis: boolean;
   size: BoxSize;
-  onOpenTeam: OpenTeam;
 }) {
   const zone = match?.zone ?? "";
-  let border = "border-sand-300";
-  if (emphasis) border = "border-sun-500";
-  if (live) border = "border-ember-500 ring-2 ring-ember-500/30";
+  let border = "border-stone-300";
+  if (emphasis) border = "border-selva-800 ring-2 ring-selva-800/20";
+  if (live) border = "border-ember-500 ring-1 ring-ember-500/30";
   const sizing = BOX_SIZE_CLASS[size];
-  // The winner keeps a filled background. The app uses the standard amber
-  // palette for highlights (the `amber-soft-*` tokens are almost white), and
-  // the repechaje box stays one step lighter because it is already small.
-  const winnerFill = size === "tiny" ? "bg-amber-soft-100" : "bg-amber-100";
+  void zone;
 
   return (
-    <div className={`flex w-full flex-col overflow-hidden rounded-lg border bg-white shadow-sm ${border}`}>
+    <div className={`flex w-full flex-col overflow-hidden rounded-sm border bg-white ${border}`}>
+      {/* Live indicator: visual only (the public page has no audio). */}
+      {live && (
+        <div className="flex items-center gap-1 bg-ember-50 px-1.5 py-0.5 text-[0.7rem] sm:text-[0.6rem] font-semibold uppercase tracking-[0.08em] text-ember-600">
+          <span
+            aria-hidden="true"
+            className="h-1.5 w-1.5 animate-pulse rounded-full bg-ember-500"
+          />
+          En vivo
+        </div>
+      )}
       {matchRows(match).map((row) => (
-        <button
+        <div
           key={row.key}
-          type="button"
-          disabled={!row.player}
-          onClick={() => {
-            if (!row.player) return;
-            onOpenTeam({ id: row.player.id, name: row.player.name, zone });
-          }}
-          className={`flex w-full items-start justify-between gap-1 border-b border-sand-100 text-left leading-tight transition-colors last:border-b-0 ${sizing} ${
-            row.player ? (row.winner ? "hover:bg-amber-200" : "hover:bg-sand-50") : "cursor-default"
-          } ${row.winner ? `${winnerFill} font-semibold text-foreground` : "text-stone-600"}`}
+          className={`flex w-full items-start justify-between gap-1.5 border-b border-sand-200/70 leading-tight last:border-b-0 ${sizing} ${
+            row.winner ? "border-l-2 border-l-selva-700" : ""
+          } ${row.winner ? "font-bold text-stone-900" : "text-stone-600"}`}
         >
           <span className={`min-w-0 flex-1 break-words ${row.player ? "" : "italic text-stone-400"}`}>
             {row.player ? row.player.name : "A definir"}
           </span>
-          <span className="shrink-0 tabular-nums text-stone-500">{row.score ?? ""}</span>
-        </button>
+          <span className="shrink-0 tabular-nums text-stone-600">{row.score ?? ""}</span>
+        </div>
       ))}
     </div>
   );
@@ -149,127 +135,109 @@ function MatchBox({
 function SlotView({
   slot,
   liveIds,
-  onOpenTeam,
+  showLabel = false,
 }: {
   slot: BracketSlot;
   liveIds: Set<string>;
-  onOpenTeam: OpenTeam;
+  showLabel?: boolean;
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-0.5">
-      <span className="px-0.5 text-[0.55rem] font-semibold uppercase tracking-wide text-stone-400">
-        {STAGE_LABEL[slot.stage] ?? slot.stage}
-      </span>
+    <div className="flex w-full min-w-0 flex-col gap-0.5">
+      {showLabel && (
+        <span className="px-0.5 text-[0.76rem] sm:text-[0.66rem] font-semibold text-stone-500">
+          {STAGE_LABEL[slot.stage] ?? slot.stage}
+        </span>
+      )}
       <MatchBox
         match={slot.match}
         live={Boolean(slot.match && liveIds.has(slot.match.id))}
         emphasis={slot.stage === "FINAL"}
         size={slotSize(slot.stage)}
-        onOpenTeam={onOpenTeam}
+       
       />
     </div>
   );
 }
 
-const COLUMN_JUSTIFY = {
-  start: "justify-start",
-  around: "justify-around",
-  center: "justify-center",
-} as const;
+/**
+ * Línea de llave. El tramo vertical une los dos partidos que alimentan al
+ * siguiente; el horizontal entra en el partido destino por su centro.
+ */
+const CONNECTOR = "relative shrink-0 self-stretch w-2 sm:w-5";
 
-function BracketColumn({
-  slots,
-  justify,
-  liveIds,
-  onOpenTeam,
-}: {
-  slots: BracketSlot[];
-  justify: keyof typeof COLUMN_JUSTIFY;
-  liveIds: Set<string>;
-  onOpenTeam: OpenTeam;
-}) {
-  if (slots.length === 0) return null;
-
+function PairConnector() {
   return (
-    <div className={`flex min-w-0 flex-1 flex-col gap-2 ${COLUMN_JUSTIFY[justify]}`}>
-      {slots.map((slot) => (
-        <SlotView key={slot.stage} slot={slot} liveIds={liveIds} onOpenTeam={onOpenTeam} />
-      ))}
+    <div className={CONNECTOR} aria-hidden="true">
+      <span className="absolute left-0 right-1/2 top-1/4 border-t border-stone-300" />
+      <span className="absolute left-0 right-1/2 bottom-1/4 border-t border-stone-300" />
+      <span className="absolute left-1/2 top-1/4 bottom-1/4 border-l border-stone-300" />
+      <span className="absolute left-1/2 right-0 top-1/2 border-t border-stone-300" />
+    </div>
+  );
+}
+
+/** Línea recta para un partido que alimenta directo al siguiente. */
+function StraightConnector() {
+  return (
+    <div className={CONNECTOR} aria-hidden="true">
+      <span className="absolute left-0 right-0 top-1/2 border-t border-stone-300" />
     </div>
   );
 }
 
 /**
- * Cuartos format. The left column lists the repechaje and then the cuartos
- * already paired for the semis (QF1, QF4, QF2, QF3), so each semi can be
- * centered between the two cuartos that feed it. A grid keeps every box in the
- * same place whatever the length of the team names.
+ * Une cuatro partidos con dos: los pares se juntan en 1/4 y 3/4 de la altura,
+ * que es donde caen las dos filas de la ronda siguiente.
  */
-function CuartosBoard({
-  columns,
-  liveIds,
-  onOpenTeam,
-}: {
-  columns: BracketColumns;
-  liveIds: Set<string>;
-  onOpenTeam: OpenTeam;
-}) {
-  const cuartos = columns.left.slice(1);
-  const pairs: Array<[BracketSlot, BracketSlot]> = [];
-  for (let index = 0; index + 1 < cuartos.length; index += 2) {
-    const top = cuartos[index];
-    const bottom = cuartos[index + 1];
-    if (top && bottom) pairs.push([top, bottom]);
-  }
-  const repechaje = columns.left[0] ?? null;
-  const rows = pairs.length * 2 + 1;
-
+function QuadConnector() {
   return (
-    <div
-      className="grid gap-x-1.5 gap-y-1.5"
-      style={{
-        gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-        gridTemplateRows: `repeat(${rows}, auto)`,
-      }}
-    >
-      {repechaje ? (
-        <div style={{ gridColumn: 1, gridRow: 1 }}>
-          <SlotView slot={repechaje} liveIds={liveIds} onOpenTeam={onOpenTeam} />
+    <div className={CONNECTOR} aria-hidden="true">
+      <span className="absolute left-0 right-1/2 top-[12.5%] border-t border-stone-300" />
+      <span className="absolute left-0 right-1/2 top-[37.5%] border-t border-stone-300" />
+      <span className="absolute left-1/2 top-[12.5%] h-[25%] border-l border-stone-300" />
+      <span className="absolute left-1/2 right-0 top-1/2 border-t border-stone-300" />
+
+      <span className="absolute left-0 right-1/2 top-[62.5%] border-t border-stone-300" />
+      <span className="absolute left-0 right-1/2 top-[87.5%] border-t border-stone-300" />
+      <span className="absolute left-1/2 top-[62.5%] h-[25%] border-l border-stone-300" />
+      <span className="absolute left-1/2 right-0 top-3/4 border-t border-stone-300" />
+    </div>
+  );
+}
+
+function Board({
+  semis,
+  final,
+  bronze,
+  liveIds,
+}: {
+  semis: ReactNode;
+  final: BracketSlot;
+  bronze: BracketSlot | null;
+  liveIds: Set<string>;
+}) {
+  return (
+    <div className="mx-auto w-full max-w-xl">
+      <div className="flex items-stretch">
+        <div className="flex min-w-0 flex-1 flex-col justify-around gap-3">
+          {semis}
         </div>
-      ) : null}
-
-      {pairs.map((pair, index) => {
-        const [top, bottom] = pair;
-        const semi = columns.middle[index] ?? null;
-        const firstRow = index * 2 + 2;
-
-        return (
-          <Fragment key={top.stage}>
-            <div style={{ gridColumn: 1, gridRow: firstRow }}>
-              <SlotView slot={top} liveIds={liveIds} onOpenTeam={onOpenTeam} />
-            </div>
-            <div style={{ gridColumn: 1, gridRow: firstRow + 1 }}>
-              <SlotView slot={bottom} liveIds={liveIds} onOpenTeam={onOpenTeam} />
-            </div>
-            {semi ? (
-              <div style={{ gridColumn: 2, gridRow: `${firstRow} / span 2`, alignSelf: "center" }}>
-                <SlotView slot={semi} liveIds={liveIds} onOpenTeam={onOpenTeam} />
-              </div>
-            ) : null}
-          </Fragment>
-        );
-      })}
-
-      {/* Centered between the two semis, not on the whole board: the repechaje
-          row on top must not push the final down. */}
-      <div
-        className="flex min-w-0 flex-col justify-center gap-2"
-        style={{ gridColumn: 3, gridRow: `2 / span ${rows - 1}` }}
-      >
-        {columns.right.map((slot) => (
-          <SlotView key={slot.stage} slot={slot} liveIds={liveIds} onOpenTeam={onOpenTeam} />
-        ))}
+        <PairConnector />
+        <div className="flex min-w-0 flex-1 items-center">
+          <SlotView slot={final} liveIds={liveIds} showLabel />
+        </div>
       </div>
+      {/* El bronce va en su propia fila, alineado con la columna de la final:
+          así mide lo mismo y no le mueve el centro a la llave. */}
+      {bronze && (
+        <div className="mt-3 flex items-stretch">
+          <div className="min-w-0 flex-1" />
+          <div className="w-2 shrink-0 sm:w-5" />
+          <div className="min-w-0 flex-1">
+            <SlotView slot={bronze} liveIds={liveIds} showLabel />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -277,11 +245,8 @@ function CuartosBoard({
 export function EliminatoriesView({
   brackets,
   phase,
-  schedule,
-  matchMinutes,
-  onOpenTeam,
+  liveIds,
 }: EliminatoriesViewProps) {
-  const liveIds = useMemo(() => liveMatchIds(schedule, matchMinutes), [schedule, matchMinutes]);
   const columns = useMemo(() => buildBracketColumns(brackets), [brackets]);
 
   if (!isKnownPhase(phase)) {
@@ -296,21 +261,141 @@ export function EliminatoriesView({
     return <NoticeBox>Generando cuadro…</NoticeBox>;
   }
 
+  const [semi1, semi2] = columns.middle;
+  const final = columns.right.find((s) => s.stage === "FINAL") ?? null;
+  const bronze = columns.right.find((s) => s.stage === "BRONZE") ?? null;
+  const byStage = (stage: Stage) => columns.left.find((s) => s.stage === stage) ?? null;
+
+  if (!semi1 || !semi2 || !final) {
+    return <NoticeBox>Generando cuadro…</NoticeBox>;
+  }
+
+  // Cuartos: cada semi se dibuja entre los dos cuartos que la alimentan
+  // (SF1 <- QF1, QF4 ; SF2 <- QF2, QF3). El repechaje entra a QF1, así que va
+  // arriba con su propia línea.
   if (columns.mode === "cuartos") {
+    const qf1 = byStage("CUARTOS_1");
+    const qf4 = byStage("CUARTOS_4");
+    const qf2 = byStage("CUARTOS_2");
+    const qf3 = byStage("CUARTOS_3");
+    const repe = byStage("REPECHAJE_1");
+
+    if (!qf1 || !qf2 || !qf3 || !qf4) {
+      return <NoticeBox>Generando cuadro…</NoticeBox>;
+    }
+
     return (
       <div className="mx-auto w-full max-w-xl">
-        <CuartosBoard columns={columns} liveIds={liveIds} onOpenTeam={onOpenTeam} />
+        {repe && (
+          <div className="mb-2 flex items-center gap-1.5">
+            <div className="w-[30%] min-w-0">
+              <SlotView slot={repe} liveIds={liveIds} showLabel />
+            </div>
+            <StraightConnector />
+            <span className="text-[0.72rem] sm:text-[0.62rem] text-stone-500">
+              entra a Cuartos 1
+            </span>
+          </div>
+        )}
+
+        {/* Tres columnas parejas: cuartos, semis y final. Así cada caja usa el
+            mismo ancho en el celular en vez de partirse en dos mitades. */}
+        <div className="flex items-stretch">
+          <div className="grid min-w-0 flex-1 grid-rows-4 gap-2">
+            {[qf1, qf4, qf2, qf3].map((slot) => (
+              <div key={slot.stage} className="flex items-center">
+                <SlotView slot={slot} liveIds={liveIds} showLabel />
+              </div>
+            ))}
+          </div>
+          <QuadConnector />
+          <div className="grid min-w-0 flex-1 grid-rows-2 gap-2">
+            {[semi1, semi2].map((slot) => (
+              <div key={slot.stage} className="flex items-center">
+                <SlotView slot={slot} liveIds={liveIds} showLabel />
+              </div>
+            ))}
+          </div>
+          <PairConnector />
+          <div className="flex min-w-0 flex-1 items-center">
+            <SlotView slot={final} liveIds={liveIds} showLabel />
+          </div>
+        </div>
+
+        {bronze && (
+          <div className="mt-3 flex items-stretch">
+            <div className="min-w-0 flex-1" />
+            <div className="w-2 shrink-0 sm:w-5" />
+            <div className="min-w-0 flex-1" />
+            <div className="w-2 shrink-0 sm:w-5" />
+            <div className="min-w-0 flex-1">
+              <SlotView slot={bronze} liveIds={liveIds} showLabel />
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
+  // Repechaje: cada repechaje alimenta a la semi del otro lado (SF1 <- RE2,
+  // SF2 <- RE1), así que van en filas para que la línea no cruce.
+  if (columns.mode === "repechaje") {
+    const re1 = byStage("REPECHAJE_1");
+    const re2 = byStage("REPECHAJE_2");
+
+    return (
+      <Board
+        liveIds={liveIds}
+        final={final}
+        bronze={bronze}
+       
+        semis={
+          <>
+            <div className="flex items-stretch">
+              <div className="w-[38%] min-w-0 self-center">
+                {re2 ? (
+                  <SlotView slot={re2} liveIds={liveIds} showLabel />
+                ) : (
+                  <span />
+                )}
+              </div>
+              <StraightConnector />
+              <div className="min-w-0 flex-1">
+                <SlotView slot={semi1} liveIds={liveIds} showLabel />
+              </div>
+            </div>
+            <div className="flex items-stretch">
+              <div className="w-[38%] min-w-0 self-center">
+                {re1 ? (
+                  <SlotView slot={re1} liveIds={liveIds} showLabel />
+                ) : (
+                  <span />
+                )}
+              </div>
+              <StraightConnector />
+              <div className="min-w-0 flex-1">
+                <SlotView slot={semi2} liveIds={liveIds} showLabel />
+              </div>
+            </div>
+          </>
+        }
+      />
+    );
+  }
+
+  // Estándar: las semis vienen de la fase de grupos, sin ronda previa.
   return (
-    <div className="mx-auto w-full max-w-xl">
-      <div className="flex items-stretch gap-1.5">
-        <BracketColumn slots={columns.left} justify="start" liveIds={liveIds} onOpenTeam={onOpenTeam} />
-        <BracketColumn slots={columns.middle} justify="around" liveIds={liveIds} onOpenTeam={onOpenTeam} />
-        <BracketColumn slots={columns.right} justify="center" liveIds={liveIds} onOpenTeam={onOpenTeam} />
-      </div>
-    </div>
+    <Board
+      liveIds={liveIds}
+      final={final}
+      bronze={bronze}
+     
+      semis={
+        <>
+          <SlotView slot={semi1} liveIds={liveIds} showLabel />
+          <SlotView slot={semi2} liveIds={liveIds} showLabel />
+        </>
+      }
+    />
   );
 }

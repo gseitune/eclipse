@@ -3,21 +3,20 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useLiveState } from "@/lib/front/use-live-state";
-import { phaseLabel, isKnownPhase, hasBracketResult } from "@/lib/front/phase";
+import { phaseLabel, isKnownPhase } from "@/lib/front/phase";
 import { liveMatchIdsForEtapa } from "@/lib/front/live";
-import { useChime } from "@/lib/front/chime";
 import { fetchGallery, fetchRanking } from "@/lib/front/api";
-import type { Circuit, StateSnapshot, ZoneId, TeamPublic, StandingRow, RankingResponse } from "@/lib/front/types";
-import type { FotoGaleria } from "@/lib/front/galeria";
+import type { Circuit, StateSnapshot, ZoneId, TeamPublic, RankingResponse } from "@/lib/front/types";import type { FotoGaleria } from "@/lib/front/galeria";
 import { Hero } from "./Hero";
+import { HeroCarousel } from "./HeroCarousel";
 import { TournamentSwitch, type TournamentId } from "./TournamentSwitch";
 import { MatchTicker } from "./MatchTicker";
 import { TournamentTabs } from "./TournamentTabs";
-import { TeamSheet } from "./TeamSheet";
-import { ChimeBanner } from "./ChimeBanner";
 import { RankingPanel } from "./RankingPanel";
 import { GaleriaCarrusel } from "./GaleriaCarrusel";
+import { PodiosCarrusel } from "./PodiosCarrusel";
 import { IconoInstagram } from "./IconoInstagram";
+import { IconoEngranaje } from "@/components/Iconos";
 
 /** Redes oficiales. Único dato manual de los links. */
 const INSTAGRAM_SELVARENA = "https://www.instagram.com/selvarena_obera/";
@@ -25,17 +24,18 @@ const INSTAGRAM_DACOSTA = "https://www.instagram.com/dacosta.fotodeportiva/";
 
 export function PublicHome({
   initial,
+  initialRanking,
   initialCircuit,
   isPreview = false,
-  version,
   fotos,
   albumUrl,
 }: {
   initial: StateSnapshot | null;
+  /** Ranking rendered by the server, so the podium is there on first paint. */
+  initialRanking: RankingResponse | null;
   /** Circuit rendered by the server, taken from `?circuito=`. */
   initialCircuit: Circuit;
   isPreview?: boolean;
-  version: string;
   /** Fotos ya armadas por el servidor. Vacío = la galería no se dibuja. */
   fotos: FotoGaleria[];
   /** Link a la carpeta completa del fotógrafo en Drive. */
@@ -61,12 +61,9 @@ export function PublicHome({
 
   const { state, loading, error } = useLiveState({ initial, circuit });
 
-  // Mount chime hook — triggers audio on new live matches
-  useChime({ state, matchMinutes: state?.matchMinutes ?? 20 });
-
   // Active etapa finished state — from ranking (not state), so a finished
   // etapa never shows EN VIVO
-  const [ranking, setRanking] = useState<RankingResponse | null>(null);
+  const [ranking, setRanking] = useState<RankingResponse | null>(initialRanking);
   useEffect(() => {
     let cancelled = false;
     fetchRanking(circuit)
@@ -80,6 +77,21 @@ export function PublicHome({
       cancelled = true;
     };
   }, [circuit]);
+
+  // Podios de todas las etapas cerradas: el tablero cuenta la temporada
+  // completa, no solo la última fecha.
+  const podios = useMemo(
+    () =>
+      (ranking?.etapas ?? [])
+        .filter((etapa) => etapa.finished && etapa.positions.length > 0)
+        .map((etapa) => ({
+          etapaName: etapa.name,
+          top: etapa.positions
+            .slice(0, 3)
+            .map((p) => ({ position: p.position, teamName: p.teamName })),
+        })),
+    [ranking],
+  );
 
   // Photos follow the same circuit: the server sends the initial album of
   // Principiantes, and every switch asks for the folder of the selected one.
@@ -126,68 +138,22 @@ export function PublicHome({
     return { liveIds: ids, liveTeamIds: teamIds, initialZone: zone };
   }, [state]);
 
-  // Lifted openTeam state — shared between StandingsTables and EliminatoriesView
-  const [openTeam, setOpenTeam] = useState<{ id: string; name: string; zone: string } | null>(null);
-
-  function handleOpenTeam(team: { id: string; name: string; zone: string }) {
-    setOpenTeam(team);
-  }
-
-  function handleCloseTeamSheet() {
-    setOpenTeam(null);
-  }
-
-  const isEliminatories = phase === "ELIMINATORIES";
   const isDesempate = phase === "DESEMPATE";
   const known = isKnownPhase(phase);
-
-  // The bracket view replaces the group view only once the knockout has its
-  // first decided result. Until then — even with the phase already flipped to
-  // ELIMINATORIES — the home keeps showing groups (Marcador + Posiciones).
-  const showBrackets = isEliminatories && hasBracketResult(state?.brackets ?? []);
-
-  // Galería del fotógrafo: fotos de la carpeta del circuito elegido, sin
-  // recuadro propio (la enmarca el contenedor de la home).
-  const galeriaJsx = (
-    <GaleriaCarrusel fotos={galeria.fotos} albumUrl={galeria.albumUrl} />
-  );
 
   return (
     <div className="min-h-screen flex flex-col">
       {/* Top bar — static, scrolls with the page */}
-      <div className="flex items-start justify-between px-3 pt-3">
-        <div className="pointer-events-none">
-          <div className="-ml-11 mt-4 w-40 rotate-[-45deg] whitespace-nowrap bg-amber-600 py-1 text-center text-[11px] font-bold uppercase tracking-widest text-white shadow-md">
-            BETA TEST {version}
-          </div>
-        </div>
-
+      <div className="flex items-start justify-end px-3 pt-3">
         {/* Organizer button — static top-right, hidden inside organizer preview */}
         {!isPreview && (
           <Link
             href="/organizador"
-            className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full bg-amber-600/70 px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-wide text-white shadow-lg shadow-amber-600/30 backdrop-blur transition-colors hover:bg-amber-700/80 hover:shadow-amber-700/40 sm:min-h-[44px] sm:gap-2 sm:px-5 sm:py-2.5 sm:text-xs"
+            aria-label="Panel del organizador"
+            title="Panel del organizador"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-stone-300 bg-white/80 text-stone-600 transition-colors hover:bg-white hover:text-stone-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-selva-600"
           >
-            <svg
-              className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-            </svg>
-            Organizador
+            <IconoEngranaje className="h-5 w-5 shrink-0" />
           </Link>
         )}
       </div>
@@ -197,29 +163,44 @@ export function PublicHome({
         <div className="flex min-h-screen items-center justify-center">
           <div className="flex flex-col items-center gap-3">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-700 border-t-transparent" />
-            <span className="text-sm text-stone-600">Cargando...</span>
+            <span className="text-[15px] sm:text-sm text-stone-600">Cargando...</span>
           </div>
         </div>
       )}
 
-      {/* Hero */}
-      <Hero
-        circuit={`Circuito Mixto ${
-          circuit === "INTERMEDIOS" ? "Intermedios" : "Principiantes"
-        } ${state?.etapa?.season ?? 2026}`}
-        etapaName={state?.etapa?.name?.toUpperCase() ?? "—"}
-        live={liveIds.size > 0}
-        finished={
-          ranking?.etapas.some((e) => e.id === state?.etapaId && e.finished) ??
-          false
-        }
-      />
+      {/* Hero: si hay fotos, el carrusel manda y la marca se apoya encima. */}
+      {galeria.fotos.length > 0 ? (
+        <HeroCarousel
+          fotos={galeria.fotos}
+          circuit={`Circuito Mixto ${
+            circuit === "INTERMEDIOS" ? "Intermedios" : "Principiantes"
+          } ${state?.etapa?.season ?? 2026}`}
+          etapaName={state?.etapa?.name?.toUpperCase() ?? "—"}
+          live={liveIds.size > 0}
+          finished={
+            ranking?.etapas.some((e) => e.id === state?.etapaId && e.finished) ??
+            false
+          }
+        />
+      ) : (
+        <Hero
+          circuit={`Circuito Mixto ${
+            circuit === "INTERMEDIOS" ? "Intermedios" : "Principiantes"
+          } ${state?.etapa?.season ?? 2026}`}
+          etapaName={state?.etapa?.name?.toUpperCase() ?? "—"}
+          live={liveIds.size > 0}
+          finished={
+            ranking?.etapas.some((e) => e.id === state?.etapaId && e.finished) ??
+            false
+          }
+        />
+      )}
 
       {/* Connection-lost banner — only when live stream drops. A circuit with no
           etapas is not a connection problem: it has its own empty state. */}
       {error && error !== "No etapas yet." && (
         <div className="mx-auto w-full max-w-3xl px-6 py-3">
-          <div className="flex items-center gap-1.5 rounded-2xl border border-ember-200 bg-ember-50/60 px-4 py-2 text-xs text-ember-600">
+          <div className="flex items-center gap-1.5 rounded-2xl border border-ember-200 bg-ember-50/60 px-4 py-2 text-[13px] sm:text-xs text-ember-600">
             <span className="h-1.5 w-1.5 rounded-full bg-ember-500" />
             Conexión perdida...
           </div>
@@ -229,7 +210,7 @@ export function PublicHome({
         {/* Cancelled etapa banner — prominent, above all content */}
         {state?.etapa?.cancelledAt && (
           <div className="mx-auto w-full max-w-3xl px-6 py-3">
-            <div className="rounded-xl border border-red-200 bg-red-50/60 px-4 py-3 text-sm text-red-700">
+            <div className="rounded-xl border border-red-200 bg-red-50/60 px-4 py-3 text-[15px] sm:text-sm text-red-700">
               ⚠️ Etapa CANCELADA — esta fecha ha sido suspendida. No se
               pueden editar resultados ni modificar el orden de los
               partidos.
@@ -238,25 +219,23 @@ export function PublicHome({
         )}
 
         {/* Result-pending banner */}
-        <ChimeBanner liveCount={liveIds.size} />
-
         {/* Sections */}
-      <div className="mx-auto w-full max-w-3xl px-6 py-6 space-y-6">
+      <div className="mx-auto w-full max-w-3xl px-4 py-6 space-y-6 sm:px-6">
         {/* Circuit switch — below the hero, above the cards */}
         <div className="flex justify-center">
           <TournamentSwitch value={tournament} onChange={changeCircuit} />
         </div>
 
         {!state && !loading ? (
-          <div className="rounded-2xl border border-sand-300 bg-white/40 p-8 text-center backdrop-blur ring-1 ring-inset ring-sand-200">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-400">
+          <div className="rounded-2xl border border-selva-200 bg-selva-50 p-8 text-center shadow-[0_18px_40px_-34px_rgba(23,43,24,0.28)]">
+            <p className="text-[13px] sm:text-xs font-semibold uppercase tracking-[0.2em] text-stone-400">
               Circuito Mixto{" "}
               {circuit === "INTERMEDIOS" ? "Intermedios" : "Principiantes"}
             </p>
             <p className="mt-2 text-lg font-semibold text-stone-900">
               Todavía no hay fechas
             </p>
-            <p className="mt-1 text-sm text-stone-500">
+            <p className="mt-1 text-[15px] sm:text-sm text-stone-500">
               Las fechas y resultados se publican acá cuando se cargue la primera
               etapa.
             </p>
@@ -265,20 +244,24 @@ export function PublicHome({
           <>
             {/* DESEMPATE banner above standings */}
             {isDesempate && (
-              <div className="rounded-xl border border-amber-soft-200 bg-amber-50/60 px-4 py-3 text-sm text-amber-700">
+              <div className="rounded-xl border border-amber-soft-200 bg-amber-50/60 px-4 py-3 text-[15px] sm:text-sm text-amber-700">
                 Zonas definidas — desempate por el segundo mejor.
               </div>
             )}
 
-            {/* Live match strip — hidden once the bracket view takes over */}
-            {!showBrackets && (
-              <MatchTicker
-                schedule={state?.schedule ?? []}
-                brackets={state?.brackets ?? []}
-                nextMatch={state?.nextMatch ?? null}
-                desempate={state?.desempate ?? { needed: false, pending: false, match: null }}
-              />
-            )}
+            {/* Marcador: siempre visible. Es el ancla de la página, y si
+                desapareciera al entrar en llaves el layout saltaría. */}
+            <MatchTicker
+              schedule={state?.schedule ?? []}
+              brackets={state?.brackets ?? []}
+              nextMatch={state?.nextMatch ?? null}
+              desempate={state?.desempate ?? { needed: false, pending: false, match: null }}
+              enCurso={
+                !!state?.etapa &&
+                state.etapa.closedAt == null &&
+                state.etapa.cancelledAt == null
+              }
+            />
 
             {/* Groups / bracket / final standings behind tabs */}
             <TournamentTabs
@@ -287,26 +270,21 @@ export function PublicHome({
               zones={state?.zones ?? ({ A: [], B: [], C: [] } as Record<ZoneId, TeamPublic[]>)}
               liveTeamIds={liveTeamIds}
               initialZone={initialZone}
-              onOpenTeam={handleOpenTeam}
               brackets={state?.brackets ?? []}
-              schedule={state?.schedule ?? []}
-              matchMinutes={state?.matchMinutes ?? 20}
-              ranking={ranking}
-              etapaId={state?.etapaId ?? ""}
+              liveIds={liveIds}
               etapaClosed={state?.etapa?.closedAt != null}
             />
 
-            {/* Galería del fotógrafo — fotos del Drive público, sin recuadro */}
-            {galeriaJsx}
+            <PodiosCarrusel podios={podios} />
 
             {/* Combined points panel (S3) */}
             <RankingPanel circuit={circuit} />
 
             {/* Unknown phase fallback — keep standings/ticker working */}
             {!known && (
-              <div className="rounded-2xl border border-sand-300 bg-white/40 p-6 backdrop-blur ring-1 ring-inset ring-sand-200">
+              <div className="rounded-2xl border border-selva-200 bg-selva-50 p-6 shadow-[0_18px_40px_-34px_rgba(23,43,24,0.28)]">
                 <h2 className="text-lg font-semibold text-stone-900">Estado del torneo</h2>
-                <p className="mt-2 text-sm text-stone-500">
+                <p className="mt-2 text-[15px] sm:text-sm text-stone-500">
                   {phaseLabel(phase)}
                 </p>
               </div>
@@ -315,54 +293,43 @@ export function PublicHome({
         )}
       </div>
 
-      {/* TeamSheet modal — rendered at PublicHome level */}
-      {openTeam && (
-        <TeamSheet
-          team={openTeam}
-          onClose={handleCloseTeamSheet}
-          state={state}
-          standingsRow={(() => {
-            if (openTeam.zone === "—") return null;
-            const rows = state?.standings[openTeam.zone as keyof typeof state.standings] ?? [];
-            return rows.find((r: StandingRow) => r.teamId === openTeam.id) ?? null;
-          })()}
-          position={(() => {
-            if (openTeam.zone === "—") return 0;
-            const rows = state?.standings[openTeam.zone as keyof typeof state.standings] ?? [];
-            return rows.findIndex((r: StandingRow) => r.teamId === openTeam.id) + 1;
-          })()}
-        />
-      )}
+      {/* Footer: fotos del fotógrafo arriba, redes y créditos abajo */}
+      <footer className="mt-auto border-t border-sand-200 bg-sand-50/60 text-[15px] sm:text-sm text-stone-500 backdrop-blur-sm">
+        {galeria.fotos.length > 5 && (
+          <div className="mx-auto w-full max-w-3xl px-4 pt-6 sm:px-6">
+            <GaleriaCarrusel
+              fotos={galeria.fotos.slice(5)}
+              albumUrl={galeria.albumUrl}
+              creditUrl={INSTAGRAM_DACOSTA}
+            />
+          </div>
+        )}
 
-      {/* Footer with GS badge */}
-      <footer className="mt-auto border-t border-sand-200 px-6 py-5 text-sm text-stone-500">
-        {/* Redes oficiales */}
-        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+        <div className="mt-6 px-6 py-3">
+        <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
+          {/* La marca es el link a Instagram; el ícono va al final, apoyado
+              sobre la misma línea de base que el wordmark. */}
           <a
             href={INSTAGRAM_SELVARENA}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex min-h-[32px] items-center gap-1.5 transition-colors hover:text-amber-700"
+            aria-label="@selvarena_obera en Instagram"
+            title="@selvarena_obera en Instagram"
+            className="inline-flex items-end gap-1.5 transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-selva-600 sm:gap-2"
           >
-            <IconoInstagram className="h-4 w-4" />
-            @selvarena_obera
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/selvarena-logo-tierra.png"
+              alt=""
+              className="h-4 w-auto sm:h-5"
+              draggable={false}
+            />
+            <IconoInstagram className="h-3.5 w-3.5 shrink-0 text-tierra-900 sm:h-4 sm:w-4" />
           </a>
-          <a
-            href={INSTAGRAM_DACOSTA}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex min-h-[32px] items-center gap-1.5 transition-colors hover:text-amber-700"
-          >
-            <IconoInstagram className="h-4 w-4" />
-            @dacosta.fotodeportiva
-          </a>
-        </div>
-
-        <div className="mt-4 flex flex-col items-center justify-between gap-2 sm:flex-row">
-          <span>SELVARENA · Deportes de playa - Beach Voley</span>
-          <span className="flex items-center gap-1 font-bold uppercase">
+          <span className="flex items-center gap-1 text-[11px] font-bold uppercase sm:text-sm">
             GS proyecto eclipse
           </span>
+        </div>
         </div>
       </footer>
     </div>

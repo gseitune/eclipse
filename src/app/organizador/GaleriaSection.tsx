@@ -11,7 +11,6 @@ import type { Circuit } from "@/lib/front/types";
  */
 export function GaleriaSection({ circuit }: { readonly circuit: Circuit }) {
   const [url, setUrl] = useState("");
-  const [saved, setSaved] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -21,7 +20,6 @@ export function GaleriaSection({ circuit }: { readonly circuit: Circuit }) {
     fetchGalleryFolder(circuit)
       .then((resp) => {
         if (cancelled) return;
-        setSaved(resp.folder);
         setUrl(resp.folder ?? "");
       })
       .catch((err) => {
@@ -43,7 +41,6 @@ export function GaleriaSection({ circuit }: { readonly circuit: Circuit }) {
     setMsg(null);
     try {
       const resp = await saveGalleryFolder(circuit, url.trim());
-      setSaved(resp.folder);
       setUrl(resp.folder ?? "");
       setMsg(
         resp.folder
@@ -65,7 +62,7 @@ export function GaleriaSection({ circuit }: { readonly circuit: Circuit }) {
       <span className="block text-base font-bold text-stone-900">
         Fotos del circuito
       </span>
-      <span className="mt-0.5 block text-xs text-stone-500">
+      <span className="mt-0.5 block text-[13px] sm:text-xs text-stone-500">
         Carpeta de Drive con las fotos de {circuito}
       </span>
 
@@ -73,7 +70,7 @@ export function GaleriaSection({ circuit }: { readonly circuit: Circuit }) {
         <div>
           <label
             htmlFor="galeria-folder"
-            className="block text-xs font-medium text-stone-600 mb-1"
+            className="block text-[13px] sm:text-xs font-medium text-stone-600 mb-1"
           >
             Link de la carpeta de Drive
           </label>
@@ -84,18 +81,14 @@ export function GaleriaSection({ circuit }: { readonly circuit: Circuit }) {
             onChange={(e) => setUrl(e.target.value)}
             disabled={saving || loading}
             placeholder="https://drive.google.com/drive/folders/..."
-            className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+            className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-[15px] sm:text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
           />
-          <p className="mt-1 text-xs text-stone-400">
-            Pegá el link de la carpeta compartida. Si lo dejás vacío, la home usa
-            el álbum por defecto.
-          </p>
         </div>
         {msg && (
           <p
-            className={`rounded-lg px-3 py-2 text-xs font-medium ${
+            className={`rounded-lg px-3 py-2 text-[13px] sm:text-xs font-medium ${
               ok
-                ? "bg-green-50 text-green-700 border border-green-200"
+                ? "bg-selva-50 text-selva-700 border border-selva-200"
                 : "bg-red-50 text-red-700 border border-red-200"
             }`}
             role="alert"
@@ -103,18 +96,11 @@ export function GaleriaSection({ circuit }: { readonly circuit: Circuit }) {
             {msg}
           </p>
         )}
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-xs text-stone-500">
-            {loading
-              ? "Leyendo…"
-              : saved
-                ? "Carpeta propia configurada"
-                : "Usando el álbum por defecto"}
-          </span>
+        <div className="flex justify-end">
           <button
             type="submit"
             disabled={saving || loading}
-            className="rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50 transition-colors min-h-[44px]"
+            className="rounded-lg bg-tierra-900 px-4 py-2.5 text-[15px] sm:text-sm font-semibold text-white hover:bg-tierra-950 disabled:opacity-50 transition-colors min-h-[44px]"
           >
             {saving ? "Guardando…" : "Guardar link"}
           </button>

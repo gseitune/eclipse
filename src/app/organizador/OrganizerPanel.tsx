@@ -7,6 +7,7 @@ import { closeEtapaUi, closedBannerVisible, CLOSED_BANNER_MS, type CloseEtapaUi 
 import type { Circuit, MatchPublic, StateSnapshot } from "@/lib/front/types";
 import { computeTimeEstimate } from "@/lib/time-estimate";
 import { stageLabel } from "@/lib/front/phase";
+import { IconoApagado, IconoCasa, IconoEngranaje } from "@/components/Iconos";
 import {
   sectionTargetId,
   sectionsFor,
@@ -59,7 +60,7 @@ function BellIcon() {
 function PendingNotice({ match }: { readonly match: MatchPublic | null }) {
   if (!match) return null;
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 pt-4">
+    <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 pt-4">
       <button
         type="button"
         onClick={() => {
@@ -71,15 +72,15 @@ function PendingNotice({ match }: { readonly match: MatchPublic | null }) {
       >
         <BellIcon />
         <span className="flex-1 min-w-0">
-          <span className="block text-sm font-semibold text-stone-900">
+          <span className="block text-[15px] sm:text-sm font-semibold text-stone-900">
             Falta cargar un resultado
           </span>
-          <span className="mt-0.5 block truncate text-xs text-stone-600">
+          <span className="mt-0.5 block truncate text-[13px] sm:text-xs text-stone-600">
             {stageLabel(match.stage)} — {match.teamA?.name ?? "Equipo A"} vs{" "}
             {match.teamB?.name ?? "Equipo B"}
           </span>
         </span>
-        <span className="flex-shrink-0 text-xs font-semibold text-amber-700">
+        <span className="flex-shrink-0 text-[13px] sm:text-xs font-semibold text-amber-700">
           Cargar →
         </span>
       </button>
@@ -108,7 +109,7 @@ function CheckIcon() {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      className="h-5 w-5 flex-shrink-0 text-emerald-700"
+      className="h-5 w-5 flex-shrink-0 text-selva-700"
       viewBox="0 0 20 20"
       fill="currentColor"
       aria-hidden="true"
@@ -141,14 +142,14 @@ function CloseEtapaBanner({
     // banner slot stays empty instead of turning into a permanent badge.
     if (!showClosed) return null;
     return (
-      <div className="mx-auto w-full max-w-3xl px-6 pt-4">
-        <div className="flex w-full items-center gap-3 rounded-xl border border-emerald-300 bg-emerald-50 px-5 py-4">
+      <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 pt-4">
+        <div className="flex w-full items-center gap-3 rounded-xl border border-selva-300 bg-selva-50 px-5 py-4">
           <CheckIcon />
           <span className="flex-1 min-w-0">
-            <span className="block text-sm font-bold text-emerald-900">
+            <span className="block text-[15px] sm:text-sm font-bold text-selva-900">
               Etapa finalizada
             </span>
-            <span className="mt-0.5 block text-xs text-emerald-800">
+            <span className="mt-0.5 block text-[13px] sm:text-xs text-selva-800">
               Circuito cerrado: ya no se pueden cargar ni editar resultados.
             </span>
           </span>
@@ -159,7 +160,7 @@ function CloseEtapaBanner({
 
   if (uiState === "locked") {
     return (
-      <div className="mx-auto w-full max-w-3xl px-6 pt-4">
+      <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 pt-4">
         <div
           role="group"
           aria-disabled="true"
@@ -167,10 +168,10 @@ function CloseEtapaBanner({
         >
           <LockIcon />
           <span className="flex-1 min-w-0">
-            <span className="block text-sm font-bold text-stone-400">
+            <span className="block text-[15px] sm:text-sm font-bold text-stone-400">
               Finalizar etapa
             </span>
-            <span className="mt-0.5 block text-xs text-stone-400">
+            <span className="mt-0.5 block text-[13px] sm:text-xs text-stone-400">
               Se habilita cuando esté cargado el resultado de la final
             </span>
           </span>
@@ -180,29 +181,29 @@ function CloseEtapaBanner({
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 pt-4">
+    <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 pt-4">
       <button
         type="button"
         onClick={onRequestClose}
         disabled={busy}
-        className="flex w-full items-center gap-3 rounded-xl border border-amber-600 bg-amber-500 px-5 py-4 text-left text-white shadow-lg shadow-amber-500/30 transition-colors hover:bg-amber-600 disabled:opacity-60 min-h-[56px]"
+        className="flex w-full items-center gap-3 rounded-xl border border-tierra-800 bg-tierra-500 px-5 py-4 text-left text-white shadow-lg shadow-amber-500/30 transition-colors hover:bg-amber-600 disabled:opacity-60 min-h-[56px]"
       >
         <FlagIcon />
         <span className="flex-1 min-w-0">
           <span className="block text-base font-extrabold uppercase tracking-wide">
             Finalizar etapa
           </span>
-          <span className="mt-0.5 block text-xs text-white/90">
+          <span className="mt-0.5 block text-[13px] sm:text-xs text-white/90">
             {busy
               ? "Cerrando…"
               : "Cierra el circuito con el resultado de la final"}
           </span>
         </span>
-        <span className="flex-shrink-0 text-sm font-bold">Finalizar →</span>
+        <span className="flex-shrink-0 text-[15px] sm:text-sm font-bold">Finalizar →</span>
       </button>
       {message && (
         <p
-          className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700"
+          className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[13px] sm:text-xs font-medium text-red-700"
           role="alert"
         >
           {message}
@@ -237,14 +238,14 @@ function SectionCard({
       className="flex w-full items-start gap-4 rounded-xl border border-sand-300 bg-sand-50 px-5 py-4 text-left ring-1 ring-inset ring-sand-200 hover:bg-sand-100 hover:ring-sand-300 transition-colors min-h-[44px]"
     >
       <span className="flex-1 min-w-0">
-        <span className="block text-sm font-semibold text-stone-900">
+        <span className="block text-[15px] sm:text-sm font-semibold text-stone-900">
           {label}
         </span>
-        <span className="mt-0.5 block text-xs text-stone-500">
+        <span className="mt-0.5 block text-[13px] sm:text-xs text-stone-500">
           {hint}
         </span>
       </span>
-      <span className="text-sunset-500 text-sm font-medium flex-shrink-0 self-center">
+      <span className="text-sunset-500 text-[15px] sm:text-sm font-medium flex-shrink-0 self-center">
         →
       </span>
     </button>
@@ -267,10 +268,10 @@ function DisabledSectionCard({
     >
       <LockIcon />
       <span className="flex-1 min-w-0">
-        <span className="block text-sm font-semibold text-stone-400">
+        <span className="block text-[15px] sm:text-sm font-semibold text-stone-400">
           {label}
         </span>
-        <span className="mt-0.5 block text-xs text-stone-400">
+        <span className="mt-0.5 block text-[13px] sm:text-xs text-stone-400">
           {hint}
         </span>
       </span>
@@ -306,7 +307,7 @@ function ResultsCard({
           <span className="block text-base font-bold text-stone-400">
             Resultados
           </span>
-          <span className="mt-0.5 block text-xs text-stone-400">
+          <span className="mt-0.5 block text-[13px] sm:text-xs text-stone-400">
             {closed
               ? "Etapa finalizada: sólo consulta"
               : "Etapa cancelada — sin acceso"}
@@ -324,11 +325,12 @@ function ResultsCard({
       <span className="block text-base font-bold text-stone-900">
         Resultados
       </span>
-      <span className="mt-0.5 block text-xs text-stone-500">
+      <span className="mt-0.5 block text-[13px] sm:text-xs text-stone-500">
         Cargar o corregir resultados
       </span>
       <div className="mt-4">
         <ResultadoEntryPanel
+          key={state?.nextMatch?.id ?? "none"}
           state={state}
           loading={loading}
           error={error}
@@ -380,10 +382,10 @@ function TimeCountersCard({
   }, [schedule, resultStatusById, nowMs, matchMinutes]);
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-4">
+    <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 py-4">
       <div className="rounded-xl border border-sand-300 bg-sand-50 px-5 py-4 ring-1 ring-inset ring-sand-200">
         {estimate ? (
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-stone-700">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[15px] sm:text-sm text-stone-700">
             <span>
               <span className="font-semibold text-stone-900">Inicio:</span>{" "}
               {formatClock(estimate.tournamentStart)}
@@ -402,7 +404,7 @@ function TimeCountersCard({
             </span>
           </div>
         ) : (
-          <p className="text-sm text-stone-500">
+          <p className="text-[15px] sm:text-sm text-stone-500">
             Sin horario definido — cargá el horario del primer partido
           </p>
         )}
@@ -412,9 +414,7 @@ function TimeCountersCard({
 }
 
 /* ── Main panel ── */
-export function OrganizerPanel({
-  email,
-}: OrganizerPanelProps) {
+export function OrganizerPanel(_props: OrganizerPanelProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [activeSection, setActiveSection] = useState<
     "circuitos" | "reagendar" | null
@@ -529,63 +529,71 @@ export function OrganizerPanel({
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-10 border-b border-sand-200 bg-sand-50/90 backdrop-blur ring-1 ring-inset ring-sand-200">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-4">
-          <div className="flex flex-col">
-            <h1 className="text-lg font-semibold text-stone-900">
-              Panel organizador
-            </h1>
-            <span className="text-xs text-stone-400 mt-0.5">
-              {email}
-              {liveState?.etapa
-                ? ` · ${circuit === "INTERMEDIOS" ? "Intermedios" : "Principiantes"} ${liveState.etapa.season} · ${liveState.etapa.name}`
-                : ` · ${circuit === "INTERMEDIOS" ? "Intermedios" : "Principiantes"}`}
-            </span>
-            {(liveState?.etapa?.closedAt || liveState?.etapa?.cancelledAt) && (
-              <span className="text-xs text-amber-700 mt-0.5">
-                {liveState.etapa.cancelledAt
-                  ? "Etapa cancelada: sin acceso de edición"
-                  : "Etapa finalizada: sólo consulta"}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {/* Circuit lives in memory, so without this the panel falls back to
-                Principiantes on every reload and a closed stage locks results. */}
-            <label htmlFor="panel-circuito" className="sr-only">
-              Circuito
-            </label>
-            <select
-              id="panel-circuito"
-              value={circuit}
-              onChange={(e) => changeCircuit(e.target.value as Circuit)}
-              className="rounded-lg border border-sand-300 bg-white px-2 py-2 text-xs font-medium text-stone-700 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[40px]"
-            >
-              <option value="PRINCIPIANTES">Principiantes</option>
-              <option value="INTERMEDIOS">Intermedios</option>
-            </select>
+      <header className="z-10 border-b border-sand-200 bg-sand-50/90 backdrop-blur ring-1 ring-inset ring-sand-200 sm:sticky sm:top-0">
+        <div className="mx-auto flex max-w-3xl flex-col items-end gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-6">
+          {/* El título queda solo para lectores de pantalla: la barra pasó a
+              ser únicamente controles. */}
+          <h1 className="sr-only">Panel organizador</h1>
+          <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
             {view === "panel" ? (
               <>
+                {/* Circuit lives in memory, so without this the panel falls back
+                    to Principiantes on every reload and a closed stage locks
+                    results. Only the panel shows it: in the public preview the
+                    switch would change the circuit behind the iframe. */}
+                <div
+                  role="tablist"
+                  aria-label="Circuito"
+                  className="inline-flex rounded-full border border-stone-300 bg-white/80 p-1"
+                >
+                  {(["PRINCIPIANTES", "INTERMEDIOS"] as const).map((option) => {
+                    const active = circuit === option;
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        onClick={() => changeCircuit(option)}
+                        className={`inline-flex min-h-[38px] items-center rounded-full px-3 text-[13px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-selva-600 ${
+                          active
+                            ? "bg-tierra-900 text-sand-50"
+                            : "text-stone-600 hover:bg-white"
+                        }`}
+                      >
+                        {option === "PRINCIPIANTES"
+                          ? "Principiantes"
+                          : "Intermedios"}
+                      </button>
+                    );
+                  })}
+                </div>
                 <button
                   onClick={() => setView("public")}
-                  className="rounded-lg border border-sand-300 bg-sand-50 px-4 py-2 text-xs font-semibold text-stone-700 ring-1 ring-inset ring-sand-200 hover:bg-sand-100 transition-colors min-h-[44px]"
+                  aria-label="Ver página pública"
+                  title="Ver página pública"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-stone-300 bg-sand-50 text-stone-700 ring-1 ring-inset ring-sand-200 hover:bg-sand-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-selva-600"
                 >
-                  👁 Ver página
+                  <IconoCasa className="h-5 w-5" />
                 </button>
                 <button
                   onClick={handleLogout}
                   disabled={loggingOut}
-                  className="rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-200 hover:bg-red-100 disabled:opacity-50 transition-colors min-h-[44px]"
+                  aria-label={loggingOut ? "Cerrando sesión" : "Cerrar sesión"}
+                  title="Cerrar sesión"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-red-300 bg-red-50 text-red-700 ring-1 ring-inset ring-red-200 hover:bg-red-100 disabled:opacity-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-selva-600"
                 >
-                  {loggingOut ? "Cerrando…" : "Cerrar sesión"}
+                  <IconoApagado className="h-5 w-5" />
                 </button>
               </>
             ) : (
               <button
                 onClick={() => setView("panel")}
-                className="rounded-lg border border-sand-300 bg-sand-50 px-4 py-2 text-xs font-semibold text-stone-700 ring-1 ring-inset ring-sand-200 hover:bg-sand-100 transition-colors min-h-[44px]"
+                aria-label="Volver al panel"
+                title="Volver al panel"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-stone-300 bg-sand-50 text-stone-700 ring-1 ring-inset ring-sand-200 hover:bg-sand-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-selva-600"
               >
-                ← Volver al panel
+                <IconoEngranaje className="h-5 w-5" />
               </button>
             )}
           </div>
@@ -618,14 +626,14 @@ export function OrganizerPanel({
                 <h3 className="text-base font-semibold text-stone-900">
                   Finalizar {liveState?.etapa?.name ?? "la etapa"}
                 </h3>
-                <p className="mt-2 text-sm text-stone-600">
+                <p className="mt-2 text-[15px] sm:text-sm text-stone-600">
                   Se cierra el circuito con el resultado de la final.{" "}
                   <strong>No se puede deshacer</strong>: después no vas a poder
                   cargar ni editar más resultados.
                 </p>
                 {closeMsg && (
                   <p
-                    className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700"
+                    className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[13px] sm:text-xs font-medium text-red-700"
                     role="alert"
                   >
                     {closeMsg}
@@ -636,7 +644,7 @@ export function OrganizerPanel({
                     type="button"
                     onClick={() => setCloseConfirmOpen(false)}
                     disabled={closingEtapa}
-                    className="rounded-lg border border-sand-300 bg-sand-50 px-4 py-2.5 text-xs font-semibold text-stone-700 ring-1 ring-inset ring-sand-200 hover:bg-sand-100 disabled:opacity-50 transition-colors min-h-[44px]"
+                    className="rounded-lg border border-sand-300 bg-sand-50 px-4 py-2.5 text-[13px] sm:text-xs font-semibold text-stone-700 ring-1 ring-inset ring-sand-200 hover:bg-sand-100 disabled:opacity-50 transition-colors min-h-[44px]"
                   >
                     Cancelar
                   </button>
@@ -644,7 +652,7 @@ export function OrganizerPanel({
                     type="button"
                     onClick={handleCloseEtapa}
                     disabled={closingEtapa}
-                    className="rounded-lg bg-amber-600 px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-white hover:bg-amber-700 disabled:opacity-50 transition-colors min-h-[44px]"
+                    className="rounded-lg bg-tierra-900 px-4 py-2.5 text-[13px] sm:text-xs font-bold uppercase tracking-wide text-white hover:bg-tierra-950 disabled:opacity-50 transition-colors min-h-[44px]"
                   >
                     {closingEtapa ? "Cerrando…" : "Sí, finalizar etapa"}
                   </button>
@@ -666,12 +674,13 @@ export function OrganizerPanel({
           circuit={circuit}
           onCircuitChange={changeCircuit}
           onBack={() => setActiveSection(null)}
+          currentEtapaId={liveState?.etapaId ?? null}
         />
       ) : activeSection === "reagendar" ? (
         <ReagendarSection onBack={() => setActiveSection(null)} readOnly={isClosed} />
       ) : (
         /* Sections list */
-        <main className="mx-auto w-full max-w-3xl px-6 py-8">
+        <main className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
           <nav aria-label="Secciones del panel" className="flex flex-col gap-3">
             {sections.map((section) =>
               section.kind === "actionable" ? (
@@ -721,11 +730,6 @@ export function OrganizerPanel({
   ) : (
         /* Public view — embedded iframe (same-origin, session preserved) */
         <div className="flex-1 flex flex-col">
-          <div className="mx-auto w-full max-w-3xl px-6 py-3">
-            <span className="text-xs text-stone-500">
-              Vista previa pública — misma sesión
-            </span>
-          </div>
           <iframe
             src="/?preview=1"
             className="flex-1 w-full border-0"

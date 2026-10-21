@@ -3,7 +3,7 @@ export function IconoInstagram({ className }: { className?: string }) {
   return (
     <svg
       className={className}
-      viewBox="0 0 24 24"
+      viewBox="2 2 20 20"
       fill="none"
       stroke="currentColor"
       strokeWidth={1.8}

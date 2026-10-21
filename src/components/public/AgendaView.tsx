@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { stageLabel } from "@/lib/front/phase";
-import { liveMatchIds } from "@/lib/front/live";
+import { liveMatchIdsForEtapa } from "@/lib/front/live";
 import { fetchState } from "@/lib/front/api";
 import { ApiError } from "@/lib/front/types";
 import type { StateSnapshot, ScheduleRow, MatchPublic, DesempateMatchInfo } from "@/lib/front/types";
@@ -112,7 +112,10 @@ export function AgendaView({ initial }: { initial: StateSnapshot | null }) {
   }, []);
 
   const liveIds = useMemo(
-    () => (snapshot ? liveMatchIds(snapshot.schedule, snapshot.matchMinutes) : new Set<string>()),
+    () =>
+      snapshot
+        ? liveMatchIdsForEtapa(snapshot.schedule, snapshot.matchMinutes, snapshot.etapa)
+        : new Set<string>(),
     [snapshot],
   );
 
@@ -123,7 +126,7 @@ export function AgendaView({ initial }: { initial: StateSnapshot | null }) {
         <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-4">
           <Link
             href="/"
-            className="flex items-center gap-1 text-sm font-semibold text-stone-700 hover:text-stone-900 transition-colors min-h-[44px] items-center"
+            className="flex items-center gap-1 text-[15px] sm:text-sm font-semibold text-stone-700 hover:text-stone-900 transition-colors min-h-[44px] items-center"
           >
             <span aria-hidden="true">←</span> Volver
           </Link>
@@ -131,7 +134,7 @@ export function AgendaView({ initial }: { initial: StateSnapshot | null }) {
           <button
             onClick={refetch}
             disabled={loading}
-            className="rounded-xl bg-stone-900 px-4 py-2 text-sm font-medium text-white ring-1 ring-inset ring-stone-700/50 hover:bg-stone-800 disabled:opacity-50 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+            className="rounded-xl bg-tierra-900 px-4 py-2 text-[15px] sm:text-sm font-medium text-white ring-1 ring-inset ring-tierra-950/50 hover:bg-tierra-950 disabled:opacity-50 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-sunset-600"
             aria-label="Actualizar agenda"
           >
             {loading ? "Actualizando…" : "Actualizar"}
@@ -144,7 +147,7 @@ export function AgendaView({ initial }: { initial: StateSnapshot | null }) {
         <div className="flex flex-1 items-center justify-center">
           <div className="flex flex-col items-center gap-3">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-amber-700 border-t-transparent" />
-            <span className="text-sm text-stone-600">Cargando agenda…</span>
+            <span className="text-[15px] sm:text-sm text-stone-600">Cargando agenda…</span>
           </div>
         </div>
       )}
@@ -187,13 +190,13 @@ function AgendaContent({
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-6 space-y-8">
       {error && (
-        <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <div className="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-[15px] sm:text-sm text-red-800">
           {error}
         </div>
       )}
 
       {snapshot.schedule.length === 0 ? (
-        <div className="text-center text-sm text-stone-400">
+        <div className="text-center text-[15px] sm:text-sm text-stone-400">
           No hay partidos programados.
         </div>
       ) : (
@@ -218,13 +221,13 @@ function AgendaContent({
                     }`}
                   >
                     {/* Slot / order */}
-                    <span className="flex-shrink-0 text-sm font-semibold text-stone-400 min-w-[3rem]">
+                    <span className="flex-shrink-0 text-[15px] sm:text-sm font-semibold text-stone-400 min-w-[3rem]">
                       {row.slot}
                     </span>
 
                     {/* Team names / match info */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-stone-900">
+                      <p className="text-[15px] sm:text-sm font-medium text-stone-900">
                         {info.teamA && info.teamB ? (
                           <>
                             <span>{info.teamA}</span>
@@ -236,19 +239,19 @@ function AgendaContent({
                         )}
                       </p>
                       {windowText && (
-                        <p className="text-xs text-stone-500">{windowText}</p>
+                        <p className="text-[13px] sm:text-xs text-stone-500">{windowText}</p>
                       )}
                     </div>
 
                     {/* Result / status */}
                     <div className="flex-shrink-0 text-right">
                       {info.status === "PENDING" && isLive ? (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-ember-500">
+                        <span className="inline-flex items-center gap-1.5 text-[13px] sm:text-xs font-semibold text-ember-500">
                           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ember-500" />
                           EN VIVO
                         </span>
                       ) : (
-                        <span className="text-sm font-medium text-stone-700">
+                        <span className="text-[15px] sm:text-sm font-medium text-stone-700">
                           {formatResult(info)}
                         </span>
                       )}

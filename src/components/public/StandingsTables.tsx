@@ -11,7 +11,6 @@ interface StandingsTablesProps {
   zones: Record<ZoneId, TeamPublic[]>;
   liveTeamIds: Set<string>;
   initialZone: ZoneId;
-  onOpenTeam: (team: { id: string; name: string; zone: string }) => void;
 }
 
 /**
@@ -23,7 +22,6 @@ export function StandingsTables({
   zones,
   liveTeamIds,
   initialZone,
-  onOpenTeam,
 }: StandingsTablesProps) {
   const [activeZone, setActiveZone] = useState<ZoneId>(initialZone);
 
@@ -37,10 +35,6 @@ export function StandingsTables({
   const displayZones = zoneList.length > 0 ? zoneList : (["A", "B"] as ZoneId[]);
   const shownZone = displayZones.includes(activeZone) ? activeZone : displayZones[0];
 
-  function openTeamSheet(row: StandingRow) {
-    onOpenTeam({ id: row.teamId, name: row.teamName, zone: row.zone });
-  }
-
   return (
     <div>
       {/* Mobile tabs */}
@@ -51,10 +45,10 @@ export function StandingsTables({
             <button
               key={z}
               onClick={() => setActiveZone(z)}
-              className={`min-h-[44px] flex-1 rounded-lg text-sm font-semibold transition-colors ${
+              className={`min-h-[44px] flex-1 rounded-lg text-[15px] sm:text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sunset-600 ${
                 isActive
-                  ? "bg-amber-700 text-white"
-                  : "bg-sand-100 text-stone-700 hover:bg-sand-200"
+                  ? "bg-tierra-900 text-sand-50"
+                  : "bg-white/80 text-stone-600 hover:bg-white"
               }`}
             >
               {zoneName(z)}
@@ -65,7 +59,7 @@ export function StandingsTables({
 
       {/* Tables grid */}
       <div
-        className={`mt-4 grid grid-cols-1 gap-4 sm:mt-0 sm:gap-4 ${
+        className={`mt-4 grid grid-cols-1 gap-4 sm:mt-0 sm:gap-0 ${
           displayZones.length === 3
             ? "sm:grid-cols-3"
             : displayZones.length === 2
@@ -73,7 +67,7 @@ export function StandingsTables({
               : "sm:grid-cols-1"
         }`}
       >
-        {displayZones.map((z) => {
+        {displayZones.map((z, zi) => {
           const rows = standings[z] ?? [];
           const zoneTeams = zones[z] ?? [];
           const isMobileActive = z === shownZone;
@@ -81,43 +75,46 @@ export function StandingsTables({
           return (
             <div
               key={z}
-              className={isMobileActive ? "" : "hidden sm:block"}
+              className={`${isMobileActive ? "" : "hidden sm:block"} border-t border-sand-300/70 pt-4 sm:border-t-0 sm:pt-0 ${
+                zi > 0 ? "sm:border-l sm:border-sand-300/70 sm:pl-7" : ""
+              } ${zi < displayZones.length - 1 ? "sm:pr-7" : ""}`}
             >
-              <div className="rounded-xl border border-sand-200 bg-white/40 p-3">
+              <div>
                 {/* Zone header */}
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-bold text-stone-800">
+                <div className="flex items-baseline justify-between mb-2">
+                  <h3 className="text-[12px] sm:text-[11px] font-bold uppercase tracking-[0.16em] text-stone-500">
                     {zoneName(z)}
                   </h3>
-                  <span className="inline-flex items-center justify-center rounded-full bg-sand-200 px-2 py-0.5 text-xs font-semibold text-stone-600">
-                    {zoneTeams.length}
+                  <span className="text-[13px] sm:text-xs text-stone-500">
+                    {zoneTeams.length}{" "}
+                    {zoneTeams.length === 1 ? "equipo" : "equipos"}
                   </span>
                 </div>
 
                 {/* Empty state */}
                 {rows.length === 0 && zoneTeams.length === 0 ? (
-                  <p className="py-4 text-center text-sm text-stone-400">
+                  <p className="py-4 text-center text-[15px] sm:text-sm text-stone-400">
                     Sin equipos
                   </p>
                 ) : (
                   <table className="w-full" aria-label={`Posiciones ${zoneName(z)}`}>
                     <thead>
-                      <tr className="border-b border-sand-200 text-xs text-stone-500">
-                        <th className="w-8 py-1 text-left font-semibold">
+                      <tr className="border-b border-sand-300/70 text-[12px] sm:text-[11px] text-stone-500">
+                        <th className="w-7 pb-1 text-left font-semibold">
                           #
                         </th>
-                        <th className="py-1 text-left font-semibold">
+                        <th className="pb-1 text-left font-semibold">
                           Equipo
                         </th>
-                        <th className="py-1 text-right font-semibold">
+                        <th className="pb-1 text-right font-semibold">
                           PJ
                         </th>
-                        <th className="py-1 text-right font-semibold">
+                        <th className="pb-1 text-right font-semibold">
                           G
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-sand-100">
+                    <tbody className="divide-y divide-sand-200/70">
                       {rows.map((row, idx) => {
                         const isLeader = idx === 0;
                         const isLive = liveTeamIds.has(row.teamId);
@@ -125,41 +122,32 @@ export function StandingsTables({
                         return (
                           <tr
                             key={row.teamId}
-                            className={
-                              isLive
-                                ? "bg-sand-50"
-                                : isLeader
-                                  ? "bg-amber-50/40"
-                                  : ""
-                            }
+                            className={isLive ? "bg-white/60" : ""}
                           >
-                            <td className="py-1.5">
+                            <td className="py-2">
                               <span
-                                className={`font-bold ${
-                                  isLeader ? "text-amber-700" : "text-stone-500"
+                                className={`font-display text-base tabular-nums ${
+                                  isLeader ? "text-selva-800" : "text-stone-400"
                                 }`}
                               >
                                 {idx + 1}
                               </span>
                             </td>
-                            <td className="py-1.5">
-                              <button
-                                onClick={() => openTeamSheet(row)}
-                                className="min-h-[44px] w-full text-left truncate text-stone-800 hover:text-amber-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 rounded"
-                              >
+                            <td className="py-2">
+                              <div className="text-[16px] sm:text-[15px] font-medium text-stone-800">
                                 <span className="block truncate">{row.teamName}</span>
                                 {isLive && (
-                                  <span className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-semibold text-ember-500">
+                                  <span className="mt-0.5 inline-flex items-center gap-1 text-[12px] sm:text-[11px] font-medium text-ember-500">
                                     <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ember-500" />
-                                    EN VIVO
+                                    en vivo
                                   </span>
                                 )}
-                              </button>
+                              </div>
                             </td>
-                            <td className="py-1.5 text-right text-sm text-stone-600">
+                            <td className="py-2 text-right font-display text-base tabular-nums text-stone-600">
                               {row.played}
                             </td>
-                            <td className="py-1.5 text-right text-sm text-stone-600">
+                            <td className="py-2 text-right font-display text-base tabular-nums text-stone-600">
                               {row.won}
                             </td>
                           </tr>

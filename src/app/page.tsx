@@ -1,14 +1,13 @@
-import { connection } from "next/server";
+﻿import { connection } from "next/server";
 import { headers } from "next/headers";
 import Link from "next/link";
-import type { Circuit, StateSnapshot } from "@/lib/front/types";
+import type { Circuit, RankingResponse, StateSnapshot } from "@/lib/front/types";
 import {
   GALERIA_FOLDER_POR_DEFECTO,
   listarFotosGaleria,
   urlAlbumDrive,
 } from "@/lib/front/galeria";
 import { PublicHome } from "@/components/public/PublicHome";
-import { betaVersion } from "@/lib/version";
 import { getGalleryFolder } from "@/lib/back";
 
 export default async function Home({
@@ -44,6 +43,7 @@ export default async function Home({
   const fotosGaleria = listarFotosGaleria(carpetaGaleria, 12);
 
   let initial: StateSnapshot | null = null;
+  let initialRanking: RankingResponse | null = null;
   let fetchError = false;
 
   try {
@@ -60,16 +60,28 @@ export default async function Home({
     fetchError = true;
   }
 
+  // El ranking va también desde el servidor: el podio del marcador y el estado
+  // de la etapa se dibujan completos en la primera pintura, sin saltos.
+  try {
+    const res = await fetch(
+      `${proto}://${host}/api/ranking?circuit=${initialCircuit}`,
+      { cache: "no-store" },
+    );
+    if (res.ok) initialRanking = await res.json();
+  } catch {
+    // La tabla es complementaria: si falla, la home sigue.
+  }
+
   const fotos = await fotosGaleria;
 
   return (
     <>
       <PublicHome
         initial={initial}
+        initialRanking={initialRanking}
         initialCircuit={initialCircuit}
         isPreview={isPreview}
-        version={betaVersion()}
-        fotos={fotos}
+          fotos={fotos}
         albumUrl={urlAlbumDrive(carpetaGaleria)}
       />
       {fetchError && (

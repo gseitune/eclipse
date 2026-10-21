@@ -36,12 +36,15 @@ export interface CircuitosSectionProps {
   /** Circuit (annual season) the organizer is working on. */
   readonly circuit: Circuit;
   readonly onCircuitChange: (circuit: Circuit) => void;
+  /** Etapa the panel is actually operating on right now, if any. */
+  readonly currentEtapaId?: string | null;
 }
 
 export function CircuitosSection({
   onBack,
   circuit,
   onCircuitChange,
+  currentEtapaId,
 }: CircuitosSectionProps) {
   const [etapas, setEtapas] = useState<EtapaMeta[]>([]);
   const [loading, setLoading] = useState(true);
@@ -351,7 +354,7 @@ export function CircuitosSection({
             Crear Etapa
           </h2>
         </div>
-        <div className="flex items-center gap-2 text-sm text-stone-400">
+        <div className="flex items-center gap-2 text-[15px] sm:text-sm text-stone-400">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-amber-700 border-t-transparent" />
           Cargando…
         </div>
@@ -390,12 +393,12 @@ export function CircuitosSection({
 
       {/* Create form */}
       <section aria-label="Crear etapa" className="mb-8">
-        <h3 className="text-sm font-semibold text-stone-700 mb-3">
+        <h3 className="text-[15px] sm:text-sm font-semibold text-stone-700 mb-3">
           Crear Etapa
         </h3>
         <form onSubmit={handleCreate} className="rounded-xl border border-sand-200 bg-sand-50 p-5 space-y-4">
           <div>
-            <label htmlFor="circuito-tipo" className="block text-xs font-medium text-stone-600 mb-1">
+            <label htmlFor="circuito-tipo" className="block text-[13px] sm:text-xs font-medium text-stone-600 mb-1">
               Circuito
             </label>
             <select
@@ -403,17 +406,17 @@ export function CircuitosSection({
               value={circuit}
               onChange={(e) => handleCircuitChange(e.target.value as Circuit)}
               disabled={submitting}
-              className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+              className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-[15px] sm:text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
             >
               <option value="PRINCIPIANTES">Principiantes</option>
               <option value="INTERMEDIOS">Intermedios</option>
             </select>
-            <p className="mt-1 text-xs text-stone-400">
+            <p className="mt-1 text-[13px] sm:text-xs text-stone-400">
               Cada circuito tiene su propia numeración y su propia tabla anual.
             </p>
           </div>
           <div>
-            <label htmlFor="circuito-fecha" className="block text-xs font-medium text-stone-600 mb-1">
+            <label htmlFor="circuito-fecha" className="block text-[13px] sm:text-xs font-medium text-stone-600 mb-1">
               Fecha de la etapa
             </label>
             <input
@@ -423,15 +426,15 @@ export function CircuitosSection({
               value={fecha}
               onChange={(e) => setFecha(e.target.value)}
               disabled={submitting}
-              className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+              className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-[15px] sm:text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
             />
-            <p className="mt-1 text-xs text-stone-400">
+            <p className="mt-1 text-[13px] sm:text-xs text-stone-400">
               Ordena el circuito: la etapa más reciente es la que se muestra
               como actual.
             </p>
           </div>
           <div>
-            <label htmlFor="circuito-nombre" className="block text-xs font-medium text-stone-600 mb-1">
+            <label htmlFor="circuito-nombre" className="block text-[13px] sm:text-xs font-medium text-stone-600 mb-1">
               Número del circuito (Etapa)
             </label>
             <select
@@ -440,7 +443,7 @@ export function CircuitosSection({
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
               disabled={submitting || availableNumbers.length === 0}
-              className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+              className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-[15px] sm:text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
             >
               <option value="" disabled>
                 {availableNumbers.length === 0
@@ -454,7 +457,7 @@ export function CircuitosSection({
               ))}
             </select>
             {availableNumbers.length === 0 && (
-              <p className="mt-1 text-xs text-stone-400">
+              <p className="mt-1 text-[13px] sm:text-xs text-stone-400">
                 Se alcanzó el máximo de 8 etapas.
               </p>
             )}
@@ -462,7 +465,7 @@ export function CircuitosSection({
           <div>
             <label
               htmlFor="circuito-formato"
-              className="block text-xs font-medium text-stone-600 mb-1"
+              className="block text-[13px] sm:text-xs font-medium text-stone-600 mb-1"
             >
               Formato
             </label>
@@ -471,7 +474,7 @@ export function CircuitosSection({
               value={effectiveFormato}
               onChange={(e) => setFormato(e.target.value as BracketFormat)}
               disabled={submitting}
-              className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+              className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-[15px] sm:text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
             >
               {validFormats.map((value) => (
                 <option key={value} value={value}>
@@ -479,14 +482,14 @@ export function CircuitosSection({
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-stone-400">
+            <p className="mt-1 text-[13px] sm:text-xs text-stone-400">
               El partido por el tercer puesto se juega siempre.
             </p>
           </div>
           <div>
             <label
               htmlFor="circuito-formato-set"
-              className="block text-xs font-medium text-stone-600 mb-1"
+              className="block text-[13px] sm:text-xs font-medium text-stone-600 mb-1"
             >
               Formato de los partidos
             </label>
@@ -497,7 +500,7 @@ export function CircuitosSection({
                 setFormatoSet(e.target.value as EtapaSetFormat | "STAGE")
               }
               disabled={submitting}
-              className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+              className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-[15px] sm:text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
             >
               <option value="STAGE">
                 Por instancia (zonas a 21, semis 2×15, final mejor de 3)
@@ -507,17 +510,17 @@ export function CircuitosSection({
                 2 sets a 21 (tercer set a 15 si quedan 1-1)
               </option>
             </select>
-            <p className="mt-1 text-xs text-stone-400">
+            <p className="mt-1 text-[13px] sm:text-xs text-stone-400">
               El formato elegido se aplica a todos los partidos de la etapa,
               incluida la final.
             </p>
           </div>
           <div>
-            <span className="block text-xs font-medium text-stone-600 mb-1">
+            <span className="block text-[13px] sm:text-xs font-medium text-stone-600 mb-1">
               Crear Etapa — mixto fijo: un jugador masculino y una jugadora femenina por equipo
             </span>
             {equipos.length === 0 ? (
-              <p className="text-sm text-stone-400 mb-2">
+              <p className="text-[15px] sm:text-sm text-stone-400 mb-2">
                 Todavía no hay equipos cargados.
               </p>
             ) : (
@@ -535,7 +538,7 @@ export function CircuitosSection({
                         onChange={(e) => updateEquipo(index, { maleName: e.target.value })}
                         disabled={submitting}
                         placeholder="Jugador masculino"
-                        className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                        className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-[15px] sm:text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
                       />
                       <input
                         type="text"
@@ -544,7 +547,7 @@ export function CircuitosSection({
                         onChange={(e) => updateEquipo(index, { femaleName: e.target.value })}
                         disabled={submitting}
                         placeholder="Jugadora femenina"
-                        className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                        className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-[15px] sm:text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
                       />
                     </div>
                     <button
@@ -553,7 +556,7 @@ export function CircuitosSection({
                         setEquipos((rows) => rows.filter((_, i) => i !== index))
                       }
                       disabled={submitting}
-                      className="text-xs font-medium text-stone-500 hover:text-red-600 disabled:opacity-50 transition-colors"
+                      className="text-[13px] sm:text-xs font-medium text-stone-500 hover:text-red-600 disabled:opacity-50 transition-colors"
                     >
                       Quitar
                     </button>
@@ -570,11 +573,11 @@ export function CircuitosSection({
                 ])
               }
               disabled={submitting}
-              className="inline-flex items-center gap-1 rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm font-medium text-stone-700 hover:bg-sand-50 disabled:opacity-50 transition-colors min-h-[44px]"
+              className="inline-flex items-center gap-1 rounded-lg border border-sand-300 bg-white px-3 py-2 text-[15px] sm:text-sm font-medium text-stone-700 hover:bg-sand-50 disabled:opacity-50 transition-colors min-h-[44px]"
             >
               + Agregar equipo
             </button>
-            <p className="mt-2 text-xs text-stone-500">
+            <p className="mt-2 text-[13px] sm:text-xs text-stone-500">
               {equipos.length} {equipos.length === 1 ? "equipo" : "equipos"}
               {equipos.length > 0 &&
                 ` · ${threeZones ? "3 zonas" : "2 zonas"}`}
@@ -583,7 +586,7 @@ export function CircuitosSection({
           <button
             type="submit"
             disabled={submitting || !nombre || !fecha || !allRowsFilled}
-            className="w-full rounded-lg bg-amber-600 px-4 py-3 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50 transition-colors min-h-[44px]"
+            className="w-full rounded-lg bg-tierra-900 px-4 py-3 text-[15px] sm:text-sm font-semibold text-white hover:bg-tierra-950 disabled:opacity-50 transition-colors min-h-[44px]"
           >
             {submitting ? "Creando…" : "Crear etapa"}
           </button>
@@ -591,11 +594,11 @@ export function CircuitosSection({
             type="button"
             onClick={handleCreateCancelled}
             disabled={submitting || !nombre || !fecha}
-            className="w-full rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50 transition-colors min-h-[44px]"
+            className="w-full rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[15px] sm:text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50 transition-colors min-h-[44px]"
           >
             🚫 Registrar etapa cancelada por clima
           </button>
-          <p className="text-center text-xs text-stone-400">
+          <p className="text-center text-[13px] sm:text-xs text-stone-400">
             Una etapa cancelada por clima se registra solo con número y fecha: no
             necesita equipos ni genera fixture.
           </p>
@@ -605,9 +608,9 @@ export function CircuitosSection({
       {/* Submit messages */}
       {submitMsg && (
         <div
-          className={`mb-4 rounded-lg px-4 py-3 text-sm font-medium ${
+          className={`mb-4 rounded-lg px-4 py-3 text-[15px] sm:text-sm font-medium ${
             submitMsg.includes("creada") || submitMsg.includes("cerrado")
-              ? "bg-green-50 text-green-700 border border-green-200"
+              ? "bg-selva-50 text-selva-700 border border-selva-200"
               : "bg-red-50 text-red-700 border border-red-200"
           }`}
           role="alert"
@@ -618,11 +621,11 @@ export function CircuitosSection({
 
       {/* Etapa list */}
       <section aria-label="Lista de etapas">
-        <h3 className="text-sm font-semibold text-stone-700 mb-3">
+        <h3 className="text-[15px] sm:text-sm font-semibold text-stone-700 mb-3">
           Etapas ({etapas.length})
         </h3>
         {etapas.length === 0 ? (
-          <p className="text-sm text-stone-400">
+          <p className="text-[15px] sm:text-sm text-stone-400">
             Aún no hay etapas creadas.
           </p>
         ) : (
@@ -630,20 +633,30 @@ export function CircuitosSection({
             {etapasPorNumero.map((etapa) => (
               <li
                 key={etapa.id}
-                className="flex items-center justify-between rounded-xl border border-sand-200 bg-white/40 px-4 py-3"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-sand-200 bg-white/40 px-4 py-3"
               >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-stone-900">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="truncate text-[15px] sm:text-sm font-semibold text-stone-900">
                       {etapa.name}
                     </span>
+                    {etapa.id === currentEtapaId && (
+                      <span className="rounded-full bg-selva-100 px-2 py-0.5 text-[11px] sm:text-[10px] font-bold uppercase tracking-wide text-selva-800">
+                        Actual
+                      </span>
+                    )}
+                    {etapa.closedAt && (
+                      <span className="rounded-full bg-sand-200 px-2 py-0.5 text-[11px] sm:text-[10px] font-bold uppercase tracking-wide text-stone-600">
+                        Finalizada
+                      </span>
+                    )}
                     {etapa.cancelledAt && (
-                      <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-700 ring-1 ring-inset ring-red-200">
+                      <span className="rounded-full bg-ember-50 px-2 py-0.5 text-[11px] sm:text-[10px] font-bold uppercase tracking-wide text-ember-600 ring-1 ring-inset ring-ember-200">
                         Cancelada
                       </span>
                     )}
                   </div>
-                  <div className="mt-0.5 flex items-center gap-2 text-xs text-stone-500">
+                  <div className="mt-0.5 flex items-center gap-2 text-[13px] sm:text-xs text-stone-500">
                     <span>{formatDateEs(etapa.date)}</span>
                     <span>·</span>
                     <span>{etapa.teamCount} equipos</span>
@@ -655,7 +668,7 @@ export function CircuitosSection({
                       <button
                         type="button"
                         onClick={() => openEditModal(etapa)}
-                        className="rounded-lg border border-sand-300 bg-white px-3 py-2 text-xs font-semibold text-stone-700 hover:bg-sand-100 transition-colors min-h-[44px]"
+                        className="rounded-lg border border-sand-300 bg-white px-3 py-2 text-[13px] sm:text-xs font-semibold text-stone-700 hover:bg-sand-100 transition-colors min-h-[44px]"
                       >
                         ✏️ Editar
                       </button>
@@ -663,7 +676,7 @@ export function CircuitosSection({
                     <button
                       type="button"
                       onClick={() => openCancelModal(etapa)}
-                      className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors min-h-[44px]"
+                      className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[13px] sm:text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors min-h-[44px]"
                     >
                       🚫 Cancelar fecha
                     </button>
@@ -677,7 +690,7 @@ export function CircuitosSection({
                         setDeleteMsg(null);
                         setDeleteTarget(etapa);
                       }}
-                      className="rounded-lg border border-red-300 bg-white px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 transition-colors min-h-[44px]"
+                      className="rounded-lg border border-red-300 bg-white px-3 py-2 text-[13px] sm:text-xs font-semibold text-red-700 hover:bg-red-50 transition-colors min-h-[44px]"
                     >
                       🗑️ Eliminar
                     </button>
@@ -701,7 +714,7 @@ export function CircuitosSection({
             <h3 className="text-base font-semibold text-stone-900">
               Editar {editTarget.name}
             </h3>
-            <p className="mt-2 text-sm text-stone-600">
+            <p className="mt-2 text-[15px] sm:text-sm text-stone-600">
               Sólo se editan el nombre y la fecha. Los equipos de la etapa no se
               modifican: sólo cambian entre etapas.
             </p>
@@ -709,7 +722,7 @@ export function CircuitosSection({
               <div>
                 <label
                   htmlFor="edit-name"
-                  className="block text-xs font-medium text-stone-600 mb-1"
+                  className="block text-[13px] sm:text-xs font-medium text-stone-600 mb-1"
                 >
                   Nombre de la etapa
                 </label>
@@ -720,13 +733,13 @@ export function CircuitosSection({
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   disabled={editing}
-                  className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                  className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-[15px] sm:text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
                 />
               </div>
               <div>
                 <label
                   htmlFor="edit-date"
-                  className="block text-xs font-medium text-stone-600 mb-1"
+                  className="block text-[13px] sm:text-xs font-medium text-stone-600 mb-1"
                 >
                   Fecha
                 </label>
@@ -736,12 +749,12 @@ export function CircuitosSection({
                   value={editDate}
                   onChange={(e) => setEditDate(e.target.value)}
                   disabled={editing}
-                  className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                  className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-[15px] sm:text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
                 />
               </div>
               {editMsg && (
                 <p
-                  className="rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700 border border-red-200"
+                  className="rounded-lg bg-red-50 px-3 py-2 text-[13px] sm:text-xs font-medium text-red-700 border border-red-200"
                   role="alert"
                 >
                   {editMsg}
@@ -752,14 +765,14 @@ export function CircuitosSection({
                   type="button"
                   onClick={closeEditModal}
                   disabled={editing}
-                  className="rounded-lg border border-sand-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 hover:bg-sand-50 transition-colors min-h-[44px]"
+                  className="rounded-lg border border-sand-300 bg-white px-4 py-2.5 text-[15px] sm:text-sm font-medium text-stone-600 hover:bg-sand-50 transition-colors min-h-[44px]"
                 >
                   Volver
                 </button>
                 <button
                   type="submit"
                   disabled={editing || !editName.trim()}
-                  className="rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50 transition-colors min-h-[44px]"
+                  className="rounded-lg bg-tierra-900 px-4 py-2.5 text-[15px] sm:text-sm font-semibold text-white hover:bg-tierra-950 disabled:opacity-50 transition-colors min-h-[44px]"
                 >
                   {editing ? "Guardando…" : "Guardar cambios"}
                 </button>
@@ -781,13 +794,13 @@ export function CircuitosSection({
             <h3 className="text-base font-semibold text-stone-900">
               Eliminar {deleteTarget.name}
             </h3>
-            <p className="mt-2 text-sm text-stone-600">
+            <p className="mt-2 text-[15px] sm:text-sm text-stone-600">
               Se borra la etapa cancelada con sus equipos y partidos, y el número
               vuelve a quedar disponible. <strong>No se puede deshacer.</strong>
             </p>
             {deleteMsg && (
               <p
-                className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700 border border-red-200"
+                className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-[13px] sm:text-xs font-medium text-red-700 border border-red-200"
                 role="alert"
               >
                 {deleteMsg}
@@ -798,7 +811,7 @@ export function CircuitosSection({
                 type="button"
                 onClick={() => setDeleteTarget(null)}
                 disabled={deleting}
-                className="rounded-lg border border-sand-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 hover:bg-sand-50 transition-colors min-h-[44px]"
+                className="rounded-lg border border-sand-300 bg-white px-4 py-2.5 text-[15px] sm:text-sm font-medium text-stone-600 hover:bg-sand-50 transition-colors min-h-[44px]"
               >
                 Volver
               </button>
@@ -806,7 +819,7 @@ export function CircuitosSection({
                 type="button"
                 onClick={handleDeleteConfirm}
                 disabled={deleting}
-                className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50 transition-colors min-h-[44px]"
+                className="rounded-lg bg-red-600 px-4 py-2.5 text-[15px] sm:text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50 transition-colors min-h-[44px]"
               >
                 {deleting ? "Eliminando…" : "Sí, eliminar"}
               </button>
@@ -827,14 +840,14 @@ export function CircuitosSection({
             <h3 className="text-base font-semibold text-stone-900">
               Cancelar {cancelTarget.name}
             </h3>
-            <p className="mt-2 text-sm text-stone-600">
+            <p className="mt-2 text-[15px] sm:text-sm text-stone-600">
               Se cancela la fecha de la etapa. No se borran datos.
             </p>
             <form onSubmit={handleCancelConfirm} className="mt-4 space-y-4">
               <div>
                 <label
                   htmlFor="cancel-password"
-                  className="block text-xs font-medium text-stone-600 mb-1"
+                  className="block text-[13px] sm:text-xs font-medium text-stone-600 mb-1"
                 >
                   Contraseña del organizador
                 </label>
@@ -846,12 +859,12 @@ export function CircuitosSection({
                   value={cancelPassword}
                   onChange={(e) => setCancelPassword(e.target.value)}
                   disabled={cancelling}
-                  className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                  className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-[15px] sm:text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
                 />
               </div>
               {cancelMsg && (
                 <p
-                  className="rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700 border border-red-200"
+                  className="rounded-lg bg-red-50 px-3 py-2 text-[13px] sm:text-xs font-medium text-red-700 border border-red-200"
                   role="alert"
                 >
                   {cancelMsg}
@@ -862,14 +875,14 @@ export function CircuitosSection({
                   type="button"
                   onClick={closeCancelModal}
                   disabled={cancelling}
-                  className="rounded-lg border border-sand-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 hover:bg-sand-50 transition-colors min-h-[44px]"
+                  className="rounded-lg border border-sand-300 bg-white px-4 py-2.5 text-[15px] sm:text-sm font-medium text-stone-600 hover:bg-sand-50 transition-colors min-h-[44px]"
                 >
                   Volver
                 </button>
                 <button
                   type="submit"
                   disabled={cancelling || !cancelPassword}
-                  className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50 transition-colors min-h-[44px]"
+                  className="rounded-lg bg-red-600 px-4 py-2.5 text-[15px] sm:text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50 transition-colors min-h-[44px]"
                 >
                   {cancelling ? "Cancelando…" : "Confirmar cancelación"}
                 </button>

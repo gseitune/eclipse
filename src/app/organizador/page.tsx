@@ -18,7 +18,7 @@ export default async function OrganizadorPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center">
-      <div className="w-full max-w-md px-6">
+      <div className="w-full max-w-md px-4 sm:px-6">
         <OrganizerLogin />
       </div>
     </main>

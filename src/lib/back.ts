@@ -2136,7 +2136,12 @@ export async function editResult(input: EditResultInput) {
     recordedAt: new Date(),
   };
 
-  if (playedDescendants > 0 && input.cascade) {
+  // A correction that keeps the same winner does not invalidate anything
+  // downstream: the bracket is fed by the winner, not by the score. Cascading
+  // there would erase a whole played chain to fix a single digit.
+  const winnerChanged = payload.winnerId !== match.winnerId;
+
+  if (playedDescendants > 0 && input.cascade && winnerChanged) {
     // Cascade correction: clear the invalidated chain INSIDE the same
     // transaction as the edit. reconcileAfterMatch and fillDescendantMatches
     // below then re-derive the bracket from the corrected result.

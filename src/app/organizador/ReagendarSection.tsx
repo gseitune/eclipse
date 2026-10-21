@@ -166,12 +166,12 @@ export function ReagendarSection({ onBack, readOnly = false }: ReagendarSectionP
           </button>
           <h2 className="text-lg font-semibold text-stone-900">Agenda de partidos</h2>
           {readOnly && (
-            <span className="ml-auto rounded-full bg-stone-200 px-2.5 py-0.5 text-xs font-semibold text-stone-600">
+            <span className="ml-auto rounded-full bg-stone-200 px-2.5 py-0.5 text-[13px] sm:text-xs font-semibold text-stone-600">
               Sólo lectura
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2 text-sm text-stone-400">
+        <div className="flex items-center gap-2 text-[15px] sm:text-sm text-stone-400">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-amber-700 border-t-transparent" />
           Cargando…
         </div>
@@ -208,12 +208,12 @@ export function ReagendarSection({ onBack, readOnly = false }: ReagendarSectionP
 
       {/* Error state */}
       {error && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[15px] sm:text-sm text-red-700 flex items-center justify-between">
           <span>{error}</span>
           <button
             type="button"
             onClick={refetch}
-            className="rounded-md border border-red-300 bg-red-100 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-200 transition-colors min-h-[44px]"
+            className="rounded-md border border-red-300 bg-red-100 px-3 py-1 text-[13px] sm:text-xs font-semibold text-red-700 hover:bg-red-200 transition-colors min-h-[44px]"
           >
             Reintentar
           </button>
@@ -235,20 +235,20 @@ export function ReagendarSection({ onBack, readOnly = false }: ReagendarSectionP
                 className="flex items-center gap-3 rounded-xl border border-sand-200 bg-sand-50 px-4 py-3 hover:bg-sand-100 transition-colors"
               >
                 {/* Order number */}
-                <span className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full bg-stone-200 text-xs font-bold text-stone-700">
+                <span className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full bg-stone-200 text-[13px] sm:text-xs font-bold text-stone-700">
                   {row.slot}
                 </span>
 
                 {/* Window + stage + teams */}
                 <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium text-stone-900">
+                  <span className="text-[15px] sm:text-sm font-medium text-stone-900">
                     {windowText(row) || "—"}
                   </span>
                   <span className="mx-1.5 text-stone-300">·</span>
-                  <span className="text-xs text-stone-500">
+                  <span className="text-[13px] sm:text-xs text-stone-500">
                     {stageLabel(row.stage)}
                   </span>
-                  <div className="text-sm text-stone-600 mt-0.5">
+                  <div className="text-[15px] sm:text-sm text-stone-600 mt-0.5">
                     {row.teamA && row.teamB
                       ? `${row.teamA.name} vs ${row.teamB.name}`
                       : "Por definir"}
@@ -257,7 +257,7 @@ export function ReagendarSection({ onBack, readOnly = false }: ReagendarSectionP
 
                 {/* Status chip */}
                 <span
-                  className={`flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                  className={`flex-shrink-0 rounded-full px-2.5 py-0.5 text-[13px] sm:text-xs font-semibold ${
                     isPending
                       ? "bg-amber-100 text-amber-700"
                       : "bg-stone-200 text-stone-600"
@@ -304,7 +304,7 @@ export function ReagendarSection({ onBack, readOnly = false }: ReagendarSectionP
 
         {/* Row-level errors */}
         {Object.entries(rowErrors).map(([id, msg]) => (
-          <p key={id} className="mt-1 text-xs text-red-500">
+          <p key={id} className="mt-1 text-[13px] sm:text-xs text-red-500">
             {msg}
           </p>
         ))}

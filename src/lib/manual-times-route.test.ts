@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { describe, it, before, after } from "node:test";
 
 /**
- * Tests for POST /api/matches/[id]/times â€” organizer manual time updates.
+ * Tests for POST /api/matches/[id]/times — organizer manual time updates.
  * Uses a throwaway SQLite database via prisma db push,
  * mirroring the pattern in back.integration.test.ts and auth.test.ts.
  * NextRequest is constructed with a session cookie for auth tests.

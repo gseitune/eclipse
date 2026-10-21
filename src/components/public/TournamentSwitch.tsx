@@ -23,7 +23,7 @@ export function TournamentSwitch({
     <div
       role="tablist"
       aria-label="Elegir torneo"
-      className="inline-flex rounded-full border border-sand-300 bg-white/60 p-1 shadow-sm backdrop-blur"
+      className="inline-flex w-full max-w-sm gap-1 rounded-2xl border border-stone-300 bg-white/80 p-1"
     >
       {OPTIONS.map((option) => {
         const active = option.id === value;
@@ -34,13 +34,13 @@ export function TournamentSwitch({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(option.id)}
-            className={`inline-flex min-h-[40px] items-center gap-1.5 rounded-full px-4 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 ${
+            className={`flex min-h-[48px] flex-1 items-center justify-center rounded-xl px-3 font-display text-[16px] sm:text-[15px] tracking-wide transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-selva-600 ${
               active
-                ? "bg-sun-500/90 text-stone-900 shadow"
-                : "text-stone-600 hover:bg-sand-100"
+                ? "bg-tierra-900 text-sand-50"
+                : "text-stone-600 hover:bg-white"
             }`}
           >
-            {option.label}
+            {option.label.toUpperCase()}
           </button>
         );
       })}

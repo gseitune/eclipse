@@ -58,7 +58,7 @@ function CheckIcon() {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      className="h-5 w-5 flex-shrink-0 text-green-600"
+      className="h-5 w-5 flex-shrink-0 text-selva-600"
       viewBox="0 0 20 20"
       fill="currentColor"
       aria-hidden="true"
@@ -397,7 +397,7 @@ export function ResultadoEntryPanel({
     <div className="space-y-6">
       {/* ── Match scoreboard ── */}
       <section aria-label="Cargar resultado" className="mb-6">
-        <h3 className="text-sm font-semibold text-stone-700 mb-3">
+        <h3 className="text-[15px] sm:text-sm font-semibold text-stone-700 mb-3">
           Cargar resultado
         </h3>
 
@@ -405,7 +405,7 @@ export function ResultadoEntryPanel({
           /* Inactive board — gray with lock */
           <div className="flex items-center justify-center gap-2 rounded-xl border border-sand-200 bg-stone-100/70 px-6 py-10 text-stone-400">
             <LockIcon />
-            <span className="text-sm font-medium">
+            <span className="text-[15px] sm:text-sm font-medium">
               Sin partido activo
             </span>
           </div>
@@ -414,16 +414,16 @@ export function ResultadoEntryPanel({
             {/* Match label + window */}
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
-                <span className="text-xs font-medium text-stone-500 uppercase tracking-wide">
+                <span className="text-[13px] sm:text-xs font-medium text-stone-500 uppercase tracking-wide">
                   {stageLabel(nextMatch.stage)}
                 </span>
                 {hasManualTime ? (
-                  <p className="text-xs text-stone-400 mt-0.5">
+                  <p className="text-[13px] sm:text-xs text-stone-400 mt-0.5">
                     {manualRange}
                   </p>
                 ) : (
                   windowText(schedule, nextMatch.id) && (
-                    <p className="text-xs text-stone-400 mt-0.5">
+                    <p className="text-[13px] sm:text-xs text-stone-400 mt-0.5">
                       {windowText(schedule, nextMatch.id)}
                     </p>
                   )
@@ -431,7 +431,7 @@ export function ResultadoEntryPanel({
                 <button
                   type="button"
                   onClick={openTimeModal}
-                  className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-sand-300 bg-white px-2 py-1 text-[11px] font-medium text-stone-600 ring-1 ring-inset ring-sand-200 hover:bg-sand-100 transition-colors min-h-[28px]"
+                  className="mt-1.5 inline-flex items-center gap-1 rounded-md border border-sand-300 bg-white px-2 py-1 text-[12px] sm:text-[11px] font-medium text-stone-600 ring-1 ring-inset ring-sand-200 hover:bg-sand-100 transition-colors min-h-[28px]"
                 >
                   ⏰ {hasManualTime ? "Editar horario" : "Cargar horario"}
                 </button>
@@ -447,7 +447,7 @@ export function ResultadoEntryPanel({
                   role="tab"
                   aria-selected={activeTab === "sets"}
                   onClick={() => { setActiveTab("sets"); setSubmitMsg(null); }}
-                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors min-h-[44px] ${
+                  className={`px-3 py-2 text-[15px] sm:text-sm font-medium rounded-md transition-colors min-h-[44px] ${
                     activeTab === "sets"
                       ? "bg-white text-stone-900 shadow-sm"
                       : "text-stone-500 hover:text-stone-700"
@@ -460,7 +460,7 @@ export function ResultadoEntryPanel({
                   role="tab"
                   aria-selected={activeTab === "winner"}
                   onClick={() => { setActiveTab("winner"); setSubmitMsg(null); }}
-                  className={`px-3 py-2 text-sm font-medium rounded-md transition-colors min-h-[44px] ${
+                  className={`px-3 py-2 text-[15px] sm:text-sm font-medium rounded-md transition-colors min-h-[44px] ${
                     activeTab === "winner"
                       ? "bg-white text-stone-900 shadow-sm"
                       : "text-stone-500 hover:text-stone-700"
@@ -474,21 +474,21 @@ export function ResultadoEntryPanel({
             {/* Sets scoreboard — teams on each side, number in the middle */}
             {activeTab === "sets" && (
               <div className="space-y-4">
-                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
                   {/* Team A */}
-                  <div className="text-right">
+                  <div className="text-left sm:text-right">
                     <span className="block text-base font-semibold text-stone-900">
                       {nextMatch.teamA?.name ?? "Equipo A"}
                     </span>
                     {nextMatch.teamA && (
-                      <span className="block text-[11px] text-stone-400 mt-0.5">
+                      <span className="block text-[12px] sm:text-[11px] text-stone-400 mt-0.5">
                         Equipo A
                       </span>
                     )}
                   </div>
 
                   {/* Middle score */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-center gap-2 sm:justify-start">
                     <label htmlFor="set-a" className="sr-only">
                       Sets del equipo A
                     </label>
@@ -526,7 +526,7 @@ export function ResultadoEntryPanel({
                       {nextMatch.teamB?.name ?? "Equipo B"}
                     </span>
                     {nextMatch.teamB && (
-                      <span className="block text-[11px] text-stone-400 mt-0.5">
+                      <span className="block text-[12px] sm:text-[11px] text-stone-400 mt-0.5">
                         Equipo B
                       </span>
                     )}
@@ -537,7 +537,7 @@ export function ResultadoEntryPanel({
                   <div>
                     <label
                       htmlFor="resultado-formato"
-                      className="block text-xs font-medium text-stone-600 mb-1"
+                      className="block text-[13px] sm:text-xs font-medium text-stone-600 mb-1"
                     >
                       Formato del partido
                     </label>
@@ -548,7 +548,7 @@ export function ResultadoEntryPanel({
                         setFormatChoice(e.target.value as SetFormatId)
                       }
                       disabled={submitting}
-                      className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                      className="w-full rounded-lg border border-sand-300 bg-white px-3 py-2 text-[15px] sm:text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
                     >
                       {allowedFormats.map((format) => (
                         <option key={format} value={format}>
@@ -559,14 +559,14 @@ export function ResultadoEntryPanel({
                   </div>
                 )}
 
-                <p className="text-[11px] text-stone-500">
+                <p className="text-[12px] sm:text-[11px] text-stone-500">
                   {setFormatHint(activeFormat)}
                 </p>
 
                 {needsSecondSet && (
                   <div className="space-y-3 rounded-lg border border-sand-200 bg-white/60 p-3">
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-xs font-medium text-stone-600">
+                      <span className="text-[13px] sm:text-xs font-medium text-stone-600">
                         Segundo set
                       </span>
                       <div className="flex items-center gap-2">
@@ -582,7 +582,7 @@ export function ResultadoEntryPanel({
                           onChange={(e) => setSet2A(e.target.value)}
                           disabled={submitting}
                           placeholder="0"
-                          className="w-16 rounded-lg border border-sand-300 bg-white px-2 py-2 text-center text-base font-bold text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                          className="w-14 rounded-lg border border-sand-300 bg-white px-2 py-2 text-center text-base font-bold sm:w-16 text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
                         />
                         <span className="text-stone-400 font-bold">:</span>
                         <label htmlFor="set2-b" className="sr-only">
@@ -597,14 +597,14 @@ export function ResultadoEntryPanel({
                           onChange={(e) => setSet2B(e.target.value)}
                           disabled={submitting}
                           placeholder="0"
-                          className="w-16 rounded-lg border border-sand-300 bg-white px-2 py-2 text-center text-base font-bold text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                          className="w-14 rounded-lg border border-sand-300 bg-white px-2 py-2 text-center text-base font-bold sm:w-16 text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
                         />
                       </div>
                     </div>
 
                     {showThirdSet && (
                       <div className="flex items-center justify-between gap-3 border-t border-sand-200 pt-3">
-                        <span className="text-xs font-medium text-stone-600">
+                        <span className="text-[13px] sm:text-xs font-medium text-stone-600">
                           Tercer set (van 1-1)
                         </span>
                         <div className="flex items-center gap-2">
@@ -620,7 +620,7 @@ export function ResultadoEntryPanel({
                             onChange={(e) => setSet3A(e.target.value)}
                             disabled={submitting}
                             placeholder="0"
-                            className="w-16 rounded-lg border border-sand-300 bg-white px-2 py-2 text-center text-base font-bold text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                            className="w-14 rounded-lg border border-sand-300 bg-white px-2 py-2 text-center text-base font-bold sm:w-16 text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
                           />
                           <span className="text-stone-400 font-bold">:</span>
                           <label htmlFor="set3-b" className="sr-only">
@@ -635,7 +635,7 @@ export function ResultadoEntryPanel({
                             onChange={(e) => setSet3B(e.target.value)}
                             disabled={submitting}
                             placeholder="0"
-                            className="w-16 rounded-lg border border-sand-300 bg-white px-2 py-2 text-center text-base font-bold text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                            className="w-14 rounded-lg border border-sand-300 bg-white px-2 py-2 text-center text-base font-bold sm:w-16 text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
                           />
                         </div>
                       </div>
@@ -647,7 +647,7 @@ export function ResultadoEntryPanel({
                   type="button"
                   onClick={handleSetsSubmit}
                   disabled={submitting || !setAScore || !setBScore}
-                  className="w-full rounded-lg bg-amber-600 px-4 py-3 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50 transition-colors min-h-[44px]"
+                  className="w-full rounded-lg bg-tierra-900 px-4 py-3 text-[15px] sm:text-sm font-semibold text-white hover:bg-tierra-950 disabled:opacity-50 transition-colors min-h-[44px]"
                 >
                   {submitting ? "Cargando…" : "Cargar resultado"}
                 </button>
@@ -663,7 +663,7 @@ export function ResultadoEntryPanel({
                   disabled={submitting || !nextMatch.teamAId}
                   className="flex-1 rounded-xl border-2 border-sand-300 bg-white py-4 px-4 text-center font-semibold text-stone-900 hover:border-amber-soft-400 hover:bg-amber-50 disabled:opacity-50 transition-colors min-h-[44px]"
                 >
-                  <span className="block text-sm text-stone-500 mb-1">Gana</span>
+                  <span className="block text-[15px] sm:text-sm text-stone-500 mb-1">Gana</span>
                   <span className="text-base">{nextMatch.teamA?.name ?? "Equipo A"}</span>
                 </button>
                 <button
@@ -672,7 +672,7 @@ export function ResultadoEntryPanel({
                   disabled={submitting || !nextMatch.teamBId}
                   className="flex-1 rounded-xl border-2 border-sand-300 bg-white py-4 px-4 text-center font-semibold text-stone-900 hover:border-amber-soft-400 hover:bg-amber-50 disabled:opacity-50 transition-colors min-h-[44px]"
                 >
-                  <span className="block text-sm text-stone-500 mb-1">Gana</span>
+                  <span className="block text-[15px] sm:text-sm text-stone-500 mb-1">Gana</span>
                   <span className="text-base">{nextMatch.teamB?.name ?? "Equipo B"}</span>
                 </button>
               </div>
@@ -681,9 +681,9 @@ export function ResultadoEntryPanel({
             {/* Submit message */}
             {submitMsg && (
               <div
-                className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium ${
+                className={`flex items-center gap-2 rounded-lg px-4 py-3 text-[15px] sm:text-sm font-medium ${
                   submitMsg === "Resultado cargado"
-                    ? "bg-green-50 text-green-700 border border-green-200"
+                    ? "bg-selva-50 text-selva-700 border border-selva-200"
                     : "bg-red-50 text-red-700 border border-red-200"
                 }`}
                 role="alert"
@@ -695,10 +695,10 @@ export function ResultadoEntryPanel({
 
             {/* Loading indicator */}
             {loading && (
-              <p className="text-xs text-stone-400">Actualizando…</p>
+              <p className="text-[13px] sm:text-xs text-stone-400">Actualizando…</p>
             )}
             {error && !submitMsg && (
-              <p className="text-xs text-red-500">{error}</p>
+              <p className="text-[13px] sm:text-xs text-red-500">{error}</p>
             )}
           </div>
         )}
@@ -716,7 +716,7 @@ export function ResultadoEntryPanel({
             <h3 className="text-base font-semibold text-stone-900">
               Horario del partido
             </h3>
-            <p className="mt-1 text-sm text-stone-500">
+            <p className="mt-1 text-[15px] sm:text-sm text-stone-500">
               {nextMatch.teamA?.name ?? "Equipo A"} vs{" "}
               {nextMatch.teamB?.name ?? "Equipo B"}
             </p>
@@ -725,7 +725,7 @@ export function ResultadoEntryPanel({
               <div>
                 <label
                   htmlFor="time-start"
-                  className="block text-xs font-medium text-stone-600 mb-1"
+                  className="block text-[13px] sm:text-xs font-medium text-stone-600 mb-1"
                 >
                   Inicio
                 </label>
@@ -736,13 +736,13 @@ export function ResultadoEntryPanel({
                     value={timeStart}
                     onChange={(e) => setTimeStart(e.target.value)}
                     disabled={timeSaving}
-                    className="flex-1 rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                    className="flex-1 rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-[15px] sm:text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
                   />
                   <button
                     type="button"
                     onClick={() => setTimeStart(toDatetimeLocal(new Date()))}
                     disabled={timeSaving}
-                    className="shrink-0 rounded-lg border border-sand-300 bg-sand-50 px-3 py-2.5 text-sm font-medium text-stone-600 hover:bg-sand-100 disabled:opacity-50 transition-colors min-h-[44px]"
+                    className="shrink-0 rounded-lg border border-sand-300 bg-sand-50 px-3 py-2.5 text-[15px] sm:text-sm font-medium text-stone-600 hover:bg-sand-100 disabled:opacity-50 transition-colors min-h-[44px]"
                   >
                     Ahora mismo
                   </button>
@@ -752,7 +752,7 @@ export function ResultadoEntryPanel({
               <div>
                 <label
                   htmlFor="time-end"
-                  className="block text-xs font-medium text-stone-600 mb-1"
+                  className="block text-[13px] sm:text-xs font-medium text-stone-600 mb-1"
                 >
                   Fin
                 </label>
@@ -763,13 +763,13 @@ export function ResultadoEntryPanel({
                     value={timeEnd}
                     onChange={(e) => setTimeEnd(e.target.value)}
                     disabled={timeSaving}
-                    className="flex-1 rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                    className="flex-1 rounded-lg border border-sand-300 bg-white px-3 py-2.5 text-[15px] sm:text-sm text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
                   />
                   <button
                     type="button"
                     onClick={() => setTimeEnd(toDatetimeLocal(new Date()))}
                     disabled={timeSaving}
-                    className="shrink-0 rounded-lg border border-sand-300 bg-sand-50 px-3 py-2.5 text-sm font-medium text-stone-600 hover:bg-sand-100 disabled:opacity-50 transition-colors min-h-[44px]"
+                    className="shrink-0 rounded-lg border border-sand-300 bg-sand-50 px-3 py-2.5 text-[15px] sm:text-sm font-medium text-stone-600 hover:bg-sand-100 disabled:opacity-50 transition-colors min-h-[44px]"
                   >
                     Ahora mismo
                   </button>
@@ -778,7 +778,7 @@ export function ResultadoEntryPanel({
 
               {timeError && (
                 <p
-                  className="rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700 border border-red-200"
+                  className="rounded-lg bg-red-50 px-3 py-2 text-[13px] sm:text-xs font-medium text-red-700 border border-red-200"
                   role="alert"
                 >
                   {timeError}
@@ -790,7 +790,7 @@ export function ResultadoEntryPanel({
                   type="button"
                   onClick={handleRemoveTimes}
                   disabled={timeSaving || (!hasManualTime && !timeStart && !timeEnd)}
-                  className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50 transition-colors min-h-[44px]"
+                  className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-[15px] sm:text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50 transition-colors min-h-[44px]"
                 >
                   Quitar horario
                 </button>
@@ -799,7 +799,7 @@ export function ResultadoEntryPanel({
                     type="button"
                     onClick={closeTimeModal}
                     disabled={timeSaving}
-                    className="rounded-lg border border-sand-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 hover:bg-sand-50 disabled:opacity-50 transition-colors min-h-[44px]"
+                    className="rounded-lg border border-sand-300 bg-white px-4 py-2.5 text-[15px] sm:text-sm font-medium text-stone-600 hover:bg-sand-50 disabled:opacity-50 transition-colors min-h-[44px]"
                   >
                     Volver
                   </button>
@@ -807,7 +807,7 @@ export function ResultadoEntryPanel({
                     type="button"
                     onClick={handleSaveTimes}
                     disabled={timeSaving || (!timeStart && !timeEnd)}
-                    className="rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50 transition-colors min-h-[44px]"
+                    className="rounded-lg bg-tierra-900 px-4 py-2.5 text-[15px] sm:text-sm font-semibold text-white hover:bg-tierra-950 disabled:opacity-50 transition-colors min-h-[44px]"
                   >
                     {timeSaving ? "Guardando…" : "Guardar horario"}
                   </button>
@@ -998,7 +998,7 @@ export function CorregirResultadosPanel({
         aria-label="Corregir resultados trabados"
         className="rounded-xl border border-sand-200 bg-stone-100/70 p-5"
       >
-        <p className="text-xs font-medium text-red-700" role="alert">
+        <p className="text-[13px] sm:text-xs font-medium text-red-700" role="alert">
           {boardError}
         </p>
       </section>
@@ -1020,10 +1020,10 @@ export function CorregirResultadosPanel({
         className="rounded-xl border border-sand-300 bg-sand-50 p-5 space-y-3"
       >
         <div>
-          <span className="block text-sm font-semibold text-stone-900">
+          <span className="block text-[15px] sm:text-sm font-semibold text-stone-900">
             Corregir resultados
           </span>
-          <span className="mt-0.5 block text-xs text-stone-500">
+          <span className="mt-0.5 block text-[13px] sm:text-xs text-stone-500">
             {readOnly
               ? "Etapa finalizada: los resultados quedan sólo para consulta."
               : "Todos los partidos jugados de esta etapa. Corregir uno borra solo la cadena afectada y la vuelve a calcular."}
@@ -1032,7 +1032,7 @@ export function CorregirResultadosPanel({
 
         {doneMsg && (
           <p
-            className="rounded-lg bg-green-50 px-3 py-2 text-xs font-medium text-green-700 border border-green-200"
+            className="rounded-lg bg-selva-50 px-3 py-2 text-[13px] sm:text-xs font-medium text-selva-700 border border-selva-200"
             role="alert"
           >
             {doneMsg}
@@ -1046,11 +1046,11 @@ export function CorregirResultadosPanel({
               className="flex items-center justify-between gap-3 rounded-lg border border-sand-200 bg-white px-4 py-3"
             >
               <div className="min-w-0">
-                <span className="block truncate text-sm font-semibold text-stone-900">
+                <span className="block truncate text-[15px] sm:text-sm font-semibold text-stone-900">
                   {stageLabel(row.stage)} — {row.teamA?.name ?? "Equipo A"} vs{" "}
                   {row.teamB?.name ?? "Equipo B"}
                 </span>
-                <span className="mt-0.5 block text-xs text-stone-500">
+                <span className="mt-0.5 block text-[13px] sm:text-xs text-stone-500">
                   {scoreText(row)}
                 </span>
               </div>
@@ -1058,7 +1058,7 @@ export function CorregirResultadosPanel({
                 <button
                   type="button"
                   onClick={() => openCorrection(row)}
-                  className="shrink-0 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-amber-700 min-h-[36px]"
+                  className="shrink-0 rounded-lg bg-tierra-900 px-3 py-2 text-[13px] sm:text-xs font-semibold text-white transition-colors hover:bg-tierra-950 min-h-[36px]"
                 >
                   Corregir
                 </button>
@@ -1081,7 +1081,7 @@ export function CorregirResultadosPanel({
               <h3 className="text-base font-semibold text-stone-900">
                 Corregir resultado
               </h3>
-              <p className="mt-1 text-sm text-stone-500">
+              <p className="mt-1 text-[15px] sm:text-sm text-stone-500">
                 {stageLabel(openRow.stage)} — {openRow.teamA?.name ?? "Equipo A"} vs{" "}
                 {openRow.teamB?.name ?? "Equipo B"}
               </p>
@@ -1099,7 +1099,7 @@ export function CorregirResultadosPanel({
                   setCorrTab("sets");
                   setCorrMsg(null);
                 }}
-                className={`px-3 py-2 text-sm font-medium rounded-md transition-colors min-h-[44px] ${
+                className={`px-3 py-2 text-[15px] sm:text-sm font-medium rounded-md transition-colors min-h-[44px] ${
                   corrTab === "sets"
                     ? "bg-white text-stone-900 shadow-sm"
                     : "text-stone-500 hover:text-stone-700"
@@ -1115,7 +1115,7 @@ export function CorregirResultadosPanel({
                   setCorrTab("winner");
                   setCorrMsg(null);
                 }}
-                className={`px-3 py-2 text-sm font-medium rounded-md transition-colors min-h-[44px] ${
+                className={`px-3 py-2 text-[15px] sm:text-sm font-medium rounded-md transition-colors min-h-[44px] ${
                   corrTab === "winner"
                     ? "bg-white text-stone-900 shadow-sm"
                     : "text-stone-500 hover:text-stone-700"
@@ -1162,7 +1162,7 @@ export function CorregirResultadosPanel({
                 {corrFormat !== "SINGLE_21" && (
                   <div className="space-y-2 rounded-lg border border-sand-200 bg-stone-50 p-3">
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-xs font-medium text-stone-600">
+                      <span className="text-[13px] sm:text-xs font-medium text-stone-600">
                         Segundo set
                       </span>
                       <div className="flex items-center gap-2">
@@ -1178,7 +1178,7 @@ export function CorregirResultadosPanel({
                           onChange={(e) => setCorr2A(e.target.value)}
                           disabled={corrSaving}
                           placeholder="0"
-                          className="w-16 rounded-lg border border-sand-300 bg-white px-2 py-2 text-center text-base font-bold text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                          className="w-14 rounded-lg border border-sand-300 bg-white px-2 py-2 text-center text-base font-bold sm:w-16 text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
                         />
                         <span className="text-stone-400 font-bold">:</span>
                         <label htmlFor="corr-set2-b" className="sr-only">
@@ -1193,14 +1193,14 @@ export function CorregirResultadosPanel({
                           onChange={(e) => setCorr2B(e.target.value)}
                           disabled={corrSaving}
                           placeholder="0"
-                          className="w-16 rounded-lg border border-sand-300 bg-white px-2 py-2 text-center text-base font-bold text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                          className="w-14 rounded-lg border border-sand-300 bg-white px-2 py-2 text-center text-base font-bold sm:w-16 text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
                         />
                       </div>
                     </div>
 
                     {showCorrThird && (
                       <div className="flex items-center justify-between gap-3 border-t border-sand-200 pt-2">
-                        <span className="text-xs font-medium text-stone-600">
+                        <span className="text-[13px] sm:text-xs font-medium text-stone-600">
                           Tercer set (van 1-1)
                         </span>
                         <div className="flex items-center gap-2">
@@ -1216,7 +1216,7 @@ export function CorregirResultadosPanel({
                             onChange={(e) => setCorr3A(e.target.value)}
                             disabled={corrSaving}
                             placeholder="0"
-                            className="w-16 rounded-lg border border-sand-300 bg-white px-2 py-2 text-center text-base font-bold text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                            className="w-14 rounded-lg border border-sand-300 bg-white px-2 py-2 text-center text-base font-bold sm:w-16 text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
                           />
                           <span className="text-stone-400 font-bold">:</span>
                           <label htmlFor="corr-set3-b" className="sr-only">
@@ -1231,7 +1231,7 @@ export function CorregirResultadosPanel({
                             onChange={(e) => setCorr3B(e.target.value)}
                             disabled={corrSaving}
                             placeholder="0"
-                            className="w-16 rounded-lg border border-sand-300 bg-white px-2 py-2 text-center text-base font-bold text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                            className="w-14 rounded-lg border border-sand-300 bg-white px-2 py-2 text-center text-base font-bold sm:w-16 text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
                           />
                         </div>
                       </div>
@@ -1239,7 +1239,7 @@ export function CorregirResultadosPanel({
                   </div>
                 )}
 
-                <p className="text-center text-[11px] text-stone-500">
+                <p className="text-center text-[12px] sm:text-[11px] text-stone-500">
                   {setFormatHint(corrFormat)}
                 </p>
               </div>
@@ -1251,11 +1251,11 @@ export function CorregirResultadosPanel({
                   disabled={corrSaving || !openRow.teamA?.id}
                   className={`flex-1 rounded-xl border-2 px-4 py-4 text-center font-semibold transition-colors min-h-[44px] ${
                     corrWinner === openRow.teamA?.id
-                      ? "border-amber-600 bg-amber-50 text-stone-900"
+                      ? "border-tierra-800 bg-tierra-50 text-stone-900"
                       : "border-sand-300 bg-white text-stone-900 hover:border-amber-soft-400 hover:bg-amber-50"
                   } disabled:opacity-50`}
                 >
-                  <span className="block text-sm text-stone-500 mb-1">Gana</span>
+                  <span className="block text-[15px] sm:text-sm text-stone-500 mb-1">Gana</span>
                   <span className="text-base">{openRow.teamA?.name ?? "Equipo A"}</span>
                 </button>
                 <button
@@ -1264,11 +1264,11 @@ export function CorregirResultadosPanel({
                   disabled={corrSaving || !openRow.teamB?.id}
                   className={`flex-1 rounded-xl border-2 px-4 py-4 text-center font-semibold transition-colors min-h-[44px] ${
                     corrWinner === openRow.teamB?.id
-                      ? "border-amber-600 bg-amber-50 text-stone-900"
+                      ? "border-tierra-800 bg-tierra-50 text-stone-900"
                       : "border-sand-300 bg-white text-stone-900 hover:border-amber-soft-400 hover:bg-amber-50"
                   } disabled:opacity-50`}
                 >
-                  <span className="block text-sm text-stone-500 mb-1">Gana</span>
+                  <span className="block text-[15px] sm:text-sm text-stone-500 mb-1">Gana</span>
                   <span className="text-base">{openRow.teamB?.name ?? "Equipo B"}</span>
                 </button>
               </div>
@@ -1285,14 +1285,14 @@ export function CorregirResultadosPanel({
               >
                 {clearedLabels.length > 0 && (
                   <>
-                    <p className="text-xs font-semibold text-red-800">
-                      Al corregir se borran los resultados de:
+                    <p className="text-[13px] sm:text-xs font-semibold text-red-800">
+                      Si el ganador cambia, se borran los resultados de:
                     </p>
                     <ul className="mt-1.5 space-y-1">
                       {clearedLabels.map((label) => (
                         <li
                           key={label}
-                          className="text-xs text-red-700"
+                          className="text-[13px] sm:text-xs text-red-700"
                         >
                           {label}
                         </li>
@@ -1301,10 +1301,10 @@ export function CorregirResultadosPanel({
                   </>
                 )}
                 {nulledLabels.length > 0 && (
-                  <p className="mt-1.5 text-xs text-stone-600">
-                    Se vacían los cruces ({nulledLabels.join(", ")}) para
-                    rearmar la llave desde el resultado corregido. Esta acción
-                    no se puede deshacer.
+                  <p className="mt-1.5 text-[13px] sm:text-xs text-stone-600">
+                    Si cambia el ganador, se vacían los cruces ({nulledLabels.join(", ")}) para
+                    rearmar la llave desde el resultado corregido. Si solo corregís el
+                    marcador, no se borra nada.
                   </p>
                 )}
               </div>
@@ -1312,7 +1312,7 @@ export function CorregirResultadosPanel({
 
             {corrMsg && (
               <p
-                className="rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700 border border-red-200"
+                className="rounded-lg bg-red-50 px-3 py-2 text-[13px] sm:text-xs font-medium text-red-700 border border-red-200"
                 role="alert"
               >
                 {corrMsg}
@@ -1324,7 +1324,7 @@ export function CorregirResultadosPanel({
                 type="button"
                 onClick={() => !corrSaving && setOpenRow(null)}
                 disabled={corrSaving}
-                className="rounded-lg border border-sand-300 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 hover:bg-sand-50 disabled:opacity-50 transition-colors min-h-[44px]"
+                className="rounded-lg border border-sand-300 bg-white px-4 py-2.5 text-[15px] sm:text-sm font-medium text-stone-600 hover:bg-sand-50 disabled:opacity-50 transition-colors min-h-[44px]"
               >
                 Volver
               </button>
@@ -1332,7 +1332,7 @@ export function CorregirResultadosPanel({
                 type="button"
                 onClick={handleCorregir}
                 disabled={!canConfirm}
-                className="rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50 transition-colors min-h-[44px]"
+                className="rounded-lg bg-tierra-900 px-4 py-2.5 text-[15px] sm:text-sm font-semibold text-white hover:bg-tierra-950 disabled:opacity-50 transition-colors min-h-[44px]"
               >
                 {corrSaving ? "Corrigiendo…" : "Corregir resultado"}
               </button>
@@ -1417,11 +1417,11 @@ export function MejoresTercerosPanel({ state, refetch }: MejoresTercerosPanelPro
       >
         <div className="mb-1 flex items-center gap-2">
           <LockIcon />
-          <h3 className="text-sm font-semibold text-stone-500">
+          <h3 className="text-[15px] sm:text-sm font-semibold text-stone-500">
             Mejor 3.º — faltan marcadores
           </h3>
         </div>
-        <p className="text-xs text-stone-400">
+        <p className="text-[13px] sm:text-xs text-stone-400">
           Para comparar a los terceros hace falta el marcador de sus partidos
           contra el 1.º y 2.º de su zona. Cargá esos resultados para desbloquear
           Cuartos.
@@ -1441,11 +1441,11 @@ export function MejoresTercerosPanel({ state, refetch }: MejoresTercerosPanelPro
       >
         <div className="mb-1 flex items-center gap-2">
           <LockIcon />
-          <h3 className="text-sm font-semibold text-stone-500">
+          <h3 className="text-[15px] sm:text-sm font-semibold text-stone-500">
             Empate en el mejor 3.º
           </h3>
         </div>
-        <p className="text-xs text-stone-400">
+        <p className="text-[13px] sm:text-xs text-stone-400">
           Se habilita cuando estén cargados todos los resultados de la fase de
           zonas.
         </p>
@@ -1463,17 +1463,17 @@ export function MejoresTercerosPanel({ state, refetch }: MejoresTercerosPanelPro
         aria-label="Desempate del mejor 3.º — pendiente"
         className="rounded-xl border border-amber-300 bg-amber-50 p-5"
       >
-        <h3 className="text-sm font-semibold text-stone-900 mb-1">
+        <h3 className="text-[15px] sm:text-sm font-semibold text-stone-900 mb-1">
           Desempate del mejor 3.º
         </h3>
-        <p className="text-xs text-stone-600 mb-2">
+        <p className="text-[13px] sm:text-xs text-stone-600 mb-2">
           Los terceros empatados juegan el desempate{" "}
           <span className="font-semibold text-stone-900">
             {dTeamA} vs {dTeamB}
           </span>
           . Cargá su resultado en el panel de partidos y Cuartos se arma solo.
         </p>
-        <p className="text-xs text-stone-500">
+        <p className="text-[13px] sm:text-xs text-stone-500">
           El ganador entra directo a Cuartos 4; el perdedor juega el repechage
           contra el tercero restante.
         </p>
@@ -1488,17 +1488,17 @@ export function MejoresTercerosPanel({ state, refetch }: MejoresTercerosPanelPro
       aria-label="Elegir mejor tercer puesto"
       className="rounded-xl border border-amber-300 bg-amber-50 p-5"
     >
-      <h3 className="text-sm font-semibold text-stone-900 mb-1">
+      <h3 className="text-[15px] sm:text-sm font-semibold text-stone-900 mb-1">
         Empate en el mejor 3.º
       </h3>
-      <p className="text-xs text-stone-600 mb-4">
+      <p className="text-[13px] sm:text-xs text-stone-600 mb-4">
         Con un set por partido de zona, los terceros quedan empatados.
       </p>
 
       {twoWayTie && (
         <div className="mb-4 rounded-lg border border-sand-300 bg-white p-4">
-          <p className="text-sm font-semibold text-stone-900 mb-1">Desempate</p>
-          <p className="text-xs text-stone-600 mb-3">
+          <p className="text-[15px] sm:text-sm font-semibold text-stone-900 mb-1">Desempate</p>
+          <p className="text-[13px] sm:text-xs text-stone-600 mb-3">
             Los dos empatados juegan un partido extra. El ganador entra directo
             a Cuartos 4; el perdedor va al repechage contra el tercero que
             resta.
@@ -1507,7 +1507,7 @@ export function MejoresTercerosPanel({ state, refetch }: MejoresTercerosPanelPro
             type="button"
             onClick={handleCreateDesempate}
             disabled={creatingDesempate || tieTeamId !== null}
-            className="w-full rounded-lg border border-amber-soft-400 bg-amber-50 px-4 py-3 text-sm font-semibold text-stone-900 transition-colors hover:bg-amber-100 disabled:opacity-50 min-h-[44px]"
+            className="w-full rounded-lg border border-amber-soft-400 bg-amber-50 px-4 py-3 text-[15px] sm:text-sm font-semibold text-stone-900 transition-colors hover:bg-amber-100 disabled:opacity-50 min-h-[44px]"
           >
             {creatingDesempate ? "Creando desempate…" : "Crear partido de desempate"}
           </button>
@@ -1515,8 +1515,8 @@ export function MejoresTercerosPanel({ state, refetch }: MejoresTercerosPanelPro
       )}
 
       <div className="rounded-lg border border-sand-300 bg-white p-4">
-        <p className="text-sm font-semibold text-stone-900 mb-1">Sorteo</p>
-        <p className="text-xs text-stone-600 mb-3">
+        <p className="text-[15px] sm:text-sm font-semibold text-stone-900 mb-1">Sorteo</p>
+        <p className="text-[13px] sm:text-xs text-stone-600 mb-3">
           {twoWayTie
             ? "Elegí cuál entra directo a Cuartos 4; el otro juega el repechage contra el tercero que resta."
             : "Elegí cuál entra directo a Cuartos 4; los otros dos juegan el repechage."}
@@ -1530,10 +1530,10 @@ export function MejoresTercerosPanel({ state, refetch }: MejoresTercerosPanelPro
               disabled={tieTeamId !== null || creatingDesempate}
               className="flex items-center justify-between rounded-lg border border-sand-300 bg-white px-4 py-3 text-left transition-colors hover:border-amber-soft-400 hover:bg-amber-50 disabled:opacity-50 min-h-[44px]"
             >
-              <span className="text-sm font-semibold text-stone-900">
+              <span className="text-[15px] sm:text-sm font-semibold text-stone-900">
                 {t.name}
               </span>
-              <span className="text-xs font-medium text-stone-500">
+              <span className="text-[13px] sm:text-xs font-medium text-stone-500">
                 {tieTeamId === t.id ? "Guardando…" : "Es el mejor 3.º"}
               </span>
             </button>
@@ -1543,7 +1543,7 @@ export function MejoresTercerosPanel({ state, refetch }: MejoresTercerosPanelPro
 
       {tieMsg && (
         <p
-          className={`mt-3 text-xs font-medium ${tieMsg.startsWith("Listo") || tieMsg.startsWith("Desempate creado") ? "text-green-700" : "text-red-700"}`}
+          className={`mt-3 text-[13px] sm:text-xs font-medium ${tieMsg.startsWith("Listo") || tieMsg.startsWith("Desempate creado") ? "text-selva-700" : "text-red-700"}`}
           role="alert"
         >
           {tieMsg}
@@ -1603,10 +1603,10 @@ export function RotationPanel({ state, refetch }: RotationPanelProps) {
       aria-label="Rotación del fixture"
       className="rounded-xl border border-sand-200 bg-stone-50 p-5"
     >
-      <h3 className="text-sm font-semibold text-stone-900 mb-1">
+      <h3 className="text-[15px] sm:text-sm font-semibold text-stone-900 mb-1">
         Rotación del fixture
       </h3>
-      <p className="text-xs text-stone-600 mb-3">
+      <p className="text-[13px] sm:text-xs text-stone-600 mb-3">
         Reordena los partidos de zona en rotación (A, B, C, …) para que nadie
         juegue dos seguidos. Disponible solo antes de cargar resultados.
       </p>
@@ -1614,13 +1614,13 @@ export function RotationPanel({ state, refetch }: RotationPanelProps) {
         type="button"
         onClick={handleReslot}
         disabled={busy}
-        className="w-full rounded-lg border border-sand-300 bg-white px-4 py-3 text-sm font-semibold text-stone-900 transition-colors hover:bg-sand-100 disabled:opacity-50 min-h-[44px]"
+        className="w-full rounded-lg border border-sand-300 bg-white px-4 py-3 text-[15px] sm:text-sm font-semibold text-stone-900 transition-colors hover:bg-sand-100 disabled:opacity-50 min-h-[44px]"
       >
         {busy ? "Reordenando…" : "Reordenar rotación del fixture"}
       </button>
       {msg && (
         <p
-          className={`mt-3 text-xs font-medium ${msg.startsWith("Listo") || msg.startsWith("El fixture") ? "text-green-700" : "text-red-700"}`}
+          className={`mt-3 text-[13px] sm:text-xs font-medium ${msg.startsWith("Listo") || msg.startsWith("El fixture") ? "text-selva-700" : "text-red-700"}`}
           role="alert"
         >
           {msg}
