@@ -11,6 +11,7 @@ import type {
 } from "@/lib/front/types";
 import { StandingsTables } from "./StandingsTables";
 import { EliminatoriesView } from "./EliminatoriesView";
+import { IconoCandado } from "@/components/Iconos";
 
 const TABS: { id: TournamentTabId; label: string }[] = [
   { id: "grupos", label: "Fase de grupos" },
@@ -94,7 +95,7 @@ export function TournamentTabs({
                     : "bg-white/80 text-stone-600 hover:bg-white"
               }`}
             >
-              {locked !== null && <span aria-hidden="true">ðŸ”’ </span>}
+              {locked !== null && <IconoCandado className="mr-1 inline h-3 w-3 align-[-2px]" />}
               {t.label}
             </button>
           );
@@ -105,7 +106,7 @@ export function TournamentTabs({
         <ul className="mt-3 space-y-1">
           {lockedTabs.map((t) => (
             <li key={t.id} className="text-[13px] sm:text-xs text-stone-500">
-              <span aria-hidden="true">ðŸ”’ </span>
+              <IconoCandado className="mr-1 inline h-3 w-3 align-[-2px]" />
               <span className="font-semibold">{t.label}</span>: {t.reason}
             </li>
           ))}
