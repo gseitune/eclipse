@@ -17,11 +17,13 @@ import { GaleriaCarrusel } from "./GaleriaCarrusel";
 import { PodiosCarrusel } from "./PodiosCarrusel";
 import { IconoInstagram } from "./IconoInstagram";
 import { IconoEngranaje } from "@/components/Iconos";
+import { IconoLinkedin } from "@/components/Iconos";
 
 /** Redes oficiales. Único dato manual de los links. */
 const INSTAGRAM_SELVARENA = "https://www.instagram.com/selvarena_obera/";
 const INSTAGRAM_DACOSTA = "https://www.instagram.com/dacosta.fotodeportiva/";
-
+const LINKEDIN_GABRIEL =
+  "https://www.linkedin.com/in/gabriel-alejandro-seitune-783201129/";
 export function PublicHome({
   initial,
   initialRanking,
@@ -326,9 +328,17 @@ export function PublicHome({
             />
             <IconoInstagram className="h-3.5 w-3.5 shrink-0 text-tierra-900 sm:h-4 sm:w-4" />
           </a>
-          <span className="flex items-center gap-1 text-[11px] font-bold uppercase sm:text-sm">
-            GS proyecto eclipse
-          </span>
+          <a
+            href={LINKEDIN_GABRIEL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Gabriel Alejandro Seitune en LinkedIn"
+            title="Gabriel Alejandro Seitune en LinkedIn"
+            className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-stone-600 transition-colors hover:text-tierra-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-selva-600 sm:text-sm"
+          >
+            <IconoLinkedin className="h-4 w-4 shrink-0" />
+            DI Gabriel Seitune
+          </a>
         </div>
         </div>
       </footer>

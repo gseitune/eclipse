@@ -92,8 +92,7 @@ export function IconoMas({ className = "" }: IconoProps) {
   );
 }
 
-export function IconoCandado({ className = "" }: IconoProps) {
-  return (
+export function IconoCandado({ className = "" }: IconoProps) {  return (
     <svg
       className={className}
       viewBox="3 2 18 20"
@@ -106,6 +105,19 @@ export function IconoCandado({ className = "" }: IconoProps) {
     >
       <rect x="4.5" y="10" width="15" height="11" rx="2" />
       <path d="M8.5 10V7a3.5 3.5 0 0 1 7 0v3" />
+    </svg>
+  );
+}
+
+export function IconoLinkedin({ className = "" }: IconoProps) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.03-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.34V9h3.42v1.56h.05a3.75 3.75 0 0 1 3.37-1.85c3.6 0 4.27 2.37 4.27 5.46v6.28ZM5.34 7.43a2.07 2.07 0 1 1 0-4.13 2.07 2.07 0 0 1 0 4.13Zm1.78 13.02H3.55V9h3.57v11.45ZM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0Z" />
     </svg>
   );
 }
