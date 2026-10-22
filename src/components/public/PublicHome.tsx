@@ -81,19 +81,31 @@ export function PublicHome({
   }, [circuit]);
 
   // Podios de todas las etapas cerradas: el tablero cuenta la temporada
-  // completa, no solo la última fecha.
-  const podios = useMemo(
-    () =>
-      (ranking?.etapas ?? [])
-        .filter((etapa) => etapa.finished && etapa.positions.length > 0)
-        .map((etapa) => ({
-          etapaName: etapa.name,
-          top: etapa.positions
-            .slice(0, 3)
-            .map((p) => ({ position: p.position, teamName: p.teamName })),
-        })),
-    [ranking],
-  );
+  // completa, no solo la última fecha. Se ordenan por número de etapa, así la
+  // primera queda a la izquierda sin depender del orden en que se cargaron.
+  const podios = useMemo(() => {
+    const etapaNumber = (name: string) => {
+      const match = name.match(/\d+/);
+      return match ? Number(match[0]) : Number.MAX_SAFE_INTEGER;
+    };
+
+    return (ranking?.etapas ?? [])
+      .filter((etapa) => etapa.finished && etapa.positions.length > 0)
+      .slice()
+      .sort((a, b) => {
+        const byNumber = etapaNumber(a.name) - etapaNumber(b.name);
+        if (byNumber !== 0) return byNumber;
+        const byDate = (a.date ? Date.parse(a.date) : 0) - (b.date ? Date.parse(b.date) : 0);
+        if (byDate !== 0) return byDate;
+        return a.sortOrder - b.sortOrder;
+      })
+      .map((etapa) => ({
+        etapaName: etapa.name,
+        top: etapa.positions
+          .slice(0, 3)
+          .map((p) => ({ position: p.position, teamName: p.teamName })),
+      }));
+  }, [ranking]);
 
   // Photos follow the same circuit: the server sends the initial album of
   // Principiantes, and every switch asks for the folder of the selected one.
