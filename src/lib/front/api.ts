@@ -16,8 +16,29 @@ export { ApiError };
 
 const BASE = "/api";
 
+/**
+ * Reads the body as JSON without trusting it. A route that throws before
+ * answering (no try/catch) answers 500 with an EMPTY body, and res.json()
+ * then dies with "SyntaxError: Unexpected end of JSON input" — the operator
+ * sees a parser bug instead of the real failure. Reading the text first lets
+ * us answer with an ApiError that says what happened.
+ */
 async function parseJson<T>(res: Response): Promise<T> {
-  return res.json() as Promise<T>;
+  const text = await res.text();
+  if (!text) {
+    throw new ApiError(
+      res.status,
+      `El servidor no devolvió datos (HTTP ${res.status}).`,
+    );
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new ApiError(
+      res.status,
+      `El servidor devolvió una respuesta inválida (HTTP ${res.status}).`,
+    );
+  }
 }
 
 async function handleResponse<T>(res: Response): Promise<T> {

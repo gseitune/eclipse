@@ -10,5 +10,14 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(request: NextRequest) {
   const etapa = request.nextUrl.searchParams.get("etapa");
-  return NextResponse.json({ schedule: await getScheduleBoard(etapa ?? null) });
+  try {
+    return NextResponse.json({ schedule: await getScheduleBoard(etapa ?? null) });
+  } catch (error) {
+    // Without this, a throw leaves the client with an empty 500: the panel
+    // then reports a JSON parse error instead of the real database failure.
+    const message = error instanceof Error ? error.message : "Unexpected error";
+    const status = (error as { status?: number }).status ?? 500;
+    console.error("GET /api/schedule failed", error);
+    return NextResponse.json({ error: message }, { status });
+  }
 }
