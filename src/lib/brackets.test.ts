@@ -18,6 +18,8 @@ function row(teamId: string, zone: Zone, won: number, setDiff = 0, unresolvedTie
     won,
     lost: 0,
     setDiff,
+    pointDiff: 0,
+    pointsFor: 0,
     maleName,
     femaleName,
     unresolvedTie,

@@ -46,15 +46,18 @@ sweep).
 Per zone, sorted by:
 
 1. **More wins** (games won).
-2. **Head-to-head**: within a zone, the winner of the direct match ranks
-   above. Works with any decided match — WINNER_ONLY is enough (uses
-   `winnerId`, no scoreboard needed) or a complete score.
-3. **Set difference**, computed from complete-score matches only, counting
+2. **Set difference**, computed from complete-score matches only, counting
    SETS WON per match (`sets[]` → wins per team; 2-1 gives set diff +1).
    WINNER_ONLY matches never invent sets (they contribute wins only).
-4. **Deterministic draw**: if no metric separates the tied teams (including
-   the guard "they never faced each other", which should not happen in a
-   round-robin), order by name ascending, then id. Never fabricates a metric.
+3. **Point difference** (points for − points against), complete-score matches
+   only. WINNER_ONLY matches contribute no points.
+4. **Points for**, complete-score matches only.
+5. **Deterministic draw**: if no metric separates the tied teams, order by
+   name ascending, then id. Never fabricates a metric.
+
+Head-to-head was removed on 2026-10-28 (product decision by Andi): in a
+3-team zone where everyone is 1-1 the direct results form a cycle and resolve
+nothing, so the chain above matches her Intermedios spreadsheet instead.
 
 Zone ties therefore always resolve into positions. The only tie case the
 system refuses to resolve silently is the cross-zone best-second fight

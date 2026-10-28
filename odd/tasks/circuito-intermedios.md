@@ -33,10 +33,10 @@ Rama: `feat/selvarena-front` · Runner: `node --import tsx --test`
 - **S10.** El historial de Intermedios se carga con partidos y sets completos, como
   etapas cerradas reales, para que la tabla anual se calcule sola.
 - **S11.** El plantel de una etapa sigue congelado una vez cargado.
-- **S12.** Pendiente de Andi (no bloquea el modelo): orden de la tabla de zona
-  (su planilla dice dif. sets → dif. puntos → puntos a favor; el sistema hoy usa
-  ganados → mano a mano → dif. sets), rango de equipos de Intermedios y escala
-  de puntos.
+- **S12.** Orden de la tabla de zona (decidido 2026-10-28): partidos ganados →
+  diferencia de sets → diferencia de puntos → puntos a favor → sorteo
+  determinista. El mano a mano se quitó. Pendientes de Andi que no bloquean el
+  modelo: rango de equipos de Intermedios y escala de puntos.
 
 ## Tasks
 

@@ -44,6 +44,10 @@ export interface StandingRow {
   won: number;
   lost: number;
   setDiff: number;
+  /** Points for minus points against. COMPLETE matches only. */
+  pointDiff: number;
+  /** Total points scored. COMPLETE matches only. */
+  pointsFor: number;
   unresolvedTie: boolean;
 }
 

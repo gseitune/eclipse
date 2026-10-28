@@ -22,6 +22,7 @@ function groupMatch(p: {
   status: "PENDING" | "WINNER_ONLY" | "COMPLETE";
   winner?: string | null;
   sets?: [number, number];
+  points?: [number, number];
 }): StandingInputMatch {
   return {
     stage: "GROUPS",
@@ -30,6 +31,8 @@ function groupMatch(p: {
     teamBId: p.b,
     setAScore: p.sets?.[0] ?? null,
     setBScore: p.sets?.[1] ?? null,
+    pointsA: p.points?.[0] ?? null,
+    pointsB: p.points?.[1] ?? null,
     resultStatus: p.status,
     winnerId: p.status === "PENDING" ? null : (p.winner ?? null),
   };
@@ -53,10 +56,10 @@ describe("computeZoneStandings", () => {
     assert.equal(rows[2].played, 2);
   });
 
-  it("head-to-head decides the tie even against a better set diff", () => {
+  it("set diff decides the tie; head-to-head no longer applies", () => {
     const teams = [team("t1", A), team("t2", A), team("t3", A), team("t4", A)];
     // t1 and t2 are both 2-1: t1 beat t2 head-to-head (2-1) but t2 has the
-    // better overall set diff (+3 vs +1). H2H must rank t1 above.
+    // better overall set diff (+3 vs +1). Set diff must rank t2 above.
     const matches = [
       groupMatch({ a: "t1", b: "t2", zone: A, status: "COMPLETE", winner: "t1", sets: [2, 1] }),
       groupMatch({ a: "t1", b: "t3", zone: A, status: "COMPLETE", winner: "t1", sets: [2, 1] }),
@@ -70,55 +73,66 @@ describe("computeZoneStandings", () => {
     const t2 = rows.find((r) => r.teamId === "t2")!;
     assert.ok(t1.setDiff < t2.setDiff, "t2 really has the better set diff");
     assert.ok(
-      rows.indexOf(t1) < rows.indexOf(t2),
-      "h2h winner ranks above despite the set diff",
+      rows.indexOf(t2) < rows.indexOf(t1),
+      "set diff ranks above the head-to-head winner",
     );
-    assert.deepEqual(rows.map((r) => r.teamId), ["t1", "t2", "t3", "t4"]);
+    assert.deepEqual(rows.map((r) => r.teamId), ["t2", "t1", "t3", "t4"]);
   });
 
-  it("head-to-head works with WINNER_ONLY matches (winnerId only)", () => {
-    const teams = [team("t1", A), team("t2", A), team("t3", A), team("t4", A)];
-    // t1 and t2 are both 2-1; their direct match was WINNER_ONLY (no
-    // scoreboard) and t1 won it, so t1 ranks above t2 despite t2 holding
-    // the better complete-score set diff.
+  it("resolves a 3-team 1-1 cycle by point diff (Andi's case)", () => {
+    const teams = [team("t1", A), team("t2", A), team("t3", A)];
+    // Every team wins one and loses one, and every match is 2-0, so all
+    // three have set diff 0 and the head-to-head is a cycle: only the point
+    // diff can separate them.
+    const matches = [
+      groupMatch({ a: "t1", b: "t2", zone: A, status: "COMPLETE", winner: "t1", sets: [2, 0], points: [42, 20] }),
+      groupMatch({ a: "t2", b: "t3", zone: A, status: "COMPLETE", winner: "t2", sets: [2, 0], points: [42, 38] }),
+      groupMatch({ a: "t3", b: "t1", zone: A, status: "COMPLETE", winner: "t3", sets: [2, 0], points: [42, 38] }),
+    ];
+    const rows = computeZoneStandings(teams, matches, A);
+    assert.ok(
+      rows.every((r) => r.won === 1 && r.setDiff === 0),
+      "wins and set diff are identical, so only point diff separates them",
+    );
+    assert.deepEqual(rows.map((r) => r.teamId), ["t1", "t3", "t2"]);
+    assert.equal(rows[0].pointDiff, 18, "+22 then -4");
+    assert.equal(rows[2].pointDiff, -18);
+  });
+
+  it("points for decides when set diff and point diff are equal", () => {
+    const teams = [team("t1", A), team("t2", A), team("t3", A)];
+    // All three end 1-1, set diff 0 and point diff 0. t1 has the fewest
+    // points scored, so it drops despite being first by name.
+    const matches = [
+      groupMatch({ a: "t1", b: "t2", zone: A, status: "COMPLETE", winner: "t1", sets: [2, 0], points: [42, 38] }),
+      groupMatch({ a: "t3", b: "t1", zone: A, status: "COMPLETE", winner: "t3", sets: [2, 0], points: [42, 38] }),
+      groupMatch({ a: "t2", b: "t3", zone: A, status: "COMPLETE", winner: "t2", sets: [2, 0], points: [44, 40] }),
+    ];
+    const rows = computeZoneStandings(teams, matches, A);
+    assert.ok(
+      rows.every((r) => r.setDiff === 0 && r.pointDiff === 0),
+      "set diff and point diff are identical",
+    );
+    assert.deepEqual(rows.map((r) => r.teamId), ["t2", "t3", "t1"]);
+    assert.equal(rows[2].pointsFor, 80, "t1 scored the fewest points");
+    assert.equal(rows[0].pointsFor, 82);
+  });
+
+  it("never counts points from WINNER_ONLY matches", () => {
+    const teams = [team("t1", A), team("t2", A), team("t3", A)];
+    // t1 beat t2 by winner only: no scoreboard, so it adds no set diff and
+    // no point diff, and t1 still drops on the metrics it does not have.
     const matches = [
       groupMatch({ a: "t1", b: "t2", zone: A, status: "WINNER_ONLY", winner: "t1" }),
-      groupMatch({ a: "t1", b: "t3", zone: A, status: "COMPLETE", winner: "t1", sets: [2, 1] }),
-      groupMatch({ a: "t1", b: "t4", zone: A, status: "COMPLETE", winner: "t4", sets: [1, 2] }),
-      groupMatch({ a: "t2", b: "t3", zone: A, status: "COMPLETE", winner: "t2", sets: [2, 0] }),
-      groupMatch({ a: "t2", b: "t4", zone: A, status: "COMPLETE", winner: "t2", sets: [2, 0] }),
-      groupMatch({ a: "t3", b: "t4", zone: A, status: "COMPLETE", winner: "t3", sets: [2, 0] }),
+      groupMatch({ a: "t2", b: "t3", zone: A, status: "COMPLETE", winner: "t2", sets: [2, 0], points: [42, 38] }),
+      groupMatch({ a: "t3", b: "t1", zone: A, status: "COMPLETE", winner: "t3", sets: [2, 0], points: [42, 38] }),
     ];
     const rows = computeZoneStandings(teams, matches, A);
     const t1 = rows.find((r) => r.teamId === "t1")!;
-    const t2 = rows.find((r) => r.teamId === "t2")!;
-    assert.ok(t1.setDiff < t2.setDiff, "t2 really has the better set diff");
-    assert.ok(
-      rows.indexOf(t1) < rows.indexOf(t2),
-      "WINNER_ONLY h2h winner ranks above",
-    );
-    assert.deepEqual(rows.map((r) => r.teamId), ["t1", "t2", "t3", "t4"]);
-  });
-
-  it("cyclical head-to-head falls back to set diff and then the deterministic draw", () => {
-    const teams = [team("t1", A), team("t2", A), team("t3", A)];
-    // Every team 1-1, same set diff, h2h cycle t1>t2>t3>t1: no metric
-    // separates them, so the deterministic draw (name) decides.
-    const matches = [
-      groupMatch({ a: "t1", b: "t2", zone: A, status: "COMPLETE", winner: "t1", sets: [2, 1] }),
-      groupMatch({ a: "t2", b: "t3", zone: A, status: "COMPLETE", winner: "t2", sets: [2, 1] }),
-      groupMatch({ a: "t3", b: "t1", zone: A, status: "COMPLETE", winner: "t3", sets: [2, 1] }),
-    ];
-    const rows = computeZoneStandings(teams, matches, A);
-    assert.deepEqual(
-      rows.map((r) => r.teamId),
-      ["t1", "t2", "t3"],
-      "deterministic draw: name ascending",
-    );
-    assert.ok(
-      rows.every((r) => !r.unresolvedTie),
-      "zone ties resolve deterministically now",
-    );
+    assert.equal(t1.won, 1, "the winner-only match counts as a win");
+    assert.equal(t1.setDiff, -2, "no sets invented");
+    assert.equal(t1.pointDiff, -4, "no points invented");
+    assert.deepEqual(rows.map((r) => r.teamId), ["t2", "t3", "t1"]);
   });
 
   it("never counts sets from WINNER_ONLY matches", () => {

@@ -3,26 +3,22 @@ import type { ResultStatus, Zone } from "../generated/prisma/client";
 /**
  * Zone standings (POSITIONS) for SELVARENA.
  *
- * Tiebreak criterion (product decision — addendum 2026-09-23):
+ * Tiebreak criterion (product decision — Andi, 2026-10-28):
  *   1. More wins (PG).
- *   2. Head-to-head among the tied teams: the winner of the direct match
- *      ranks above (winnerId from ANY decided match — WINNER_ONLY is enough,
- *      no score needed).
- *   3. Set difference (sets for - sets against) counted ONLY from complete
+ *   2. Set difference (sets for - sets against) counted ONLY from complete
  *      matches; WINNER_ONLY matches contribute no sets (never invent points).
- *   4. Deterministic draw: name ascending, then id ascending. Documented
- *      fallback for the guard "they never faced each other" (should not
- *      happen in round-robin). The backend never fabricates a metric.
+ *   3. Point difference (points for - points against), also COMPLETE only.
+ *   4. Points for (total points scored), also COMPLETE only.
+ *   5. Deterministic draw: name ascending, then id ascending.
+ *
+ * Head-to-head was REMOVED on purpose: in a 3-team zone where everyone is 1-1
+ * the direct results form a cycle and resolve nothing, which is exactly the
+ * case Andi raised. The chain above matches her Intermedios spreadsheet
+ * ("diferencia de sets → diferencia de puntos → puntos a favor").
  *
  * Zone ties always resolve into positions (no unresolvedTie anymore): the
  * only still-open tie case is the cross-zone best-second fight, handled at
  * the bracket level (DESEMPATE match / 3+ blocked edge).
- *
- * PENDING (Andi): her Intermedios spreadsheet orders the zone by
- * "diferencia de sets → diferencia de puntos → puntos a favor", while the
- * order implemented here starts with wins and head-to-head. The sample she
- * shared cannot tell them apart, so this stays as documented until she
- * confirms which one rules.
  */
 
 export interface StandingInputTeam {
@@ -55,6 +51,10 @@ export interface StandingRow {
   won: number;
   lost: number;
   setDiff: number;
+  /** Points for minus points against. COMPLETE matches only. */
+  pointDiff: number;
+  /** Total points scored. COMPLETE matches only. */
+  pointsFor: number;
   maleName: string | null;
   femaleName: string | null;
   /** Kept for API compatibility; zone ties now resolve deterministically. */
@@ -92,44 +92,6 @@ function isDecidedGroupMatch(
     ids.has(m.teamAId) &&
     ids.has(m.teamBId)
   );
-}
-
-/** Wins in direct matches against the other members of the same won-clique. */
-function headToHeadWins(
-  slice: StandingRow[],
-  matches: StandingInputMatch[],
-): Map<string, number> {
-  const ids = new Set(slice.map((r) => r.teamId));
-  const wins = new Map<string, number>();
-  for (const m of matches) {
-    if (!isDecidedGroupMatch(m, ids)) continue;
-    if (m.winnerId) wins.set(m.winnerId, (wins.get(m.winnerId) ?? 0) + 1);
-  }
-  return wins;
-}
-
-/**
- * Reorders an equal-wins clique [start..end] of `rows` with the full
- * tiebreak chain: head-to-head first, then setDiff, then deterministic draw.
- * `rows` must already be sorted by (won, name, id) so equal-wins teams are
- * contiguous.
- */
-function resolveClique(
-  rows: StandingRow[],
-  matches: StandingInputMatch[],
-  start: number,
-  end: number,
-): void {
-  const slice = rows.slice(start, end + 1);
-  const h2h = headToHeadWins(slice, matches);
-  slice.sort(
-    (x, y) =>
-      (h2h.get(y.teamId) ?? 0) - (h2h.get(x.teamId) ?? 0) ||
-      y.setDiff - x.setDiff ||
-      x.teamName.localeCompare(y.teamName) ||
-      x.teamId.localeCompare(y.teamId),
-  );
-  rows.splice(start, end - start + 1, ...slice);
 }
 
 /**
@@ -174,8 +136,8 @@ function bestThirdRestrictedStats(
 
 /**
  * Computes the standings of one zone from group-phase matches only.
- * Match counts include WINNER_ONLY and COMPLETE results; sets count only
- * for COMPLETE results; head-to-head uses winnerId from any decided match.
+ * Match counts include WINNER_ONLY and COMPLETE results; sets and points
+ * count only for COMPLETE results.
  */
 export function computeZoneStandings(
   teams: StandingInputTeam[],
@@ -195,6 +157,8 @@ export function computeZoneStandings(
       won: 0,
       lost: 0,
       setDiff: 0,
+      pointDiff: 0,
+      pointsFor: 0,
       maleName: t.maleName ?? null,
       femaleName: t.femaleName ?? null,
       unresolvedTie: false,
@@ -218,28 +182,31 @@ export function computeZoneStandings(
       a.setDiff += m.setAScore - m.setBScore;
       b.setDiff += m.setBScore - m.setAScore;
     }
+    if (
+      m.resultStatus === "COMPLETE" &&
+      m.pointsA != null &&
+      m.pointsB != null
+    ) {
+      a.pointDiff += m.pointsA - m.pointsB;
+      b.pointDiff += m.pointsB - m.pointsA;
+      a.pointsFor += m.pointsA;
+      b.pointsFor += m.pointsB;
+    }
   }
 
   for (const row of rows.values()) row.lost = row.played - row.won;
 
-  // Base order: wins only (h2h precedes setDiff, so equal-wins teams must
-  // stay contiguous before the clique resolver applies the full chain).
+  // Wins first, then the Andi chain: set diff → point diff → points for,
+  // and the deterministic draw by name and id as the last resort.
   const sorted = [...rows.values()].sort(
     (a, b) =>
       b.won - a.won ||
+      b.setDiff - a.setDiff ||
+      b.pointDiff - a.pointDiff ||
+      b.pointsFor - a.pointsFor ||
       a.teamName.localeCompare(b.teamName) ||
       a.teamId.localeCompare(b.teamId),
   );
-
-  let i = 0;
-  while (i < sorted.length) {
-    let j = i;
-    while (j + 1 < sorted.length && sorted[j + 1].won === sorted[i].won) {
-      j += 1;
-    }
-    if (j > i) resolveClique(sorted, matches, i, j);
-    i = j + 1;
-  }
 
   // CUARTOS best third: the 3rd place is only ever compared against its own
   // zone's top 2, and only post-sort positions define who those are.
