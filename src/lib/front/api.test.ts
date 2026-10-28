@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it, afterEach } from "node:test";
 
 import { ApiError } from "./types";
-import { fetchScheduleBoard, fetchState } from "./api";
+import { fetchScheduleBoard, fetchState, zonificationGenerate } from "./api";
 
 /**
  * The panel and the agenda read every API response through handleResponse,
@@ -112,5 +112,27 @@ describe("fetchState query", () => {
     const url = new URL(seen[0]!, "http://localhost");
     assert.equal(url.searchParams.get("circuit"), "INTERMEDIOS");
     assert.equal(url.searchParams.get("etapa"), null);
+  });
+});
+
+describe("zonification actions", () => {
+  it("send the etapaId, so the re-arm lands on the pinned stage", async () => {
+    const bodies: unknown[] = [];
+    globalThis.fetch = (async (
+      _input: RequestInfo | URL,
+      init?: RequestInit,
+    ) => {
+      bodies.push(JSON.parse(String(init?.body)));
+      return new Response(JSON.stringify({ mapping: {} }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as typeof fetch;
+
+    await zonificationGenerate("e3");
+
+    // Without the id the server resolves the stage with the NEWEST date, so a
+    // pinned older stage would be re-armed behind the organizer's back.
+    assert.deepEqual(bodies[0], { action: "generate", etapaId: "e3" });
   });
 });

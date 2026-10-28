@@ -10,6 +10,7 @@ import {
   resolveBestThird,
   resolveBestSecond,
   resolveZoneTie,
+  zonificationGenerate,
   createBestThirdDesempate,
   reslotEtapa,
 } from "../../lib/front/api";
@@ -1844,6 +1845,125 @@ export function MejoresSegundosPanel({ state, refetch }: MejoresSegundosPanelPro
           role="alert"
         >
           {tieMsg}
+        </p>
+      )}
+    </section>
+  );
+}
+
+export interface ZonasPanelProps {
+  readonly state: StateSnapshot | null;
+  readonly refetch: () => Promise<void>;
+}
+
+/**
+ * Zonas de la etapa + re-sorteo.
+ *
+ * El reparto lo decide `distributeTeams` al crear la etapa y hasta ahora no
+ * había ninguna forma de cambiarlo desde el panel: si el sorteo dejaba la zona
+ * de 4 del lado equivocado, había que borrar la etapa. El backend reconstruye
+ * el fixture con cada re-sorteo, así que se puede reintentar hasta que el
+ * reparto sea el correcto. Se bloquea con el primer resultado cargado: ahí el
+ * plantel ya jugó y moverlo perdería puntos.
+ */
+export function ZonasPanel({ state, refetch }: ZonasPanelProps) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const rows = useMemo(() => {
+    const zones = state?.zones;
+    if (!zones) return [];
+    return (["A", "B", "C"] as ZoneId[])
+      .map((zone) => ({ zone, teams: zones[zone] ?? [] }))
+      .filter((entry) => entry.teams.length > 0);
+  }, [state?.zones]);
+
+  const played = useMemo(
+    () =>
+      Object.values(state?.standings ?? {}).some((zoneRows) =>
+        (zoneRows ?? []).some((row) => row.played > 0),
+      ),
+    [state?.standings],
+  );
+
+  if (!state?.etapaId || state.phase !== "GROUPS" || rows.length === 0) {
+    return null;
+  }
+
+  const locked = played || state.zoneConfirmed;
+
+  async function handleRearm() {
+    if (!state?.etapaId || busy) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      await zonificationGenerate(state.etapaId);
+      setMsg("Zonas sorteadas de nuevo: los partidos se rearmaron con el reparto nuevo.");
+      await refetch();
+    } catch (err) {
+      setMsg(err instanceof ApiError ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section
+      aria-label="Zonas de la etapa"
+      className="rounded-xl border border-sand-200 bg-white p-5"
+    >
+      <h3 className="text-[15px] sm:text-sm font-semibold text-stone-900 mb-1">
+        Zonas
+      </h3>
+      <div className="mt-2 flex flex-col gap-3">
+        {rows.map(({ zone, teams }) => (
+          <div key={zone}>
+            <p className="text-[13px] sm:text-xs font-semibold text-stone-500 mb-1">
+              Zona {zone} · {teams.length}
+            </p>
+            <ul className="flex flex-wrap gap-x-3 gap-y-1">
+              {teams.map((team) => (
+                <li
+                  key={team.id}
+                  className="text-[15px] sm:text-sm text-stone-800"
+                >
+                  {team.name}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      {locked ? (
+        <p className="mt-4 text-[13px] sm:text-xs text-stone-500">
+          {played
+            ? "Las zonas quedaron fijas: ya hay resultados cargados."
+            : "Las zonas ya están confirmadas."}
+        </p>
+      ) : (
+        <div className="mt-4">
+          <p className="text-[13px] sm:text-xs text-stone-600 mb-3">
+            Si el reparto no es el que necesitás, volvé a sortear: los partidos
+            se rearman solos. Se bloquea cuando cargás el primer resultado.
+          </p>
+          <button
+            type="button"
+            onClick={handleRearm}
+            disabled={busy}
+            className="w-full rounded-lg border border-sand-300 bg-white px-4 py-3 text-[15px] sm:text-sm font-semibold text-stone-900 transition-colors hover:border-amber-soft-400 hover:bg-amber-50 disabled:opacity-50 min-h-[44px]"
+          >
+            {busy ? "Sorteando…" : "Volver a sortear las zonas"}
+          </button>
+        </div>
+      )}
+
+      {msg && (
+        <p
+          className={`mt-3 text-[13px] sm:text-xs font-medium ${msg.startsWith("Zonas sorteadas") ? "text-selva-700" : "text-red-700"}`}
+          role="alert"
+        >
+          {msg}
         </p>
       )}
     </section>

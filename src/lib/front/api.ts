@@ -69,23 +69,35 @@ export async function fetchState(
   return handleResponse<StateSnapshot>(res);
 }
 
-export async function fetchZonification(): Promise<ZonificationResponse> {
-  const res = await fetch(`${BASE}/zonification`, { cache: "no-store" });
+/**
+ * Zonificación de UNA etapa. Todas mandan `etapaId`: sin él el server resuelve
+ * la etapa con la fecha más nueva y la acción caería en otra fecha.
+ */
+export async function fetchZonification(
+  etapaId?: string | null,
+): Promise<ZonificationResponse> {
+  const res = await fetch(
+    `${BASE}/zonification${etapaId ? `?etapa=${etapaId}` : ""}`,
+    { cache: "no-store" },
+  );
   return handleResponse<ZonificationResponse>(res);
 }
 
-export async function zonificationGenerate(): Promise<ZonificationResponse> {
+export async function zonificationGenerate(
+  etapaId: string,
+): Promise<ZonificationResponse> {
   const res = await fetch(`${BASE}/zonification`, {
     method: "POST",
     credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "generate" }),
+    body: JSON.stringify({ action: "generate", etapaId }),
     cache: "no-store",
   });
   return handleResponse<ZonificationResponse>(res);
 }
 
 export async function zonificationSwap(
+  etapaId: string,
   teamId: string,
   from: string,
   to: string,
@@ -94,18 +106,20 @@ export async function zonificationSwap(
     method: "POST",
     credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "swap", teamId, from, to }),
+    body: JSON.stringify({ action: "swap", etapaId, teamId, from, to }),
     cache: "no-store",
   });
   return handleResponse<ZonificationResponse>(res);
 }
 
-export async function zonificationConfirm(): Promise<ZonificationResponse> {
+export async function zonificationConfirm(
+  etapaId: string,
+): Promise<ZonificationResponse> {
   const res = await fetch(`${BASE}/zonification`, {
     method: "POST",
     credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "confirm" }),
+    body: JSON.stringify({ action: "confirm", etapaId }),
     cache: "no-store",
   });
   return handleResponse<ZonificationResponse>(res);
