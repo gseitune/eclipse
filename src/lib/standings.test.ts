@@ -242,3 +242,28 @@ describe("computeZoneStandings", () => {
     );
   });
 });
+describe("manual zone-tie order", () => {
+  const teams = [team("t1", A), team("t2", A), team("t3", A)];
+  // Perfect 3-way tie: every match 21-19/19-21.
+  const matches = [
+    groupMatch({ a: "t1", b: "t2", zone: A, status: "COMPLETE", winner: "t1", sets: [2, 0], points: [42, 38] }),
+    groupMatch({ a: "t2", b: "t3", zone: A, status: "COMPLETE", winner: "t2", sets: [2, 0], points: [42, 38] }),
+    groupMatch({ a: "t3", b: "t1", zone: A, status: "COMPLETE", winner: "t3", sets: [2, 0], points: [42, 38] }),
+  ];
+
+  it("applies the organizer order and clears the unresolved flag", () => {
+    const rows = computeZoneStandings(teams, matches, A, ["t3", "t1", "t2"]);
+    assert.deepEqual(rows.map((r) => r.teamId), ["t3", "t1", "t2"]);
+    assert.ok(rows.every((r) => !r.unresolvedTie));
+  });
+
+  it("ignores an order that does not match the tied teams", () => {
+    for (const stale of [[], ["t1", "t2"], ["t1", "t2", "t3", "t1"], ["t1", "t2", "t9"]]) {
+      const rows = computeZoneStandings(teams, matches, A, stale);
+      assert.ok(
+        rows.every((r) => r.unresolvedTie),
+        `stale order ${JSON.stringify(stale)} must not reorder anything`,
+      );
+    }
+  });
+});

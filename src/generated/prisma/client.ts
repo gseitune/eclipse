@@ -71,3 +71,9 @@ export type Team = Prisma.TeamModel
  * 
  */
 export type Match = Prisma.MatchModel
+/**
+ * Model ZoneTieResolution
+ * Organizer decision for a zone tie that no merit metric can resolve.
+ * One row per (etapa, zone): confirming again replaces the order.
+ */
+export type ZoneTieResolution = Prisma.ZoneTieResolutionModel

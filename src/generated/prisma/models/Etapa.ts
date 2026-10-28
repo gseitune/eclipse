@@ -279,6 +279,7 @@ export type EtapaWhereInput = {
   teams?: Prisma.TeamListRelationFilter
   matches?: Prisma.MatchListRelationFilter
   state?: Prisma.XOR<Prisma.TournamentStateNullableScalarRelationFilter, Prisma.TournamentStateWhereInput> | null
+  zoneTies?: Prisma.ZoneTieResolutionListRelationFilter
 }
 
 export type EtapaOrderByWithRelationInput = {
@@ -297,6 +298,7 @@ export type EtapaOrderByWithRelationInput = {
   teams?: Prisma.TeamOrderByRelationAggregateInput
   matches?: Prisma.MatchOrderByRelationAggregateInput
   state?: Prisma.TournamentStateOrderByWithRelationInput
+  zoneTies?: Prisma.ZoneTieResolutionOrderByRelationAggregateInput
 }
 
 export type EtapaWhereUniqueInput = Prisma.AtLeast<{
@@ -319,6 +321,7 @@ export type EtapaWhereUniqueInput = Prisma.AtLeast<{
   teams?: Prisma.TeamListRelationFilter
   matches?: Prisma.MatchListRelationFilter
   state?: Prisma.XOR<Prisma.TournamentStateNullableScalarRelationFilter, Prisma.TournamentStateWhereInput> | null
+  zoneTies?: Prisma.ZoneTieResolutionListRelationFilter
 }, "id" | "circuit_season_sortOrder">
 
 export type EtapaOrderByWithAggregationInput = {
@@ -375,6 +378,7 @@ export type EtapaCreateInput = {
   teams?: Prisma.TeamCreateNestedManyWithoutEtapaInput
   matches?: Prisma.MatchCreateNestedManyWithoutEtapaInput
   state?: Prisma.TournamentStateCreateNestedOneWithoutEtapaInput
+  zoneTies?: Prisma.ZoneTieResolutionCreateNestedManyWithoutEtapaInput
 }
 
 export type EtapaUncheckedCreateInput = {
@@ -393,6 +397,7 @@ export type EtapaUncheckedCreateInput = {
   teams?: Prisma.TeamUncheckedCreateNestedManyWithoutEtapaInput
   matches?: Prisma.MatchUncheckedCreateNestedManyWithoutEtapaInput
   state?: Prisma.TournamentStateUncheckedCreateNestedOneWithoutEtapaInput
+  zoneTies?: Prisma.ZoneTieResolutionUncheckedCreateNestedManyWithoutEtapaInput
 }
 
 export type EtapaUpdateInput = {
@@ -411,6 +416,7 @@ export type EtapaUpdateInput = {
   teams?: Prisma.TeamUpdateManyWithoutEtapaNestedInput
   matches?: Prisma.MatchUpdateManyWithoutEtapaNestedInput
   state?: Prisma.TournamentStateUpdateOneWithoutEtapaNestedInput
+  zoneTies?: Prisma.ZoneTieResolutionUpdateManyWithoutEtapaNestedInput
 }
 
 export type EtapaUncheckedUpdateInput = {
@@ -429,6 +435,7 @@ export type EtapaUncheckedUpdateInput = {
   teams?: Prisma.TeamUncheckedUpdateManyWithoutEtapaNestedInput
   matches?: Prisma.MatchUncheckedUpdateManyWithoutEtapaNestedInput
   state?: Prisma.TournamentStateUncheckedUpdateOneWithoutEtapaNestedInput
+  zoneTies?: Prisma.ZoneTieResolutionUncheckedUpdateManyWithoutEtapaNestedInput
 }
 
 export type EtapaCreateManyInput = {
@@ -604,6 +611,20 @@ export type EtapaUpdateOneRequiredWithoutMatchesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.EtapaUpdateToOneWithWhereWithoutMatchesInput, Prisma.EtapaUpdateWithoutMatchesInput>, Prisma.EtapaUncheckedUpdateWithoutMatchesInput>
 }
 
+export type EtapaCreateNestedOneWithoutZoneTiesInput = {
+  create?: Prisma.XOR<Prisma.EtapaCreateWithoutZoneTiesInput, Prisma.EtapaUncheckedCreateWithoutZoneTiesInput>
+  connectOrCreate?: Prisma.EtapaCreateOrConnectWithoutZoneTiesInput
+  connect?: Prisma.EtapaWhereUniqueInput
+}
+
+export type EtapaUpdateOneRequiredWithoutZoneTiesNestedInput = {
+  create?: Prisma.XOR<Prisma.EtapaCreateWithoutZoneTiesInput, Prisma.EtapaUncheckedCreateWithoutZoneTiesInput>
+  connectOrCreate?: Prisma.EtapaCreateOrConnectWithoutZoneTiesInput
+  upsert?: Prisma.EtapaUpsertWithoutZoneTiesInput
+  connect?: Prisma.EtapaWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.EtapaUpdateToOneWithWhereWithoutZoneTiesInput, Prisma.EtapaUpdateWithoutZoneTiesInput>, Prisma.EtapaUncheckedUpdateWithoutZoneTiesInput>
+}
+
 export type EtapaCreateWithoutStateInput = {
   id?: string
   name: string
@@ -619,6 +640,7 @@ export type EtapaCreateWithoutStateInput = {
   updatedAt?: Date | string
   teams?: Prisma.TeamCreateNestedManyWithoutEtapaInput
   matches?: Prisma.MatchCreateNestedManyWithoutEtapaInput
+  zoneTies?: Prisma.ZoneTieResolutionCreateNestedManyWithoutEtapaInput
 }
 
 export type EtapaUncheckedCreateWithoutStateInput = {
@@ -636,6 +658,7 @@ export type EtapaUncheckedCreateWithoutStateInput = {
   updatedAt?: Date | string
   teams?: Prisma.TeamUncheckedCreateNestedManyWithoutEtapaInput
   matches?: Prisma.MatchUncheckedCreateNestedManyWithoutEtapaInput
+  zoneTies?: Prisma.ZoneTieResolutionUncheckedCreateNestedManyWithoutEtapaInput
 }
 
 export type EtapaCreateOrConnectWithoutStateInput = {
@@ -669,6 +692,7 @@ export type EtapaUpdateWithoutStateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teams?: Prisma.TeamUpdateManyWithoutEtapaNestedInput
   matches?: Prisma.MatchUpdateManyWithoutEtapaNestedInput
+  zoneTies?: Prisma.ZoneTieResolutionUpdateManyWithoutEtapaNestedInput
 }
 
 export type EtapaUncheckedUpdateWithoutStateInput = {
@@ -686,6 +710,7 @@ export type EtapaUncheckedUpdateWithoutStateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teams?: Prisma.TeamUncheckedUpdateManyWithoutEtapaNestedInput
   matches?: Prisma.MatchUncheckedUpdateManyWithoutEtapaNestedInput
+  zoneTies?: Prisma.ZoneTieResolutionUncheckedUpdateManyWithoutEtapaNestedInput
 }
 
 export type EtapaCreateWithoutTeamsInput = {
@@ -703,6 +728,7 @@ export type EtapaCreateWithoutTeamsInput = {
   updatedAt?: Date | string
   matches?: Prisma.MatchCreateNestedManyWithoutEtapaInput
   state?: Prisma.TournamentStateCreateNestedOneWithoutEtapaInput
+  zoneTies?: Prisma.ZoneTieResolutionCreateNestedManyWithoutEtapaInput
 }
 
 export type EtapaUncheckedCreateWithoutTeamsInput = {
@@ -720,6 +746,7 @@ export type EtapaUncheckedCreateWithoutTeamsInput = {
   updatedAt?: Date | string
   matches?: Prisma.MatchUncheckedCreateNestedManyWithoutEtapaInput
   state?: Prisma.TournamentStateUncheckedCreateNestedOneWithoutEtapaInput
+  zoneTies?: Prisma.ZoneTieResolutionUncheckedCreateNestedManyWithoutEtapaInput
 }
 
 export type EtapaCreateOrConnectWithoutTeamsInput = {
@@ -753,6 +780,7 @@ export type EtapaUpdateWithoutTeamsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   matches?: Prisma.MatchUpdateManyWithoutEtapaNestedInput
   state?: Prisma.TournamentStateUpdateOneWithoutEtapaNestedInput
+  zoneTies?: Prisma.ZoneTieResolutionUpdateManyWithoutEtapaNestedInput
 }
 
 export type EtapaUncheckedUpdateWithoutTeamsInput = {
@@ -770,6 +798,7 @@ export type EtapaUncheckedUpdateWithoutTeamsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   matches?: Prisma.MatchUncheckedUpdateManyWithoutEtapaNestedInput
   state?: Prisma.TournamentStateUncheckedUpdateOneWithoutEtapaNestedInput
+  zoneTies?: Prisma.ZoneTieResolutionUncheckedUpdateManyWithoutEtapaNestedInput
 }
 
 export type EtapaCreateWithoutMatchesInput = {
@@ -787,6 +816,7 @@ export type EtapaCreateWithoutMatchesInput = {
   updatedAt?: Date | string
   teams?: Prisma.TeamCreateNestedManyWithoutEtapaInput
   state?: Prisma.TournamentStateCreateNestedOneWithoutEtapaInput
+  zoneTies?: Prisma.ZoneTieResolutionCreateNestedManyWithoutEtapaInput
 }
 
 export type EtapaUncheckedCreateWithoutMatchesInput = {
@@ -804,6 +834,7 @@ export type EtapaUncheckedCreateWithoutMatchesInput = {
   updatedAt?: Date | string
   teams?: Prisma.TeamUncheckedCreateNestedManyWithoutEtapaInput
   state?: Prisma.TournamentStateUncheckedCreateNestedOneWithoutEtapaInput
+  zoneTies?: Prisma.ZoneTieResolutionUncheckedCreateNestedManyWithoutEtapaInput
 }
 
 export type EtapaCreateOrConnectWithoutMatchesInput = {
@@ -837,6 +868,7 @@ export type EtapaUpdateWithoutMatchesInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teams?: Prisma.TeamUpdateManyWithoutEtapaNestedInput
   state?: Prisma.TournamentStateUpdateOneWithoutEtapaNestedInput
+  zoneTies?: Prisma.ZoneTieResolutionUpdateManyWithoutEtapaNestedInput
 }
 
 export type EtapaUncheckedUpdateWithoutMatchesInput = {
@@ -854,6 +886,95 @@ export type EtapaUncheckedUpdateWithoutMatchesInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teams?: Prisma.TeamUncheckedUpdateManyWithoutEtapaNestedInput
   state?: Prisma.TournamentStateUncheckedUpdateOneWithoutEtapaNestedInput
+  zoneTies?: Prisma.ZoneTieResolutionUncheckedUpdateManyWithoutEtapaNestedInput
+}
+
+export type EtapaCreateWithoutZoneTiesInput = {
+  id?: string
+  name: string
+  date?: Date | string | null
+  circuit?: $Enums.Circuit
+  season?: number
+  sortOrder?: number
+  bracketFormat?: $Enums.BracketFormat
+  setFormat?: $Enums.SetFormat | null
+  closedAt?: Date | string | null
+  cancelledAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teams?: Prisma.TeamCreateNestedManyWithoutEtapaInput
+  matches?: Prisma.MatchCreateNestedManyWithoutEtapaInput
+  state?: Prisma.TournamentStateCreateNestedOneWithoutEtapaInput
+}
+
+export type EtapaUncheckedCreateWithoutZoneTiesInput = {
+  id?: string
+  name: string
+  date?: Date | string | null
+  circuit?: $Enums.Circuit
+  season?: number
+  sortOrder?: number
+  bracketFormat?: $Enums.BracketFormat
+  setFormat?: $Enums.SetFormat | null
+  closedAt?: Date | string | null
+  cancelledAt?: Date | string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  teams?: Prisma.TeamUncheckedCreateNestedManyWithoutEtapaInput
+  matches?: Prisma.MatchUncheckedCreateNestedManyWithoutEtapaInput
+  state?: Prisma.TournamentStateUncheckedCreateNestedOneWithoutEtapaInput
+}
+
+export type EtapaCreateOrConnectWithoutZoneTiesInput = {
+  where: Prisma.EtapaWhereUniqueInput
+  create: Prisma.XOR<Prisma.EtapaCreateWithoutZoneTiesInput, Prisma.EtapaUncheckedCreateWithoutZoneTiesInput>
+}
+
+export type EtapaUpsertWithoutZoneTiesInput = {
+  update: Prisma.XOR<Prisma.EtapaUpdateWithoutZoneTiesInput, Prisma.EtapaUncheckedUpdateWithoutZoneTiesInput>
+  create: Prisma.XOR<Prisma.EtapaCreateWithoutZoneTiesInput, Prisma.EtapaUncheckedCreateWithoutZoneTiesInput>
+  where?: Prisma.EtapaWhereInput
+}
+
+export type EtapaUpdateToOneWithWhereWithoutZoneTiesInput = {
+  where?: Prisma.EtapaWhereInput
+  data: Prisma.XOR<Prisma.EtapaUpdateWithoutZoneTiesInput, Prisma.EtapaUncheckedUpdateWithoutZoneTiesInput>
+}
+
+export type EtapaUpdateWithoutZoneTiesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  circuit?: Prisma.EnumCircuitFieldUpdateOperationsInput | $Enums.Circuit
+  season?: Prisma.IntFieldUpdateOperationsInput | number
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  bracketFormat?: Prisma.EnumBracketFormatFieldUpdateOperationsInput | $Enums.BracketFormat
+  setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
+  closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teams?: Prisma.TeamUpdateManyWithoutEtapaNestedInput
+  matches?: Prisma.MatchUpdateManyWithoutEtapaNestedInput
+  state?: Prisma.TournamentStateUpdateOneWithoutEtapaNestedInput
+}
+
+export type EtapaUncheckedUpdateWithoutZoneTiesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  date?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  circuit?: Prisma.EnumCircuitFieldUpdateOperationsInput | $Enums.Circuit
+  season?: Prisma.IntFieldUpdateOperationsInput | number
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  bracketFormat?: Prisma.EnumBracketFormatFieldUpdateOperationsInput | $Enums.BracketFormat
+  setFormat?: Prisma.NullableEnumSetFormatFieldUpdateOperationsInput | $Enums.SetFormat | null
+  closedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  cancelledAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teams?: Prisma.TeamUncheckedUpdateManyWithoutEtapaNestedInput
+  matches?: Prisma.MatchUncheckedUpdateManyWithoutEtapaNestedInput
+  state?: Prisma.TournamentStateUncheckedUpdateOneWithoutEtapaNestedInput
 }
 
 
@@ -864,11 +985,13 @@ export type EtapaUncheckedUpdateWithoutMatchesInput = {
 export type EtapaCountOutputType = {
   teams: number
   matches: number
+  zoneTies: number
 }
 
 export type EtapaCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   teams?: boolean | EtapaCountOutputTypeCountTeamsArgs
   matches?: boolean | EtapaCountOutputTypeCountMatchesArgs
+  zoneTies?: boolean | EtapaCountOutputTypeCountZoneTiesArgs
 }
 
 /**
@@ -895,6 +1018,13 @@ export type EtapaCountOutputTypeCountMatchesArgs<ExtArgs extends runtime.Types.E
   where?: Prisma.MatchWhereInput
 }
 
+/**
+ * EtapaCountOutputType without action
+ */
+export type EtapaCountOutputTypeCountZoneTiesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ZoneTieResolutionWhereInput
+}
+
 
 export type EtapaSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -912,6 +1042,7 @@ export type EtapaSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   teams?: boolean | Prisma.Etapa$teamsArgs<ExtArgs>
   matches?: boolean | Prisma.Etapa$matchesArgs<ExtArgs>
   state?: boolean | Prisma.Etapa$stateArgs<ExtArgs>
+  zoneTies?: boolean | Prisma.Etapa$zoneTiesArgs<ExtArgs>
   _count?: boolean | Prisma.EtapaCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["etapa"]>
 
@@ -965,6 +1096,7 @@ export type EtapaInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   teams?: boolean | Prisma.Etapa$teamsArgs<ExtArgs>
   matches?: boolean | Prisma.Etapa$matchesArgs<ExtArgs>
   state?: boolean | Prisma.Etapa$stateArgs<ExtArgs>
+  zoneTies?: boolean | Prisma.Etapa$zoneTiesArgs<ExtArgs>
   _count?: boolean | Prisma.EtapaCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type EtapaIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -976,6 +1108,7 @@ export type $EtapaPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
     teams: Prisma.$TeamPayload<ExtArgs>[]
     matches: Prisma.$MatchPayload<ExtArgs>[]
     state: Prisma.$TournamentStatePayload<ExtArgs> | null
+    zoneTies: Prisma.$ZoneTieResolutionPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1408,6 +1541,7 @@ export interface Prisma__EtapaClient<T, Null = never, ExtArgs extends runtime.Ty
   teams<T extends Prisma.Etapa$teamsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Etapa$teamsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TeamPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   matches<T extends Prisma.Etapa$matchesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Etapa$matchesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MatchPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   state<T extends Prisma.Etapa$stateArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Etapa$stateArgs<ExtArgs>>): Prisma.Prisma__TournamentStateClient<runtime.Types.Result.GetResult<Prisma.$TournamentStatePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  zoneTies<T extends Prisma.Etapa$zoneTiesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Etapa$zoneTiesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ZoneTieResolutionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1904,6 +2038,30 @@ export type Etapa$stateArgs<ExtArgs extends runtime.Types.Extensions.InternalArg
    */
   include?: Prisma.TournamentStateInclude<ExtArgs> | null
   where?: Prisma.TournamentStateWhereInput
+}
+
+/**
+ * Etapa.zoneTies
+ */
+export type Etapa$zoneTiesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ZoneTieResolution
+   */
+  select?: Prisma.ZoneTieResolutionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ZoneTieResolution
+   */
+  omit?: Prisma.ZoneTieResolutionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ZoneTieResolutionInclude<ExtArgs> | null
+  where?: Prisma.ZoneTieResolutionWhereInput
+  orderBy?: Prisma.ZoneTieResolutionOrderByWithRelationInput | Prisma.ZoneTieResolutionOrderByWithRelationInput[]
+  cursor?: Prisma.ZoneTieResolutionWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ZoneTieResolutionScalarFieldEnum | Prisma.ZoneTieResolutionScalarFieldEnum[]
 }
 
 /**

@@ -62,6 +62,24 @@ teams with a circular head-to-head — every match 21-19/19-21 is enough) stays
 `Zone X: tie unresolved`. The system reports the tie instead of inventing an
 order; resolution is an organizer decision.
 
+### Manual resolution of a zone tie
+
+When that happens the system stays on standby: no bracket matches are created,
+the phase stays `GROUPS`, and `/api/state` reports
+`bracketsBlocked.reason = "zone_tie"` with the tied team ids.
+
+The organizer resolves it from the panel (`POST /api/zone-tie`, organizer
+session only) with an explicit order of exactly the teams that are still tied,
+best position first. The order is stored in `ZoneTieResolution` (one row per
+etapa + zone, confirming again replaces it), feeds the zone standings, and the
+bracket is built as soon as nothing else blocks it. A stored order that no
+longer matches the current tie (results changed) is ignored and the zone goes
+back to blocked.
+
+The table comes from migration `20261028120000_add_zone_tie_resolution`. If a
+database does not have it yet, the state read keeps working (the order is
+simply absent) and the endpoint answers `503 zone_tie_storage_unavailable`.
+
 Zone ties therefore always resolve into positions. The only tie case the
 system refuses to resolve silently is the cross-zone best-second fight
 (below).

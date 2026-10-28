@@ -402,7 +402,8 @@ export const ModelName = {
   Etapa: 'Etapa',
   TournamentState: 'TournamentState',
   Team: 'Team',
-  Match: 'Match'
+  Match: 'Match',
+  ZoneTieResolution: 'ZoneTieResolution'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -418,7 +419,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "circuitSetting" | "user" | "etapa" | "tournamentState" | "team" | "match"
+    modelProps: "circuitSetting" | "user" | "etapa" | "tournamentState" | "team" | "match" | "zoneTieResolution"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -866,6 +867,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    ZoneTieResolution: {
+      payload: Prisma.$ZoneTieResolutionPayload<ExtArgs>
+      fields: Prisma.ZoneTieResolutionFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ZoneTieResolutionFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ZoneTieResolutionPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ZoneTieResolutionFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ZoneTieResolutionPayload>
+        }
+        findFirst: {
+          args: Prisma.ZoneTieResolutionFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ZoneTieResolutionPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ZoneTieResolutionFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ZoneTieResolutionPayload>
+        }
+        findMany: {
+          args: Prisma.ZoneTieResolutionFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ZoneTieResolutionPayload>[]
+        }
+        create: {
+          args: Prisma.ZoneTieResolutionCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ZoneTieResolutionPayload>
+        }
+        createMany: {
+          args: Prisma.ZoneTieResolutionCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ZoneTieResolutionCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ZoneTieResolutionPayload>[]
+        }
+        delete: {
+          args: Prisma.ZoneTieResolutionDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ZoneTieResolutionPayload>
+        }
+        update: {
+          args: Prisma.ZoneTieResolutionUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ZoneTieResolutionPayload>
+        }
+        deleteMany: {
+          args: Prisma.ZoneTieResolutionDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ZoneTieResolutionUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ZoneTieResolutionUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ZoneTieResolutionPayload>[]
+        }
+        upsert: {
+          args: Prisma.ZoneTieResolutionUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ZoneTieResolutionPayload>
+        }
+        aggregate: {
+          args: Prisma.ZoneTieResolutionAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateZoneTieResolution>
+        }
+        groupBy: {
+          args: Prisma.ZoneTieResolutionGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ZoneTieResolutionGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ZoneTieResolutionCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ZoneTieResolutionCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -990,6 +1065,18 @@ export const MatchScalarFieldEnum = {
 } as const
 
 export type MatchScalarFieldEnum = (typeof MatchScalarFieldEnum)[keyof typeof MatchScalarFieldEnum]
+
+
+export const ZoneTieResolutionScalarFieldEnum = {
+  id: 'id',
+  etapaId: 'etapaId',
+  zone: 'zone',
+  order: 'order',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ZoneTieResolutionScalarFieldEnum = (typeof ZoneTieResolutionScalarFieldEnum)[keyof typeof ZoneTieResolutionScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -1293,6 +1380,7 @@ export type GlobalOmitConfig = {
   tournamentState?: Prisma.TournamentStateOmit
   team?: Prisma.TeamOmit
   match?: Prisma.MatchOmit
+  zoneTieResolution?: Prisma.ZoneTieResolutionOmit
 }
 
 /* Types for Logging */

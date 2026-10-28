@@ -8,6 +8,7 @@ import {
   recordResult,
   setMatchTimes,
   resolveBestThird,
+  resolveZoneTie,
   createBestThirdDesempate,
   reslotEtapa,
 } from "../../lib/front/api";
@@ -21,6 +22,7 @@ import type {
   ScheduleRow,
   StandingRow,
   StateSnapshot,
+  ZoneId,
 } from "../../lib/front/types";
 import { ApiError } from "../../lib/front/types";
 import { stageLabel } from "../../lib/front/phase";
@@ -1343,6 +1345,175 @@ export function CorregirResultadosPanel({
     </>
   );
 }
+export interface ZoneTiePanelProps {
+  readonly state: StateSnapshot | null;
+  readonly refetch: () => Promise<void>;
+}
+
+/**
+ * Manual resolution of a zone tie. The engine never picks: it stays on standby
+ * (no bracket, phase in GROUPS) until the organizer confirms an order. She can
+ * also play a shorter desempate first; the app just waits.
+ */
+export function ZoneTiePanel({ state, refetch }: ZoneTiePanelProps) {
+  const blocked = state?.bracketsBlocked;
+  const [drafts, setDrafts] = useState<Record<string, string[]>>({});
+  const [busyZone, setBusyZone] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const groups = useMemo(() => {
+    if (blocked?.reason !== "zone_tie") return null;
+    const zoneOf = new Map<string, ZoneId>();
+    const names = new Map<string, string>();
+    for (const zone of ["A", "B", "C"] as ZoneId[]) {
+      for (const team of state?.zones?.[zone] ?? []) {
+        zoneOf.set(team.id, zone);
+        names.set(team.id, team.name);
+      }
+    }
+    const byZone = new Map<ZoneId, string[]>();
+    for (const id of blocked.teamIds) {
+      const zone = zoneOf.get(id);
+      if (!zone) continue;
+      byZone.set(zone, [...(byZone.get(zone) ?? []), id]);
+    }
+    return [...byZone.entries()].map(([zone, ids]) => ({
+      zone,
+      teams: ids.map((id) => ({ id, name: names.get(id) ?? "Equipo" })),
+    }));
+  }, [blocked, state?.zones]);
+
+  if (!groups || groups.length === 0) return null;
+
+  function orderFor(zone: ZoneId, ids: string[]): string[] {
+    const draft = drafts[zone];
+    if (
+      draft &&
+      draft.length === ids.length &&
+      ids.every((id) => draft.includes(id))
+    ) {
+      return draft;
+    }
+    return ids;
+  }
+
+  function move(zone: ZoneId, ids: string[], index: number, delta: number) {
+    const next = [...orderFor(zone, ids)];
+    const target = index + delta;
+    if (target < 0 || target >= next.length) return;
+    [next[index], next[target]] = [next[target], next[index]];
+    setDrafts((prev) => ({ ...prev, [zone]: next }));
+  }
+
+  async function confirm(zone: ZoneId, ids: string[]) {
+    if (!state?.etapaId || busyZone) return;
+    setBusyZone(zone);
+    setMsg(null);
+    try {
+      const result = await resolveZoneTie(
+        state.etapaId,
+        zone,
+        orderFor(zone, ids),
+      );
+      setMsg(
+        result.ok
+          ? "Listo — el orden quedó guardado y la llave se armó."
+          : "Orden guardado. La llave se arma cuando no quede ningún partido de zona pendiente.",
+      );
+      await refetch();
+    } catch (err) {
+      setMsg(err instanceof ApiError ? err.message : String(err));
+    } finally {
+      setBusyZone(null);
+    }
+  }
+
+  return (
+    <section
+      aria-label="Empate sin resolver en una zona"
+      className="rounded-xl border border-amber-300 bg-amber-50 p-5"
+    >
+      <div className="mb-1 flex items-center gap-2">
+        <LockIcon />
+        <h3 className="text-[15px] sm:text-sm font-semibold text-stone-900">
+          Empate sin resolver — el sistema espera
+        </h3>
+      </div>
+      <p className="text-[13px] sm:text-xs text-stone-600 mb-4">
+        Estos equipos quedaron iguales en partidos ganados, diferencia de sets,
+        diferencia de puntos y puntos a favor, y el mano a mano no los separa. El
+        sistema no arma la llave ni elige por nombre, id ni sorteo. Definí el
+        orden y confirmá. Si prefieren jugar un desempate más corto, jueguen y
+        después confirmá el orden que resulte.
+      </p>
+      <div className="space-y-4">
+        {groups.map(({ zone, teams }) => {
+          const ids = teams.map((t) => t.id);
+          const order = orderFor(zone, ids);
+          const byId = new Map(teams.map((t) => [t.id, t.name]));
+          const busy = busyZone === zone;
+          return (
+            <div
+              key={zone}
+              className="rounded-lg border border-amber-200 bg-white/70 p-3"
+            >
+              <p className="mb-2 text-[12px] font-bold uppercase tracking-[0.16em] text-stone-500">
+                Zona {zone}
+              </p>
+              <ol className="space-y-2">
+                {order.map((id, index) => (
+                  <li key={id} className="flex items-center gap-2">
+                    <span className="w-5 text-right font-display text-base tabular-nums text-stone-400">
+                      {index + 1}
+                    </span>
+                    <span className="flex-1 truncate text-[15px] font-medium text-stone-800">
+                      {byId.get(id) ?? "Equipo"}
+                    </span>
+                    <button
+                      type="button"
+                      aria-label={`Subir ${byId.get(id) ?? "equipo"}`}
+                      onClick={() => move(zone, ids, index, -1)}
+                      disabled={index === 0 || busy}
+                      className="min-h-[44px] min-w-[44px] rounded-lg border border-sand-300 bg-white text-stone-700 disabled:opacity-40"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Bajar ${byId.get(id) ?? "equipo"}`}
+                      onClick={() => move(zone, ids, index, 1)}
+                      disabled={index === order.length - 1 || busy}
+                      className="min-h-[44px] min-w-[44px] rounded-lg border border-sand-300 bg-white text-stone-700 disabled:opacity-40"
+                    >
+                      ↓
+                    </button>
+                  </li>
+                ))}
+              </ol>
+              <button
+                type="button"
+                onClick={() => confirm(zone, ids)}
+                disabled={busy}
+                className="mt-3 w-full rounded-lg bg-tierra-900 px-4 py-3 text-[15px] font-semibold text-sand-50 transition-colors hover:bg-tierra-800 disabled:opacity-50 min-h-[44px]"
+              >
+                {busy ? "Guardando…" : `Confirmar orden de la zona ${zone}`}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+      {msg && (
+        <p
+          className="mt-3 text-[13px] sm:text-xs font-medium text-stone-700"
+          role="alert"
+        >
+          {msg}
+        </p>
+      )}
+    </section>
+  );
+}
+
 export function MejoresTercerosPanel({ state, refetch }: MejoresTercerosPanelProps) {
   const blocked = state?.bracketsBlocked;
 
@@ -1357,11 +1528,6 @@ export function MejoresTercerosPanel({ state, refetch }: MejoresTercerosPanelPro
   const bestThirdTie = useMemo(() => {
     if (blocked?.reason !== "best_third_tie") return null;
     return blocked.teamIds.map((id) => ({ id, name: names.get(id) ?? "Equipo" }));
-  }, [blocked, names]);
-
-  const zoneTieNames = useMemo(() => {
-    if (blocked?.reason !== "zone_tie") return null;
-    return blocked.teamIds.map((id) => names.get(id) ?? "Equipo");
   }, [blocked, names]);
 
   const needsScores = useMemo(() => {
@@ -1411,34 +1577,6 @@ export function MejoresTercerosPanel({ state, refetch }: MejoresTercerosPanelPro
     } finally {
       setCreatingDesempate(false);
     }
-  }
-
-  // A zone tie that survived the whole merit chain plus head-to-head: the
-  // bracket cannot be seeded and the alphabet is not an option. Explain, no
-  // action (same as the 3+ seconds tie).
-  if (zoneTieNames) {
-    return (
-      <section
-        aria-label="Empate sin resolver en una zona"
-        className="rounded-xl border border-amber-300 bg-amber-50 p-5"
-      >
-        <div className="mb-1 flex items-center gap-2">
-          <LockIcon />
-          <h3 className="text-[15px] sm:text-sm font-semibold text-stone-900">
-            Empate sin resolver en una zona
-          </h3>
-        </div>
-        <p className="text-[13px] sm:text-xs text-stone-600 mb-2">
-          {zoneTieNames.join(" / ")} quedaron iguales en partidos ganados,
-          diferencia de sets, diferencia de puntos y puntos a favor, y el mano a
-          mano no los separa.
-        </p>
-        <p className="text-[13px] sm:text-xs text-stone-500">
-          La llave no se arma hasta que la organización defina el orden. El
-          sistema no lo resuelve por nombre ni por sorteo.
-        </p>
-      </section>
-    );
   }
 
   // Missing scores: the restricted comparison cannot run yet. Explain, no action.

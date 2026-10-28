@@ -56,7 +56,8 @@ export const ModelName = {
   Etapa: 'Etapa',
   TournamentState: 'TournamentState',
   Team: 'Team',
-  Match: 'Match'
+  Match: 'Match',
+  ZoneTieResolution: 'ZoneTieResolution'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -160,6 +161,18 @@ export const MatchScalarFieldEnum = {
 } as const
 
 export type MatchScalarFieldEnum = (typeof MatchScalarFieldEnum)[keyof typeof MatchScalarFieldEnum]
+
+
+export const ZoneTieResolutionScalarFieldEnum = {
+  id: 'id',
+  etapaId: 'etapaId',
+  zone: 'zone',
+  order: 'order',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ZoneTieResolutionScalarFieldEnum = (typeof ZoneTieResolutionScalarFieldEnum)[keyof typeof ZoneTieResolutionScalarFieldEnum]
 
 
 export const SortOrder = {

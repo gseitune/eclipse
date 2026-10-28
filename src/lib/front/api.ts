@@ -8,6 +8,7 @@ import type {
   CreateEtapaInput,
   ScheduleBoardRow,
   Circuit,
+  ZoneId,
 } from "./types";
 import type { FotoGaleria } from "./galeria";
 import { ApiError } from "./types";
@@ -266,6 +267,22 @@ export async function createBestThirdDesempate(
     headers: { "Content-Type": "application/json" },
     cache: "no-store",
     body: JSON.stringify({ etapaId }),
+  });
+  return handleResponse(res);
+}
+
+/** Organizer sets the manual order of a zone tie the engine cannot resolve. */
+export async function resolveZoneTie(
+  etapaId: string,
+  zone: ZoneId,
+  order: string[],
+): Promise<{ ok: boolean; missing: string[] }> {
+  const res = await fetch(`${BASE}/zone-tie`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+    body: JSON.stringify({ etapaId, zone, order }),
   });
   return handleResponse(res);
 }

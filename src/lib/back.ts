@@ -826,9 +826,40 @@ export async function getTeamsByZone(etapaId?: string | null) {
   return byZone;
 }
 
+/**
+ * Manual zone-tie orders saved by the organizer. Tolerant on purpose: before
+ * the migration that creates the table runs, the feature must stay inert
+ * instead of taking the whole state read down with it.
+ */
+async function readZoneTieOrders(etapaId: string): Promise<Map<Zone, string[]>> {
+  const orders = new Map<Zone, string[]>();
+  try {
+    const rows = await prisma.zoneTieResolution.findMany({
+      where: { etapaId },
+      select: { zone: true, order: true },
+    });
+    for (const row of rows) {
+      try {
+        const parsed: unknown = JSON.parse(row.order);
+        if (
+          Array.isArray(parsed) &&
+          parsed.every((id) => typeof id === "string")
+        ) {
+          orders.set(row.zone as Zone, parsed as string[]);
+        }
+      } catch {
+        // A corrupt row never blocks the standings.
+      }
+    }
+  } catch (error) {
+    console.error("zoneTieResolution read failed (migration applied?)", error);
+  }
+  return orders;
+}
+
 export async function getStandings(etapaId?: string | null): Promise<Partial<Record<string, StandingRow[]>>> {
   const id = await resolveEtapaId(etapaId);
-  const [teams, matches] = await Promise.all([
+  const [teams, matches, manualOrders] = await Promise.all([
     prisma.team.findMany({
       where: { etapaId: id },
       select: { id: true, name: true, zone: true, maleName: true, femaleName: true },
@@ -845,6 +876,7 @@ export async function getStandings(etapaId?: string | null): Promise<Partial<Rec
         winnerId: true,
       },
     }),
+    readZoneTieOrders(id),
   ]);
   const standings: Partial<Record<string, StandingRow[]>> = {};
   for (const zone of ["A", "B", "C"] as const) {
@@ -868,6 +900,7 @@ export async function getStandings(etapaId?: string | null): Promise<Partial<Rec
         };
       }),
       zone,
+      manualOrders.get(zone),
     );
     if (rows.length > 0) standings[zone] = rows;
   }
@@ -1730,6 +1763,98 @@ export async function createBestThirdDesempate(
     );
   }
   return { ok: true };
+}
+
+/**
+ * Organizer decision for a zone tie that survived the whole merit chain plus
+ * head-to-head. The system never invents that order: it stays on standby and
+ * the organizer names it. The saved order feeds the zone standings, and the
+ * bracket is built as soon as no other blocker remains.
+ *
+ * `order` lists exactly the teams still tied in that zone, best position
+ * first. Confirming again replaces the previous order.
+ */
+export async function resolveZoneTie(
+  etapaId: string,
+  zone: Zone,
+  order: string[],
+): Promise<{ ok: boolean; missing: string[] }> {
+  await requireEtapaOpen(etapaId);
+
+  const state = await getState(etapaId);
+  if (state.phase !== "GROUPS") {
+    throw new BackError(
+      "The zone order can only be set while the group phase is open.",
+      409,
+      "phase_not_groups",
+    );
+  }
+
+  const standings = await getStandings(etapaId);
+  const tied = (standings[zone] ?? []).filter((row) => row.unresolvedTie);
+  if (tied.length < 2) {
+    throw new BackError(
+      "There is no unresolved tie in that zone.",
+      400,
+      "no_zone_tie",
+    );
+  }
+
+  const tiedIds = new Set(tied.map((row) => row.teamId));
+  const unique = new Set(order);
+  if (
+    order.length !== tiedIds.size ||
+    unique.size !== order.length ||
+    !order.every((id) => tiedIds.has(id))
+  ) {
+    throw new BackError(
+      "The order must list every tied team of that zone exactly once.",
+      400,
+      "invalid_tie_order",
+    );
+  }
+
+  try {
+    await prisma.zoneTieResolution.upsert({
+      where: { etapaId_zone: { etapaId, zone } },
+      create: { etapaId, zone, order: JSON.stringify(order) },
+      update: { order: JSON.stringify(order) },
+    });
+  } catch (error) {
+    console.error("zoneTieResolution write failed (migration applied?)", error);
+    throw new BackError(
+      "No se pudo guardar el orden: falta aplicar la migración de la base.",
+      503,
+      "zone_tie_storage_unavailable",
+    );
+  }
+
+  auditWrite({
+    op: "resolveZoneTie",
+    etapaId,
+    count: order.length,
+    detail: { zone, order },
+  });
+  publishSse("standings-changed", { zone });
+
+  // The order is saved even if the zone phase is still running; the bracket is
+  // only built once nothing is left to play.
+  const next = await getNextMatch(etapaId);
+  if (next && next.stage === "GROUPS") {
+    return { ok: false, missing: ["GROUPS still pending"] };
+  }
+
+  const updated = await getStandings(etapaId);
+  const etapa = await prisma.etapa.findUnique({
+    where: { id: etapaId },
+    select: { bracketFormat: true },
+  });
+  return finalizeBrackets(
+    updated,
+    etapaId,
+    undefined,
+    etapa?.bracketFormat ?? "STANDARD",
+  );
 }
 
 /**

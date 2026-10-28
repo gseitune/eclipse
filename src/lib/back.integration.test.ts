@@ -2019,3 +2019,82 @@ describe("cascade edit (integration)", () => {
     );
   });
 });
+describe("resolveZoneTie (integration) — manual order for an unresolved tie", () => {
+  let tieEtapaId = "";
+  let resolveZoneTieLocal!: BackModule["resolveZoneTie"];
+
+  before(async () => {
+    process.env.DATABASE_URL = dbUrl;
+    execSync(`npx prisma db push --url ${dbUrl}`, {
+      cwd: repoRoot,
+      stdio: "pipe",
+    });
+
+    const p = await import("./prisma");
+    prisma = p.prisma;
+    const back = await import("./back");
+    resolveZoneTieLocal = back.resolveZoneTie;
+    getStandings = back.getStandings;
+
+    const etapa = await prisma.etapa.create({
+      data: { name: "Tie etapa", sortOrder: 7 },
+    });
+    tieEtapaId = etapa.id;
+    await prisma.team.createMany({
+      data: [
+        { id: "z1", etapaId: tieEtapaId, name: "Zeta", zone: "A" },
+        { id: "z2", etapaId: tieEtapaId, name: "Alfa", zone: "A" },
+        { id: "z3", etapaId: tieEtapaId, name: "Mike", zone: "A" },
+        { id: "z4", etapaId: tieEtapaId, name: "Norte", zone: "B" },
+        { id: "z5", etapaId: tieEtapaId, name: "Sur", zone: "B" },
+      ],
+    });
+    const tie = [{ teamA: 21, teamB: 19 }, { teamA: 21, teamB: 19 }];
+    await prisma.match.createMany({
+      data: [
+        { id: "tie1", etapaId: tieEtapaId, stage: "GROUPS", zone: "A", slot: 1, timeLabel: "10:00 - 10:20", teamAId: "z1", teamBId: "z2", sets: tie, resultStatus: "COMPLETE", winnerId: "z1" },
+        { id: "tie2", etapaId: tieEtapaId, stage: "GROUPS", zone: "A", slot: 2, timeLabel: "10:20 - 10:40", teamAId: "z2", teamBId: "z3", sets: tie, resultStatus: "COMPLETE", winnerId: "z2" },
+        { id: "tie3", etapaId: tieEtapaId, stage: "GROUPS", zone: "A", slot: 3, timeLabel: "10:40 - 11:00", teamAId: "z3", teamBId: "z1", sets: tie, resultStatus: "COMPLETE", winnerId: "z3" },
+        // Still pending: the bracket must not be built yet.
+        { id: "tie4", etapaId: tieEtapaId, stage: "GROUPS", zone: "B", slot: 4, timeLabel: "11:00 - 11:20", teamAId: "z4", teamBId: "z5" },
+      ],
+    });
+    await prisma.tournamentState.create({ data: { etapaId: tieEtapaId } });
+  });
+
+  after(async () => {
+    await prisma.$disconnect();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("reports the tie and rejects an invalid order", async () => {
+    const standings = await getStandings(tieEtapaId);
+    const rows = standings.A ?? [];
+    assert.equal(rows.length, 3);
+    assert.ok(rows.every((r) => r.unresolvedTie), "3-way tie stays unresolved");
+
+    await assert.rejects(
+      () => resolveZoneTieLocal(tieEtapaId, "A", ["z1", "z2"]),
+      (err: unknown) => (err as { reason?: string }).reason === "invalid_tie_order",
+    );
+    await assert.rejects(
+      () => resolveZoneTieLocal(tieEtapaId, "C", ["z1", "z2"]),
+      (err: unknown) => (err as { reason?: string }).reason === "no_zone_tie",
+    );
+  });
+
+  it("applies the organizer order, persists it and clears the tie", async () => {
+    const result = await resolveZoneTieLocal(tieEtapaId, "A", ["z3", "z1", "z2"]);
+    assert.deepEqual(result, { ok: false, missing: ["GROUPS still pending"] });
+
+    const standings = await getStandings(tieEtapaId);
+    assert.deepEqual((standings.A ?? []).map((r) => r.teamId), ["z3", "z1", "z2"]);
+    assert.ok((standings.A ?? []).every((r) => !r.unresolvedTie));
+
+    const saved = await prisma.zoneTieResolution.findUnique({
+      where: { etapaId_zone: { etapaId: tieEtapaId, zone: "A" } },
+    });
+    assert.ok(saved, "the order is persisted");
+    assert.deepEqual(JSON.parse(saved!.order), ["z3", "z1", "z2"]);
+  });
+});

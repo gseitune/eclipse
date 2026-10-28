@@ -151,6 +151,31 @@ function resolveHeadToHead(
 }
 
 /**
+ * Applies the organizer's manual order to the rows that are still unresolved
+ * in this zone. Ignored unless the order lists exactly those teams once each:
+ * a stale order (results changed) must never reorder anything.
+ */
+function applyManualOrder(rows: StandingRow[], order: readonly string[]): void {
+  const tied = rows.filter((r) => r.unresolvedTie);
+  if (tied.length < 2) return;
+  const tiedIds = new Set(tied.map((r) => r.teamId));
+  if (order.length !== tiedIds.size) return;
+  if (new Set(order).size !== order.length) return;
+  if (!order.every((id) => tiedIds.has(id))) return;
+
+  const rank = new Map(order.map((id, index) => [id, index]));
+  const ordered = [...tied].sort(
+    (a, b) => (rank.get(a.teamId) ?? 0) - (rank.get(b.teamId) ?? 0),
+  );
+  let cursor = 0;
+  for (let i = 0; i < rows.length; i += 1) {
+    if (!rows[i].unresolvedTie) continue;
+    rows[i] = { ...ordered[cursor], unresolvedTie: false };
+    cursor += 1;
+  }
+}
+
+/**
  * Restricted stats of a zone's 3rd place against its zone's top 2 (CUARTOS
  * best-third rule). Counts only decided zone matches against the two teams
  * that finished above the third; wins come from winnerId, points only from
@@ -199,6 +224,12 @@ export function computeZoneStandings(
   teams: StandingInputTeam[],
   matches: StandingInputMatch[],
   zone: Zone,
+  /**
+   * Organizer's manual order for an otherwise unresolved tie in this zone
+   * (team ids, best position first). Ignored when it does not match the teams
+   * that are actually still tied.
+   */
+  manualOrder?: readonly string[],
 ): StandingRow[] {
   const zoneTeams = teams.filter((t) => t.zone === zone);
   const zoneIds = new Set(zoneTeams.map((t) => t.id));
@@ -263,6 +294,8 @@ export function computeZoneStandings(
     if (j - i > 1) resolveHeadToHead(sorted, matches, i, j - 1);
     i = j;
   }
+
+  if (manualOrder && manualOrder.length > 0) applyManualOrder(sorted, manualOrder);
 
   // CUARTOS best third: the 3rd place is only ever compared against its own
   // zone's top 2, and only post-sort positions define who those are.
