@@ -16,9 +16,10 @@ import type { BestThirdStats, StandingRow } from "./standings";
  *  - unique best (won, then setDiff, then pointDiff) -> direct;
  *  - exactly two seconds tied on those -> DESEMPATE match between them for the
  *    qualifying spot (bracket waits for its result);
- *  - 3+ seconds tied on those -> blocked: detected and reported, resolution
- *    deferred (product decision). Points for is deliberately NOT used here: a
- *    desempate match is fairer than a metric nobody agreed on.
+ *  - 3+ seconds tied on those -> blocked: detected and reported, and the
+ *    organizer names the one that qualifies (resolveBestSecond). Points for is
+ *    deliberately NOT used here: a desempate match is fairer than a metric
+ *    nobody agreed on.
  */
 
 export type StandingsByZone = Partial<Record<Zone, StandingRow[]>>;

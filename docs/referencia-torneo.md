@@ -162,8 +162,8 @@ por desempate o por sorteo. El que no queda como mejor tercero va al repechaje.
 - Si hay un segundo claramente mejor, clasifica directo.
 - Si hay exactamente dos segundos empatados, juegan un partido desempate y el ganador clasifica.
   El cuadro espera ese resultado.
-- Si hay tres o más segundos empatados, el sistema se detiene y espera una decisión de la
-  organización.
+- Si hay tres o más segundos empatados, el sistema se detiene y la organización elige cuál
+  clasifica desde el panel del organizador. Con ese clic la llave se arma sola.
 
 ## Tercer y cuarto puesto
 

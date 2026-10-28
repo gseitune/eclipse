@@ -8,6 +8,7 @@ import {
   recordResult,
   setMatchTimes,
   resolveBestThird,
+  resolveBestSecond,
   resolveZoneTie,
   createBestThirdDesempate,
   reslotEtapa,
@@ -102,6 +103,11 @@ export interface ResultadoEntryPanelProps {
 }
 
 export interface MejoresTercerosPanelProps {
+  readonly state: StateSnapshot | null;
+  readonly refetch: () => Promise<void>;
+}
+
+export interface MejoresSegundosPanelProps {
   readonly state: StateSnapshot | null;
   readonly refetch: () => Promise<void>;
 }
@@ -1724,8 +1730,127 @@ export function MejoresTercerosPanel({ state, refetch }: MejoresTercerosPanelPro
   );
 }
 
-export interface RotationPanelProps {
-  readonly state: StateSnapshot | null;
+/**
+ * Best second (three zones, semifinals): when the three runners-up tie on wins,
+ * set diff and point diff, the engine does not invent a tiebreaker. Only the
+ * top of that mini-ranking reaches SEMIFINAL_1, so the organizer names the one
+ * that qualifies — no full order to record.
+ */
+export function MejoresSegundosPanel({ state, refetch }: MejoresSegundosPanelProps) {
+  const blocked = state?.bracketsBlocked;
+
+  const names = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const teams of Object.values(state?.zones ?? {})) {
+      for (const t of teams) map.set(t.id, t.name);
+    }
+    return map;
+  }, [state?.zones]);
+
+  const bestSecondTie = useMemo(() => {
+    if (blocked?.reason !== "three_seconds_tie") return null;
+    return blocked.teamIds.map((id) => ({ id, name: names.get(id) ?? "Equipo" }));
+  }, [blocked, names]);
+
+  // The pick is only valid once every zone match is loaded: while the next
+  // pending match is still a GROUP match the runner-up of a zone can change.
+  const zoneStageDone = useMemo(
+    () => !state?.nextMatch || state.nextMatch.stage !== "GROUPS",
+    [state?.nextMatch],
+  );
+
+  const [tieTeamId, setTieTeamId] = useState<string | null>(null);
+  const [tieMsg, setTieMsg] = useState<string | null>(null);
+
+  async function handleResolveBestSecond(teamId: string) {
+    if (!state?.etapaId || tieTeamId) return;
+    setTieTeamId(teamId);
+    setTieMsg(null);
+    try {
+      await resolveBestSecond(state.etapaId, teamId);
+      setTieMsg("Listo — la llave quedó armada.");
+      await refetch();
+    } catch (err) {
+      setTieMsg(err instanceof ApiError ? err.message : String(err));
+    } finally {
+      setTieTeamId(null);
+    }
+  }
+
+  if (!bestSecondTie) return null;
+
+  // Zone stage still running — gray, disabled hint instead of the choice.
+  if (!zoneStageDone) {
+    return (
+      <section
+        aria-label="Empate en el mejor 2.º — pendiente de la fase de zonas"
+        className="rounded-xl border border-sand-200 bg-stone-100/70 p-5"
+      >
+        <div className="mb-1 flex items-center gap-2">
+          <LockIcon />
+          <h3 className="text-[15px] sm:text-sm font-semibold text-stone-500">
+            Empate en el mejor 2.º
+          </h3>
+        </div>
+        <p className="text-[13px] sm:text-xs text-stone-400">
+          Se habilita cuando estén cargados todos los resultados de la fase de
+          zonas.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section
+      aria-label="Elegir mejor segundo"
+      className="rounded-xl border border-amber-300 bg-amber-50 p-5"
+    >
+      <h3 className="text-[15px] sm:text-sm font-semibold text-stone-900 mb-1">
+        Empate en el mejor 2.º
+      </h3>
+      <p className="text-[13px] sm:text-xs text-stone-600 mb-4">
+        Los tres segundos quedaron igualados en partidos ganados, diferencia de
+        sets y diferencia de puntos. El sistema no desempata por nombre: elegí
+        cuál clasifica.
+      </p>
+
+      <div className="rounded-lg border border-sand-300 bg-white p-4">
+        <p className="text-[13px] sm:text-xs text-stone-600 mb-3">
+          El elegido entra a la semifinal 1 contra el 1.º de la zona A.
+        </p>
+        <div className="flex flex-col gap-2">
+          {bestSecondTie.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => handleResolveBestSecond(t.id)}
+              disabled={tieTeamId !== null}
+              className="flex items-center justify-between rounded-lg border border-sand-300 bg-white px-4 py-3 text-left transition-colors hover:border-amber-soft-400 hover:bg-amber-50 disabled:opacity-50 min-h-[44px]"
+            >
+              <span className="text-[15px] sm:text-sm font-semibold text-stone-900">
+                {t.name}
+              </span>
+              <span className="text-[13px] sm:text-xs font-medium text-stone-500">
+                {tieTeamId === t.id ? "Guardando…" : "Es el mejor 2.º"}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {tieMsg && (
+        <p
+          className={`mt-3 text-[13px] sm:text-xs font-medium ${tieMsg.startsWith("Listo") ? "text-selva-700" : "text-red-700"}`}
+          role="alert"
+        >
+          {tieMsg}
+        </p>
+      )}
+    </section>
+  );
+}
+
+export interface RotationPanelProps {  readonly state: StateSnapshot | null;
   readonly refetch: () => Promise<void>;
 }
 

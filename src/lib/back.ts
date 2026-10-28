@@ -1766,6 +1766,82 @@ export async function createBestThirdDesempate(
 }
 
 /**
+ * Organizer picks the best second when the three runners-up tie.
+ *
+ * Cross-zone seconds never faced each other, so head-to-head cannot break the
+ * tie, and the engine does not invent a tiebreaker: it waits. Unlike a zone tie
+ * there is no order to record — only the top of that mini-ranking reaches the
+ * bracket (SEMIFINAL_1: A1 vs the best second); the other two seconds play no
+ * bracket match in this format — so the organizer names the one that qualifies
+ * and the bracket is built from it. Only a team that is actually in the tie is
+ * accepted, and only once every group match is loaded.
+ */
+export async function resolveBestSecond(
+  etapaId: string,
+  teamId: string,
+): Promise<{ ok: boolean; missing: string[] }> {
+  await requireEtapaOpen(etapaId);
+
+  const etapa = await prisma.etapa.findUnique({
+    where: { id: etapaId },
+    select: { bracketFormat: true },
+  });
+  if (etapa?.bracketFormat && etapa.bracketFormat !== "STANDARD") {
+    throw new BackError(
+      "Best second only exists in the STANDARD format (three zones, semifinals).",
+      400,
+      "not_standard_format",
+    );
+  }
+
+  const state = await getState(etapaId);
+  if (state.phase !== "GROUPS") {
+    throw new BackError(
+      "The best second can only be decided while the group phase is open.",
+      409,
+      "phase_not_groups",
+    );
+  }
+
+  // A pick over partial standings would invent the winner: the runner-up of a
+  // zone can still change while a group match of that zone is unplayed.
+  const next = await getNextMatch(etapaId);
+  if (next && next.stage === "GROUPS") {
+    throw new BackError(
+      "The best second can only be decided once every group match is loaded.",
+      409,
+      "group_phase_not_finished",
+    );
+  }
+
+  const standings = await getStandings(etapaId);
+  const selection = selectBestSecond(standings);
+  if (selection?.kind !== "blocked" || !selection.teamIds.includes(teamId)) {
+    throw new BackError(
+      "That team is not tied for best second.",
+      400,
+      "team_not_tied_for_best_second",
+    );
+  }
+
+  // A leftover DESEMPATE (created while only two were tied, before a later
+  // result changed the table) owns the spot: a pick on top of it would leave the
+  // match dangling.
+  const pendingDesempate = await prisma.match.findFirst({
+    where: { etapaId, stage: "DESEMPATE", resultStatus: "PENDING" },
+  });
+  if (pendingDesempate) {
+    throw new BackError(
+      "A desempate match is already pending; record its result instead.",
+      409,
+      "desempate_already_pending",
+    );
+  }
+
+  return finalizeBrackets(standings, etapaId, teamId, "STANDARD");
+}
+
+/**
  * Organizer decision for a zone tie that survived the whole merit chain plus
  * head-to-head. The system never invents that order: it stays on standby and
  * the organizer names it. The saved order feeds the zone standings, and the

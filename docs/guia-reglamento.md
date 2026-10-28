@@ -356,7 +356,7 @@ Depende del formato elegido en la sección 2. Ya está detallado ahí. Resumen:
 | B — Dos zonas + repechaje | 1° de cada zona directo; 2° y 3° al repechaje |
 | C — Tres zonas + cuartos | 1° y 2° de cada zona + mejor tercero + ganador del repechaje |
 
-### 7.1 Mejor segundo (solo tres zonas sin cuartos) `[FIJO]` + `[PENDIENTE]`
+### 7.1 Mejor segundo (solo tres zonas sin cuartos) `[FIJO]`
 
 Cuando hay tres zonas y el formato es de semifinales, clasifican los tres primeros más el
 **mejor segundo**:
@@ -364,14 +364,18 @@ Cuando hay tres zonas y el formato es de semifinales, clasifican los tres primer
 - Si hay un segundo claramente mejor → clasifica directo.
 - Si hay **exactamente dos** segundos empatados → se juega un **partido desempate** y el
   ganador clasifica. El cuadro espera ese resultado.
-- Si hay **tres o más** segundos empatados → el sistema **se bloquea**.
+- Si los **tres** segundos quedan empatados → la organización elige cuál clasifica desde el
+  panel del organizador, y con esa confirmación se arma la llave. El sistema nunca desempata
+  por nombre, id ni azar.
 
-> `[PENDIENTE]` El caso de tres o más segundos empatados no tiene regla. Si el reglamento
-> tiene que cubrirlo, hay que decidir qué pasa.
+> `[OJO]` El orden completo de los tres segundos no se registra: solo el primero de ese
+> mini-ranking entra a la llave (semifinal 1 contra el 1° de la zona A). Los otros dos no
+> juegan nada en este formato.
 
 **Texto sugerido:**
 > Cuando hay tres zonas, clasifican los primeros de cada zona y el mejor segundo. Si dos
-> segundos empatan, juegan un partido desempate y el ganador clasifica.
+> segundos empatan, juegan un partido desempate y el ganador clasifica. Si los tres quedan
+> empatados, la organización define cuál clasifica.
 
 > `[OJO]` Si tu formato es "tres zonas + cuartos" (11 o 12 equipos), el mejor segundo **no
 > existe**: en su lugar se usa el mejor tercero.

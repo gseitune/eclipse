@@ -96,10 +96,15 @@ system refuses to resolve silently is the cross-zone best-second fight
   estimate chain (no base fixture time; estimated only), Andi loads it with
   the normal result flow, and it fires the same SSE events (result + phase).
   The bracket generation WAITS for its result.
-- **3+ seconds tied for the spot** → detected and reported WITHOUT breaking
-  the flow: `/api/state` exposes `bracketsBlocked` with the tied team ids,
-  and an SSE `brackets-blocked` event is published. Resolution is a future
-  product decision.
+- **3+ seconds tied for the spot** → the engine does not invent a tiebreaker:
+  `/api/state` exposes `bracketsBlocked` with `reason: "three_seconds_tie"` and
+  the tied team ids, an SSE `brackets-blocked` event is published, and the
+  bracket waits. The organizer then names the one that qualifies through
+  `MejoresSegundosPanel` → `POST /api/best-second` → `resolveBestSecond`
+  (guards: STANDARD format, `GROUPS` phase, every group match loaded, team
+  really in the tie, no pending `DESEMPATE`). Only the top of that mini-ranking
+  reaches `SEMIFINAL_1`; the other two seconds play no bracket match, so no
+  order is stored — there is nothing else to order.
 
 Phases: `GROUPS` → `DESEMPATE` (only when needed) → `ELIMINATORIES`.
 

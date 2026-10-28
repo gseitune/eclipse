@@ -16,6 +16,7 @@ import {
   CorregirResultadosPanel,
   ResultadoEntryPanel,
   ZoneTiePanel,
+  MejoresSegundosPanel,
   MejoresTercerosPanel,
   RotationPanel,
 } from "./ResultadosSection";
@@ -713,6 +714,9 @@ export function OrganizerPanel(_props: OrganizerPanelProps) {
             />
             {!isCancelled && !isClosed && (
               <ZoneTiePanel state={liveState} refetch={refetch} />
+            )}
+            {!isCancelled && !isClosed && (
+              <MejoresSegundosPanel state={liveState} refetch={refetch} />
             )}
             {!isCancelled && !isClosed && (
               <MejoresTercerosPanel state={liveState} refetch={refetch} />

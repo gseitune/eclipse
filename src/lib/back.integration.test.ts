@@ -51,6 +51,7 @@ let updateEtapaMeta!: BackModule["updateEtapaMeta"];
 let getState!: BackModule["getState"];
 let getStateSnapshot!: BackModule["getStateSnapshot"];
 let resolveBestThird!: BackModule["resolveBestThird"];
+let resolveBestSecond!: BackModule["resolveBestSecond"];
 let createBestThirdDesempate!: BackModule["createBestThirdDesempate"];
 let reslotGroupSchedule!: BackModule["reslotGroupSchedule"];
 let BackError!: BackModule["BackError"];
@@ -2096,5 +2097,137 @@ describe("resolveZoneTie (integration) — manual order for an unresolved tie", 
     });
     assert.ok(saved, "the order is persisted");
     assert.deepEqual(JSON.parse(saved!.order), ["z3", "z1", "z2"]);
+  });
+});
+
+/**
+ * Best second with the three runners-up tied (STANDARD format).
+ *
+ * Cross-zone seconds never faced each other, so head-to-head cannot break the
+ * tie and the engine does not invent a tiebreaker: it waits. Only the top of
+ * that mini-ranking reaches the bracket (SEMIFINAL_1: A1 vs best second); the
+ * other two seconds play nothing here, so the organizer just names the one
+ * that qualifies.
+ */
+describe("resolveBestSecond (integration) - organizer picks among 3 tied seconds", () => {
+  let secondEtapaId = "";
+  let resolveBestSecondLocal!: BackModule["resolveBestSecond"];
+
+  before(async () => {
+    process.env.DATABASE_URL = dbUrl;
+    execSync(`npx prisma db push --url ${dbUrl}`, {
+      cwd: repoRoot,
+      stdio: "pipe",
+    });
+
+    const p = await import("./prisma");
+    prisma = p.prisma;
+    const back = await import("./back");
+    resolveBestSecondLocal = back.resolveBestSecond;
+    recordResult = back.recordResult;
+    createEtapa = back.createEtapa;
+    getTeamsByZone = back.getTeamsByZone;
+    getStateSnapshot = back.getStateSnapshot;
+
+    const teams = Array.from({ length: 12 }, (_, i) => ({
+      name: `Seg${i + 1}`,
+      maleName: `SegMale${i + 1}`,
+      femaleName: `SegFemale${i + 1}`,
+    }));
+    const etapa = await createEtapa({ name: "Segundos tres zonas", teams });
+    secondEtapaId = etapa.id;
+  });
+
+  after(async () => {
+    await prisma.$disconnect();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("refuses the pick while the group phase still has matches to play", async () => {
+    const byZone = await getTeamsByZone(secondEtapaId);
+    await assert.rejects(
+      () => resolveBestSecondLocal(secondEtapaId, byZone.A[1]!.id),
+      (err: unknown) =>
+        (err as { reason?: string }).reason === "group_phase_not_finished",
+    );
+  });
+
+  it("reports the 3-way tie, rejects a team outside it and seeds SEMIFINAL_1 with the pick", async () => {
+    const byZone = await getTeamsByZone(secondEtapaId);
+    assert.deepEqual(
+      [byZone.A.length, byZone.B.length, byZone.C.length],
+      [4, 4, 4],
+      "12 teams over 3 balanced zones",
+    );
+
+    // Better rank always wins 21-19: every runner-up ends 1-1 with setDiff 0
+    // and pointDiff 0, so the three second places tie on the whole chain.
+    const rankOf = new Map<string, number>();
+    for (const list of [byZone.A, byZone.B, byZone.C]) {
+      list.forEach((team, index) => rankOf.set(team.id, index));
+    }
+    const groupMatches = await prisma.match.findMany({
+      where: { etapaId: secondEtapaId, stage: "GROUPS" },
+      orderBy: { slot: "asc" },
+    });
+    assert.equal(groupMatches.length, 18, "3 zones of 4 -> 18 group matches");
+    for (const m of groupMatches) {
+      const aWins =
+        (rankOf.get(m.teamAId!) ?? 0) <= (rankOf.get(m.teamBId!) ?? 0);
+      await recordResult({
+        matchId: m.id,
+        setFormat: "SINGLE_21",
+        sets: [{ teamA: aWins ? 21 : 19, teamB: aWins ? 19 : 21 }],
+      });
+    }
+
+    const blockedState = await getStateSnapshot(secondEtapaId);
+    assert.equal(blockedState.bracketsBlocked?.reason, "three_seconds_tie");
+    const tiedIds = blockedState.bracketsBlocked?.teamIds ?? [];
+    assert.equal(tiedIds.length, 3, "all three runners-up tie");
+
+    for (const stage of ["SEMIFINAL_1", "SEMIFINAL_2"] as const) {
+      const slot = await prisma.match.findFirst({
+        where: { etapaId: secondEtapaId, stage },
+      });
+      assert.equal(slot?.teamAId, null, `${stage} stays empty while blocked`);
+      assert.equal(slot?.teamBId, null, `${stage} stays empty while blocked`);
+    }
+
+    // A zone champion is not in the tie: the pick must be refused.
+    await assert.rejects(
+      () => resolveBestSecondLocal(secondEtapaId, byZone.A[0]!.id),
+      (err: unknown) =>
+        (err as { reason?: string }).reason === "team_not_tied_for_best_second",
+    );
+
+    const picked = tiedIds[0]!;
+    const resolved = await resolveBestSecondLocal(secondEtapaId, picked);
+    assert.equal(
+      resolved.ok,
+      true,
+      `resolve failed: ${resolved.missing.join(", ")}`,
+    );
+
+    const semi1 = await prisma.match.findFirst({
+      where: { etapaId: secondEtapaId, stage: "SEMIFINAL_1" },
+    });
+    const semi2 = await prisma.match.findFirst({
+      where: { etapaId: secondEtapaId, stage: "SEMIFINAL_2" },
+    });
+    assert.equal(semi1?.teamAId, byZone.A[0]!.id, "SEMIFINAL_1 is A1 vs the best second");
+    assert.equal(semi1?.teamBId, picked, "the pick takes the best-second spot");
+    assert.equal(semi2?.teamAId, byZone.B[0]!.id, "SEMIFINAL_2 is B1 vs C1");
+    assert.equal(semi2?.teamBId, byZone.C[0]!.id);
+
+    const afterState = await getStateSnapshot(secondEtapaId);
+    assert.equal(afterState.bracketsBlocked, null, "no longer blocked");
+    assert.equal(afterState.phase, "ELIMINATORIES");
+
+    // The bracket is built, so the spot is closed for further picks.
+    await assert.rejects(
+      () => resolveBestSecondLocal(secondEtapaId, tiedIds[1]!),
+      (err: unknown) => (err as { reason?: string }).reason === "phase_not_groups",
+    );
   });
 });

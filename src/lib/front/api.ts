@@ -257,6 +257,21 @@ export async function resolveBestThird(
   return handleResponse(res);
 }
 
+/** Organizer names the best second when the three runners-up tie. */
+export async function resolveBestSecond(
+  etapaId: string,
+  teamId: string,
+): Promise<{ ok: boolean; missing: string[] }> {
+  const res = await fetch(`${BASE}/best-second`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+    body: JSON.stringify({ etapaId, teamId }),
+  });
+  return handleResponse(res);
+}
+
 /** Organizer picks the "Desempate" path for a tied best third (2 teams). */
 export async function createBestThirdDesempate(
   etapaId: string,
