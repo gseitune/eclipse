@@ -52,12 +52,15 @@ Per zone, sorted by:
 3. **Point difference** (points for − points against), complete-score matches
    only. WINNER_ONLY matches contribute no points.
 4. **Points for**, complete-score matches only.
-5. **Deterministic draw**: if no metric separates the tied teams, order by
-   name ascending, then id. Never fabricates a metric.
+5. **Head-to-head**, and only as the LAST resort: wins among the teams that
+   still tie on 1-4. It only applies inside a zone, because those teams faced
+   each other. A single win settles a two-team tie.
 
-Head-to-head was removed on 2026-10-28 (product decision by Andi): in a
-3-team zone where everyone is 1-1 the direct results form a cycle and resolve
-nothing, so the chain above matches her Intermedios spreadsheet instead.
+Name and id are NEVER a tiebreak. A group that survives the whole chain (3+
+teams with a circular head-to-head — every match 21-19/19-21 is enough) stays
+`unresolvedTie` and the bracket refuses to seed that zone:
+`Zone X: tie unresolved`. The system reports the tie instead of inventing an
+order; resolution is an organizer decision.
 
 Zone ties therefore always resolve into positions. The only tie case the
 system refuses to resolve silently is the cross-zone best-second fight
@@ -66,7 +69,9 @@ system refuses to resolve silently is the cross-zone best-second fight
 ## Best second & DESEMPATE (3-zone format only)
 
 - Cross-zone seconds never faced each other: head-to-head does NOT apply.
-  Comparison is (wins, set difference).
+  Comparison is (wins, set difference, point difference). Points for is
+  deliberately not used: a desempate match is fairer than a metric nobody
+  agreed on.
 - **Unique best** → qualifies directly, brackets build immediately.
 - **Exactly two seconds tied** → a `DESEMPATE` match is created between them
   for the qualifying spot. It is a regular Match: it enters the schedule

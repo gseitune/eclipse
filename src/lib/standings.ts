@@ -3,22 +3,18 @@ import type { ResultStatus, Zone } from "../generated/prisma/client";
 /**
  * Zone standings (POSITIONS) for SELVARENA.
  *
- * Tiebreak criterion (product decision — Andi, 2026-10-28):
+ * Tiebreak criterion (product decisions — Andi 2026-10-28, refined same day):
  *   1. More wins (PG).
  *   2. Set difference (sets for - sets against) counted ONLY from complete
  *      matches; WINNER_ONLY matches contribute no sets (never invent points).
  *   3. Point difference (points for - points against), also COMPLETE only.
  *   4. Points for (total points scored), also COMPLETE only.
- *   5. Deterministic draw: name ascending, then id ascending.
+ *   5. Head-to-head: only as the LAST resort and only inside the zone, i.e.
+ *      between teams that already tie on 1-4 and actually faced each other.
  *
- * Head-to-head was REMOVED on purpose: in a 3-team zone where everyone is 1-1
- * the direct results form a cycle and resolve nothing, which is exactly the
- * case Andi raised. The chain above matches her Intermedios spreadsheet
- * ("diferencia de sets → diferencia de puntos → puntos a favor").
- *
- * Zone ties always resolve into positions (no unresolvedTie anymore): the
- * only still-open tie case is the cross-zone best-second fight, handled at
- * the bracket level (DESEMPATE match / 3+ blocked edge).
+ * Name and id are NEVER a tiebreak. A group that survives the whole chain
+ * (3+ teams with a circular head-to-head) stays unresolvedTie; the bracket
+ * refuses to seed it instead of inventing an order.
  */
 
 export interface StandingInputTeam {
@@ -57,7 +53,11 @@ export interface StandingRow {
   pointsFor: number;
   maleName: string | null;
   femaleName: string | null;
-  /** Kept for API compatibility; zone ties now resolve deterministically. */
+  /**
+   * True when this row belongs to a tie that survived the whole merit chain
+   * plus head-to-head (3+ teams with a circular head-to-head). The bracket
+   * refuses to seed a zone while a needed slot is unresolved.
+   */
   unresolvedTie: boolean;
   /**
    * CUARTOS best-third comparison (addendum 2026-10-10): the stats of the
@@ -92,6 +92,62 @@ function isDecidedGroupMatch(
     ids.has(m.teamAId) &&
     ids.has(m.teamBId)
   );
+}
+
+/**
+ * Merit chain used for every zone position: more wins, then set difference,
+ * then point difference, then points for. Never name, never id.
+ */
+function compareMerit(a: StandingRow, b: StandingRow): number {
+  return (
+    b.won - a.won ||
+    b.setDiff - a.setDiff ||
+    b.pointDiff - a.pointDiff ||
+    b.pointsFor - a.pointsFor
+  );
+}
+
+function sameMerit(a: StandingRow, b: StandingRow): boolean {
+  return compareMerit(a, b) === 0;
+}
+
+/**
+ * Last-resort tiebreak INSIDE a zone: head-to-head wins among the teams still
+ * tied on the whole merit chain. Only makes sense inside a zone, because those
+ * teams faced each other.
+ *
+ * A group that survives this (3+ teams with a circular head-to-head — every
+ * match 21-19/19-21 is enough) is left UNRESOLVED on purpose. The zone is never
+ * ordered by name or id; whoever needs those positions gets a blocked bracket
+ * instead of an invented order.
+ */
+function resolveHeadToHead(
+  rows: StandingRow[],
+  matches: StandingInputMatch[],
+  start: number,
+  end: number,
+): void {
+  const slice = rows.slice(start, end + 1);
+  const ids = new Set(slice.map((r) => r.teamId));
+  const wins = new Map<string, number>();
+  for (const m of matches) {
+    if (!isDecidedGroupMatch(m, ids)) continue;
+    if (m.winnerId) wins.set(m.winnerId, (wins.get(m.winnerId) ?? 0) + 1);
+  }
+  const h2h = (r: StandingRow): number => wins.get(r.teamId) ?? 0;
+  slice.sort((x, y) => h2h(y) - h2h(x));
+
+  let i = 0;
+  while (i < slice.length) {
+    let j = i + 1;
+    while (j < slice.length && h2h(slice[j]) === h2h(slice[i])) j += 1;
+    if (j - i > 1) {
+      for (let k = i; k < j; k += 1) slice[k].unresolvedTie = true;
+    }
+    i = j;
+  }
+
+  rows.splice(start, end - start + 1, ...slice);
 }
 
 /**
@@ -196,17 +252,17 @@ export function computeZoneStandings(
 
   for (const row of rows.values()) row.lost = row.played - row.won;
 
-  // Wins first, then the Andi chain: set diff → point diff → points for,
-  // and the deterministic draw by name and id as the last resort.
-  const sorted = [...rows.values()].sort(
-    (a, b) =>
-      b.won - a.won ||
-      b.setDiff - a.setDiff ||
-      b.pointDiff - a.pointDiff ||
-      b.pointsFor - a.pointsFor ||
-      a.teamName.localeCompare(b.teamName) ||
-      a.teamId.localeCompare(b.teamId),
-  );
+  // Merit chain: wins → set diff → point diff → points for. A group that is
+  // still tied goes to head-to-head (inside the zone only). Whatever survives
+  // that stays unresolved: no position is ever decided by name or id.
+  const sorted = [...rows.values()].sort(compareMerit);
+  let i = 0;
+  while (i < sorted.length) {
+    let j = i + 1;
+    while (j < sorted.length && sameMerit(sorted[i], sorted[j])) j += 1;
+    if (j - i > 1) resolveHeadToHead(sorted, matches, i, j - 1);
+    i = j;
+  }
 
   // CUARTOS best third: the 3rd place is only ever compared against its own
   // zone's top 2, and only post-sort positions define who those are.

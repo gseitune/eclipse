@@ -394,3 +394,24 @@ describe("buildCuartosBrackets with an organizer-resolved best third", () => {
     assert.ok(qf2 && qf2.teamBId === "b3", "the picked third is seed 7 in CUARTOS_2 vs B1");
   });
 });
+describe("unresolved zone ties", () => {
+  it("refuses to seed a zone whose tie survived the whole chain", () => {
+    const standings = {
+      A: [row("tA1", A, 2, 4, true), row("tA2", A, 2, 4, true), row("tA3", A, 1), row("tA4", A, 0)],
+      B: [row("tB1", B, 3), row("tB2", B, 2), row("tB3", B, 1), row("tB4", B, 0)],
+    };
+    const { pairings, missing } = buildBrackets(standings);
+    assert.deepEqual(pairings, [], "no invented order");
+    assert.ok(missing.includes("Zone A: tie unresolved"));
+  });
+
+  it("still seeds a zone whose lower places tie but the top two are clear", () => {
+    const standings = {
+      A: [row("tA1", A, 3), row("tA2", A, 2), row("tA3", A, 1, 0, true), row("tA4", A, 1, 0, true)],
+      B: [row("tB1", B, 3), row("tB2", B, 2), row("tB3", B, 1), row("tB4", B, 0)],
+    };
+    const { pairings, missing } = buildBrackets(standings);
+    assert.deepEqual(missing, []);
+    assert.equal(pairings.length, 2);
+  });
+});

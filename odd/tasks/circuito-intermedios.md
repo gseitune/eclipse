@@ -34,9 +34,10 @@ Rama: `feat/selvarena-front` · Runner: `node --import tsx --test`
   etapas cerradas reales, para que la tabla anual se calcule sola.
 - **S11.** El plantel de una etapa sigue congelado una vez cargado.
 - **S12.** Orden de la tabla de zona (decidido 2026-10-28): partidos ganados →
-  diferencia de sets → diferencia de puntos → puntos a favor → sorteo
-  determinista. El mano a mano se quitó. Pendientes de Andi que no bloquean el
-  modelo: rango de equipos de Intermedios y escala de puntos.
+  diferencia de sets → diferencia de puntos → puntos a favor → mano a mano
+  (último recurso, solo dentro de la zona). Nombre e id nunca desempatan; un
+  empate que sobrevive a todo bloquea la llave. Pendientes de Andi que no
+  bloquean el modelo: rango de equipos de Intermedios y escala de puntos.
 
 ## Tasks
 

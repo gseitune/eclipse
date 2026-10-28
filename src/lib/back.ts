@@ -1300,8 +1300,17 @@ export async function getStateSnapshot(
       : null,
   };
 
+  const unresolvedZoneRows = (["A", "B", "C"] as Zone[])
+    .flatMap((zone) => standings[zone] ?? [])
+    .filter((row) => row.unresolvedTie);
+
   const bracketsBlocked =
-    bestThirdSelection?.kind === "blocked"
+    unresolvedZoneRows.length > 0
+      ? {
+          reason: "zone_tie" as const,
+          teamIds: unresolvedZoneRows.map((row) => row.teamId),
+        }
+      : bestThirdSelection?.kind === "blocked"
       ? { reason: bestThirdSelection.reason, teamIds: bestThirdSelection.teamIds }
       : bestSecondSelection?.kind === "blocked"
       ? { reason: "three_seconds_tie", teamIds: bestSecondSelection.teamIds }

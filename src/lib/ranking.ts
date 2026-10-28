@@ -66,10 +66,13 @@ async function isEtapaFinished(etapaId: string): Promise<boolean> {
  * Final positions (product decision):
  *   1st = winner of FINAL; 2nd = loser of FINAL.
  *   3rd/4th = losers of SEMIFINAL_1 and SEMIFINAL_2, ordered by setDiff
- *     of their zone standings row (higher setDiff = better); tie-break
- *     by team name then id.
+ *     of their zone standings row, then pointDiff, then pointsFor. The bronze
+ *     match always determines 3rd/4th; this chain is only the defensive
+ *     fallback when the bronze has no result.
  *   5th+ = every team NOT in the bracket semis, ordered by position in its
- *     zone standings, THEN by setDiff desc, then teamName asc, then id asc.
+ *     zone standings, THEN by setDiff desc, then pointDiff desc, then
+ *     pointsFor desc. Teams that tie on all of it SHARE the position and the
+ *     points: the alphabet never decides a position.
  */
 export function computeFinalPositions(
   matches: Array<{
@@ -106,7 +109,13 @@ export function computeFinalPositions(
     winnerId === finalMatch.teamAId ? finalMatch.teamBId : finalMatch.teamAId;
 
   // Collect semifinal losers (3rd/4th)
-  const semiLosers: Array<{ teamId: string; teamName: string; setDiff: number }> = [];
+  const semiLosers: Array<{
+    teamId: string;
+    teamName: string;
+    setDiff: number;
+    pointDiff: number;
+    pointsFor: number;
+  }> = [];
   for (const sm of semiMatches) {
     if (!sm.teamAId || !sm.teamBId) continue;
     const loserId = sm.winnerId
@@ -120,10 +129,17 @@ export function computeFinalPositions(
         teamId: loserId,
         teamName: row?.teamName ?? loserId,
         setDiff: row?.setDiff ?? 0,
+        pointDiff: row?.pointDiff ?? 0,
+        pointsFor: row?.pointsFor ?? 0,
       });
     }
   }
-  semiLosers.sort((a, b) => b.setDiff - a.setDiff || a.teamName.localeCompare(b.teamName) || a.teamId.localeCompare(b.teamId));
+  semiLosers.sort(
+    (a, b) =>
+      b.setDiff - a.setDiff ||
+      b.pointDiff - a.pointDiff ||
+      b.pointsFor - a.pointsFor,
+  );
 
   // Determine 3rd and 4th: BRONZE match overrides semifinal losers
   let thirdTeamId: string | null;
@@ -192,13 +208,14 @@ export function computeFinalPositions(
   }
 
   // 5th+ = all teams NOT in bracket semis, ordered by zone standings position,
-  // then setDiff desc, then teamName asc, then id asc.
+  // then setDiff desc, then pointDiff desc, then pointsFor desc. A residual
+  // tie SHARES the position and the points: no name, no id, no alphabet.
   const bracketSet = new Set([
     finalMatch.teamAId, finalMatch.teamBId,
     ...semiMatches.flatMap((m) => [m.teamAId, m.teamBId].filter((id): id is string => id !== null)),
   ]);
 
-  const allStandingTeams: Array<{ teamId: string; teamName: string; setDiff: number; zone: Zone | null; zoneRank: number; maleName: string | null; femaleName: string | null }> = [];
+  const allStandingTeams: Array<{ teamId: string; teamName: string; setDiff: number; pointDiff: number; pointsFor: number; zone: Zone | null; zoneRank: number; maleName: string | null; femaleName: string | null }> = [];
   for (const zone of ["A", "B", "C"] as Zone[]) {
     const rows = standings[zone];
     if (!rows) continue;
@@ -209,6 +226,8 @@ export function computeFinalPositions(
         teamId: r.teamId,
         teamName: r.teamName,
         setDiff: r.setDiff,
+        pointDiff: r.pointDiff,
+        pointsFor: r.pointsFor,
         zone: r.zone,
         zoneRank: i + 1,
         maleName: r.maleName ?? null,
@@ -217,21 +236,34 @@ export function computeFinalPositions(
     }
   }
 
+  const sameOutOfBracketMerit = (
+    a: (typeof allStandingTeams)[number],
+    b: (typeof allStandingTeams)[number],
+  ): boolean =>
+    a.zoneRank === b.zoneRank &&
+    a.setDiff === b.setDiff &&
+    a.pointDiff === b.pointDiff &&
+    a.pointsFor === b.pointsFor;
+
   allStandingTeams.sort((a, b) => {
     if (a.zoneRank !== b.zoneRank) return a.zoneRank - b.zoneRank;
     if (a.setDiff !== b.setDiff) return b.setDiff - a.setDiff;
-    return a.teamName.localeCompare(b.teamName) || a.teamId.localeCompare(b.teamId);
+    if (a.pointDiff !== b.pointDiff) return b.pointDiff - a.pointDiff;
+    return b.pointsFor - a.pointsFor;
   });
 
   let positionNum = 5;
-  for (const team of allStandingTeams) {
+  for (let i = 0; i < allStandingTeams.length; i += 1) {
+    const team = allStandingTeams[i];
+    const previous = allStandingTeams[i - 1];
+    if (!previous || !sameOutOfBracketMerit(previous, team)) positionNum = 5 + i;
     positions.push({
       teamId: team.teamId,
       teamName: team.teamName,
       maleName: team.maleName,
       femaleName: team.femaleName,
-      position: positionNum++,
-      points: positionPoints(positionNum - 1),
+      position: positionNum,
+      points: positionPoints(positionNum),
       zone: team.zone,
     });
   }
@@ -378,11 +410,12 @@ export function aggregateRankedPlayers(etapas: EtapaPositions[]): {
 
   const sortRanked = (map: Map<string, RankedPlayer>): RankedPlayer[] => {
     const arr = [...map.values()];
+    // Tied players are a real tie: no name, no alphabet. Insertion order
+    // (first appearance) keeps the rendering stable without deciding anything.
     arr.sort(
       (a, b) =>
         b.points - a.points ||
-        (a.bestPosition ?? Infinity) - (b.bestPosition ?? Infinity) ||
-        a.name.localeCompare(b.name),
+        (a.bestPosition ?? Infinity) - (b.bestPosition ?? Infinity),
     );
     return arr;
   };

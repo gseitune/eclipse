@@ -14,7 +14,7 @@ TournamentState (phase, zoneConfirmed, prep/match minutes), User auth, results s
 - "Match in progress" is DERIVED (first pending match in day sequence), never stored.
 - Estimates: next start = result recordedAt + prep (default 5 min); chain with matchMinutes (20). Scheduled = base timeLabel; estimated = computed, exposed per match.
 - Brackets: last group result → compute positions → generate semifinals. 2 zones: SF1=A1vB2, SF2=B1vA2, FINAL. 3 zones: top of A/B/C + best 2nd (format of seed: 3 bracket slots; define SF1=A1vBest2nd, SF2=B1vC1, FINAL).
-- Tiebreak (chosen, reported to user): 1) more wins; 2) set difference from complete matches only; 3) head-to-head; 4) tie unresolved → organizer draw. Never invent points. **Superseded 2026-10-28:** head-to-head was removed; zone order is now PG → set diff → point diff → points for → deterministic draw (see `src/lib/standings.ts`).
+- Tiebreak (chosen, reported to user): 1) more wins; 2) set difference from complete matches only; 3) head-to-head; 4) tie unresolved → organizer draw. Never invent points. **Superseded 2026-10-28:** name/id are never a tiebreak; zone order is PG → set diff → point diff → points for → head-to-head (last, in-zone only), and a tie that survives that blocks the bracket (see `src/lib/standings.ts`).
 - Auth: email+password, single role organizadora, no public signup, multi-device (no cross-invalidation), scrypt hashing (node:crypto, no new deps).
 - No mail reminders / Web Push / PWA / visual design (v2 / out of scope).
 

@@ -12,15 +12,36 @@ import type { BestThirdStats, StandingRow } from "./standings";
  * semifinals produce results. The phase flag flips GROUPS -> ELIMINATORIES,
  * only after any pending DESEMPATE (best-second playoff) is resolved.
  *
- * Best second (3-zone format, addendum 2026-09-23):
- *  - unique best (won, then setDiff) -> direct;
- *  - exactly two seconds tied on (won, setDiff) -> DESEMPATE match between
- *    them for the qualifying spot (bracket waits for its result);
- *  - 3+ seconds tied on (won, setDiff) -> blocked: detected and reported,
- *    resolution deferred (product decision).
+ * Best second (3-zone format, addendum 2026-09-23, point diff added 2026-10-28):
+ *  - unique best (won, then setDiff, then pointDiff) -> direct;
+ *  - exactly two seconds tied on those -> DESEMPATE match between them for the
+ *    qualifying spot (bracket waits for its result);
+ *  - 3+ seconds tied on those -> blocked: detected and reported, resolution
+ *    deferred (product decision). Points for is deliberately NOT used here: a
+ *    desempate match is fairer than a metric nobody agreed on.
  */
 
 export type StandingsByZone = Partial<Record<Zone, StandingRow[]>>;
+
+/**
+ * A zone position that survived the whole merit chain plus head-to-head cannot
+ * seed the bracket. Returns one blocker per zone, or an empty list.
+ */
+function unresolvedZoneTies(
+  standings: StandingsByZone,
+  zones: Zone[],
+  depth: number,
+): string[] {
+  const blockers: string[] = [];
+  for (const zone of zones) {
+    const rows = standings[zone];
+    if (!rows) continue;
+    if (rows.slice(0, depth).some((r) => r.unresolvedTie)) {
+      blockers.push(`Zone ${zone}: tie unresolved`);
+    }
+  }
+  return blockers;
+}
 
 export type BracketFormat = "STANDARD" | "REPECHAJE" | "CUARTOS";
 
@@ -86,8 +107,10 @@ export function selectBestSecond(
 
   const maxWon = Math.max(...runnersUp.map((r) => r.won));
   const onWins = runnersUp.filter((r) => r.won === maxWon);
-  const maxDiff = Math.max(...onWins.map((r) => r.setDiff));
-  const top = onWins.filter((r) => r.setDiff === maxDiff);
+  const maxSetDiff = Math.max(...onWins.map((r) => r.setDiff));
+  const onSetDiff = onWins.filter((r) => r.setDiff === maxSetDiff);
+  const maxPointDiff = Math.max(...onSetDiff.map((r) => r.pointDiff));
+  const top = onSetDiff.filter((r) => r.pointDiff === maxPointDiff);
 
   if (top.length === 1) return { kind: "direct", teamId: top[0].teamId };
   if (top.length === 2) {
@@ -134,6 +157,7 @@ export function buildBrackets(
     const a2 = runnerUp("A");
     const b2 = runnerUp("B");
     const missing = [
+      ...unresolvedZoneTies(standings, zones, 2),
       ...(!a1 ? ["A1"] : []),
       ...(!b1 ? ["B1"] : []),
       ...(!a2 ? ["A2"] : []),
@@ -156,6 +180,7 @@ export function buildBrackets(
     const b1 = champion("B");
     const c1 = champion("C");
     const missing = [
+      ...unresolvedZoneTies(standings, zones, 2),
       ...(!a1 ? ["A1"] : []),
       ...(!b1 ? ["B1"] : []),
       ...(!c1 ? ["C1"] : []),
@@ -223,7 +248,7 @@ function buildRepechajeBrackets(
   const a3 = standings.A?.[2] ?? null;
   const b3 = standings.B?.[2] ?? null;
 
-  const missing: string[] = [];
+  const missing: string[] = [...unresolvedZoneTies(standings, zones, 3)];
   if (!a2) missing.push("A2");
   if (!b2) missing.push("B2");
   if (!a3) missing.push("A3");
@@ -318,7 +343,7 @@ export function buildCuartosBrackets(
   const b3 = standings.B?.[2];
   const c3 = standings.C?.[2];
 
-  const missing: string[] = [];
+  const missing: string[] = [...unresolvedZoneTies(standings, zones, 3)];
   if (!a1 || !b1 || !c1) missing.push("Zone champion missing");
   if (!a2 || !b2 || !c2) missing.push("Zone runner-up missing");
   if (!a3 || !b3 || !c3) missing.push("Zone third missing");

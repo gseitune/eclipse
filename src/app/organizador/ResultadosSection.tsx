@@ -1359,6 +1359,11 @@ export function MejoresTercerosPanel({ state, refetch }: MejoresTercerosPanelPro
     return blocked.teamIds.map((id) => ({ id, name: names.get(id) ?? "Equipo" }));
   }, [blocked, names]);
 
+  const zoneTieNames = useMemo(() => {
+    if (blocked?.reason !== "zone_tie") return null;
+    return blocked.teamIds.map((id) => names.get(id) ?? "Equipo");
+  }, [blocked, names]);
+
   const needsScores = useMemo(() => {
     if (blocked?.reason !== "best_third_needs_scores") return null;
     return blocked.teamIds.map((id) => ({ id, name: names.get(id) ?? "Equipo" }));
@@ -1406,6 +1411,34 @@ export function MejoresTercerosPanel({ state, refetch }: MejoresTercerosPanelPro
     } finally {
       setCreatingDesempate(false);
     }
+  }
+
+  // A zone tie that survived the whole merit chain plus head-to-head: the
+  // bracket cannot be seeded and the alphabet is not an option. Explain, no
+  // action (same as the 3+ seconds tie).
+  if (zoneTieNames) {
+    return (
+      <section
+        aria-label="Empate sin resolver en una zona"
+        className="rounded-xl border border-amber-300 bg-amber-50 p-5"
+      >
+        <div className="mb-1 flex items-center gap-2">
+          <LockIcon />
+          <h3 className="text-[15px] sm:text-sm font-semibold text-stone-900">
+            Empate sin resolver en una zona
+          </h3>
+        </div>
+        <p className="text-[13px] sm:text-xs text-stone-600 mb-2">
+          {zoneTieNames.join(" / ")} quedaron iguales en partidos ganados,
+          diferencia de sets, diferencia de puntos y puntos a favor, y el mano a
+          mano no los separa.
+        </p>
+        <p className="text-[13px] sm:text-xs text-stone-500">
+          La llave no se arma hasta que la organización defina el orden. El
+          sistema no lo resuelve por nombre ni por sorteo.
+        </p>
+      </section>
+    );
   }
 
   // Missing scores: the restricted comparison cannot run yet. Explain, no action.

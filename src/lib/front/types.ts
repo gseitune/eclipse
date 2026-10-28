@@ -145,7 +145,11 @@ export interface DesempateInfo {
 }
 
 export interface BracketsBlocked {
-  reason: "three_seconds_tie" | "best_third_tie" | "best_third_needs_scores";
+  reason:
+    | "three_seconds_tie"
+    | "best_third_tie"
+    | "best_third_needs_scores"
+    | "zone_tie";
   teamIds: string[];
 }
 

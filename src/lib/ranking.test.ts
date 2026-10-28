@@ -145,22 +145,55 @@ describe("computeFinalPositions", () => {
     assert.equal(positions[5].teamId, "tC2");
   });
 
-  it("3rd/4th tie-break by team name then id", () => {
+  it("3rd/4th breaks a set-diff tie with point diff, never with the name", () => {
     const matches = [
       groupMatch({ stage: "SEMIFINAL_1", a: "tA1", b: "tB1", winner: "tA1", resultStatus: "COMPLETE" }),
       groupMatch({ stage: "SEMIFINAL_2", a: "tA2", b: "tB2", winner: "tB2", resultStatus: "COMPLETE" }),
-      groupMatch({ stage: "FINAL", a: "tA1", b: "tB1", winner: "tA1", resultStatus: "COMPLETE" }),
+      groupMatch({ stage: "FINAL", a: "tA1", b: "tB2", winner: "tA1", resultStatus: "COMPLETE" }),
     ];
-    // Both losers have same setDiff
+    // Both semifinal losers have setDiff 3. tB1 has the better point diff but
+    // loses the alphabetical comparison, so it must still take 3rd.
     const standings = {
-      A: [row("tA1", A, 2, 3), row("tA2", A, 1, 3)],
-      B: [row("tB1", B, 2, 3), row("tB2", B, 1, 3)],
+      A: [row("tA1", A, 2, 5), { ...row("tA2", A, 1, 3), pointDiff: -2, pointsFor: 60 }],
+      B: [{ ...row("tB1", B, 2, 3), pointDiff: 8, pointsFor: 70 }, row("tB2", B, 1, 5)],
     };
     const positions = computeFinalPositions(matches, standings);
     assert.equal(positions.length, 4);
-    // tA2 vs tB1 both have setDiff 3; tA2 < tB1 alphabetically
-    assert.equal(positions[2].teamId, "tA2", "name tie-break gives tA2 3rd");
-    assert.equal(positions[3].teamId, "tB1");
+    assert.equal(positions[2].teamId, "tB1", "point diff outranks the alphabet");
+    assert.equal(positions[3].teamId, "tA2");
+  });
+
+  it("5th+ shares the position and the points on a total merit tie", () => {
+    const matches = [
+      groupMatch({ stage: "SEMIFINAL_1", a: "tA1", b: "tB2", winner: "tA1", resultStatus: "COMPLETE" }),
+      groupMatch({ stage: "SEMIFINAL_2", a: "tB1", b: "tA2", winner: "tB1", resultStatus: "COMPLETE" }),
+      groupMatch({ stage: "FINAL", a: "tA1", b: "tB1", winner: "tA1", resultStatus: "COMPLETE" }),
+    ];
+    const tiedThird = { setDiff: 2, pointDiff: 10, pointsFor: 70 };
+    const tiedFourth = { setDiff: -1, pointDiff: 0, pointsFor: 50 };
+    const standings = {
+      A: [
+        row("tA1", A, 2, 5),
+        row("tA2", A, 1, 3),
+        { ...row("tA3", A, 1, 2), ...tiedThird },
+        { ...row("tA4", A, 0, -1), ...tiedFourth },
+      ],
+      B: [
+        row("tB1", B, 2, 5),
+        row("tB2", B, 1, 3),
+        { ...row("tB3", B, 1, 2), ...tiedThird },
+        { ...row("tB4", B, 0, -1), ...tiedFourth },
+      ],
+    };
+    const positions = computeFinalPositions(matches, standings);
+    const byTeam = (id: string) => positions.find((p) => p.teamId === id)!;
+    assert.equal(byTeam("tA3").position, 5);
+    assert.equal(byTeam("tB3").position, 5, "same merit = same position");
+    assert.equal(byTeam("tA3").points, 40);
+    assert.equal(byTeam("tB3").points, 40);
+    assert.equal(byTeam("tA4").position, 7, "the next position skips the shared one");
+    assert.equal(byTeam("tB4").position, 7);
+    assert.equal(byTeam("tA4").points, 30);
   });
 
   it("BRONZE match overrides semifinal losers for 3rd/4th in REPECHAJE format", () => {

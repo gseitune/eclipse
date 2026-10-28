@@ -199,4 +199,46 @@ describe("computeZoneStandings", () => {
     assert.equal(zoneA[0].zone, A);
     assert.equal(zoneB[0].zone, B);
   });
+
+  it("head-to-head decides as the LAST resort, after every metric", () => {
+    const teams = [team("t1", A), team("t2", A), team("t3", A), team("t4", A)];
+    // t1 and t2 end identical on wins, set diff, point diff and points for
+    // (2-1, +2 sets, +4 points, 122 scored). They played, t1 won, so t1 goes
+    // above. t3 and t4 are clearly worse.
+    const matches = [
+      groupMatch({ a: "t1", b: "t2", zone: A, status: "COMPLETE", winner: "t1", sets: [2, 0], points: [42, 38] }),
+      groupMatch({ a: "t1", b: "t4", zone: A, status: "COMPLETE", winner: "t1", sets: [2, 0], points: [42, 38] }),
+      groupMatch({ a: "t3", b: "t1", zone: A, status: "COMPLETE", winner: "t3", sets: [2, 0], points: [42, 38] }),
+      groupMatch({ a: "t2", b: "t3", zone: A, status: "COMPLETE", winner: "t2", sets: [2, 0], points: [42, 38] }),
+      groupMatch({ a: "t2", b: "t4", zone: A, status: "COMPLETE", winner: "t2", sets: [2, 0], points: [42, 38] }),
+      groupMatch({ a: "t4", b: "t3", zone: A, status: "COMPLETE", winner: "t4", sets: [2, 0], points: [42, 38] }),
+    ];
+    const rows = computeZoneStandings(teams, matches, A);
+    const t1 = rows.find((r) => r.teamId === "t1")!;
+    const t2 = rows.find((r) => r.teamId === "t2")!;
+    assert.deepEqual(
+      [t1.won, t1.setDiff, t1.pointDiff, t1.pointsFor],
+      [t2.won, t2.setDiff, t2.pointDiff, t2.pointsFor],
+      "every merit metric is identical",
+    );
+    assert.deepEqual(rows.map((r) => r.teamId), ["t1", "t2", "t4", "t3"]);
+    assert.ok(rows.every((r) => !r.unresolvedTie), "head-to-head resolved it");
+  });
+
+  it("leaves a circular 3-way tie unresolved instead of using names", () => {
+    const teams = [team("t1", A), team("t2", A), team("t3", A)];
+    // Every match is 21-19/19-21: all three end 1-1 with set diff 0, point
+    // diff 0 and 80 points for, and the head-to-head is a circle. No merit
+    // metric is left, and the alphabet is not an option.
+    const matches = [
+      groupMatch({ a: "t1", b: "t2", zone: A, status: "COMPLETE", winner: "t1", sets: [2, 0], points: [42, 38] }),
+      groupMatch({ a: "t2", b: "t3", zone: A, status: "COMPLETE", winner: "t2", sets: [2, 0], points: [42, 38] }),
+      groupMatch({ a: "t3", b: "t1", zone: A, status: "COMPLETE", winner: "t3", sets: [2, 0], points: [42, 38] }),
+    ];
+    const rows = computeZoneStandings(teams, matches, A);
+    assert.ok(
+      rows.every((r) => r.unresolvedTie),
+      "the tie is reported, not decided by name",
+    );
+  });
 });
