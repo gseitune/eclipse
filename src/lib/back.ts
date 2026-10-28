@@ -13,7 +13,7 @@ import {
   type ScheduleMatchInput,
   type ScheduleRow,
 } from "./schedule";
-import { buildBrackets, buildCuartosBrackets, nextRoundPairings, selectBestSecond, selectBestThird, type BestSecondSelection, type BestThirdSelection } from "./brackets";
+import { buildBrackets, buildCuartosBrackets, nextRoundPairings, selectBestSecond, selectBestThird, unresolvedSeedRows, type BestSecondSelection, type BestThirdSelection } from "./brackets";
 import { regenerateZones, swapZone, type ZoneId } from "./zonification";
 import { distributeTeams, interleaveGroupPairs, MIN_TEAMS } from "./tournament";
 import {
@@ -1300,9 +1300,12 @@ export async function getStateSnapshot(
       : null,
   };
 
-  const unresolvedZoneRows = (["A", "B", "C"] as Zone[])
-    .flatMap((zone) => standings[zone] ?? [])
-    .filter((row) => row.unresolvedTie);
+  const groupPhaseDone = !nextMatch || nextMatch.stage !== "GROUPS";
+  const unresolvedZoneRows = unresolvedSeedRows(
+    standings,
+    fmt ?? "STANDARD",
+    groupPhaseDone,
+  );
 
   const bracketsBlocked =
     unresolvedZoneRows.length > 0

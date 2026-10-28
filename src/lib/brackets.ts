@@ -45,6 +45,37 @@ function unresolvedZoneTies(
 
 export type BracketFormat = "STANDARD" | "REPECHAJE" | "CUARTOS";
 
+/** How many rows of each zone the bracket actually seeds. */
+const SEED_DEPTH: Record<BracketFormat, number> = {
+  STANDARD: 2,
+  REPECHAJE: 3,
+  CUARTOS: 3,
+};
+
+/**
+ * Rows that would block the bracket right now, for the state snapshot.
+ *
+ * Empty until the group phase is over: before that every zeroed row ties with
+ * every other and nothing is being seeded. Empty too when the unresolved tie
+ * sits below the places the format actually uses, because that tie never
+ * reaches the bracket.
+ */
+export function unresolvedSeedRows(
+  standings: StandingsByZone,
+  format: BracketFormat,
+  groupPhaseDone: boolean,
+): StandingRow[] {
+  if (!groupPhaseDone) return [];
+  const depth = SEED_DEPTH[format];
+  const rows: StandingRow[] = [];
+  for (const zone of ["A", "B", "C"] as Zone[]) {
+    const zoneRows = standings[zone];
+    if (!zoneRows) continue;
+    rows.push(...zoneRows.slice(0, depth).filter((r) => r.unresolvedTie));
+  }
+  return rows;
+}
+
 export interface BracketPairing {
   stage: string;
   teamAId: string;

@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 
 import type { Zone } from "../generated/prisma/client";
 import type { BestThirdStats, StandingRow } from "./standings";
-import { buildBrackets, buildCuartosBrackets, isGroupPhaseComplete, selectBestSecond, selectBestThird } from "./brackets";
+import { buildBrackets, buildCuartosBrackets, isGroupPhaseComplete, selectBestSecond, selectBestThird, unresolvedSeedRows } from "./brackets";
 
 const A: Zone = "A";
 const B: Zone = "B";
@@ -413,5 +413,24 @@ describe("unresolved zone ties", () => {
     const { pairings, missing } = buildBrackets(standings);
     assert.deepEqual(missing, []);
     assert.equal(pairings.length, 2);
+  });
+});
+describe("unresolvedSeedRows (state snapshot gating)", () => {
+  it("reports nothing before the group phase is over", () => {
+    const standings = {
+      A: [row("tA1", A, 0, 0, true), row("tA2", A, 0, 0, true)],
+      B: [row("tB1", B, 0, 0, true)],
+    };
+    assert.deepEqual(unresolvedSeedRows(standings, "STANDARD", false), []);
+    assert.equal(unresolvedSeedRows(standings, "STANDARD", true).length, 3);
+  });
+
+  it("ignores a tie that sits below the places the format seeds", () => {
+    const standings = {
+      A: [row("tA1", A, 3), row("tA2", A, 2), row("tA3", A, 1, 0, true), row("tA4", A, 1, 0, true)],
+    };
+    assert.deepEqual(unresolvedSeedRows(standings, "STANDARD", true), []);
+    assert.equal(unresolvedSeedRows(standings, "REPECHAJE", true).length, 1);
+    assert.equal(unresolvedSeedRows(standings, "CUARTOS", true).length, 1);
   });
 });
