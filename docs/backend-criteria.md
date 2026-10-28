@@ -147,9 +147,24 @@ Phases: `GROUPS` → `DESEMPATE` (only when needed) → `ELIMINATORIES`.
 - `generate` (re-)randomizes every team into balanced zones (6–10 → 2 zones,
   more → 3 zones).
 - `swap` moves a team between zones **only before fixture confirmation**
-  (`zoneConfirmed`); after confirmation it returns `409`.
+  (`zoneConfirmed`); after confirmation it returns `409`. The move is refused
+  with `zones_unbalanced` when it would leave the zones more than one team
+  apart.
+- Both `generate` and `swap` **rebuild the GROUPS fixture**: the pairs are
+  regenerated from the new zoning. Without that, a moved team keeps playing its
+  old zone's rivals and `computeZoneStandings` silently drops those matches (a
+  group match only counts for a zone when BOTH sides belong to it), seeding a
+  team that never played. Both are refused once a result exists
+  (`etapa_jugada`), so the rebuild never loses a result.
 - `confirm` marks the point of no return; it is required before recording or
   bracket work.
+
+## Stage selection in the organizer
+
+`/api/state?etapa=<id>` pins the stage. Without it the API answers with the
+stage that has the **newest date**, so a fecha loaded late (older date than the
+current stage) is unreachable. The organizer panel keeps its selected stage in
+`localStorage` and resets it when the circuit changes.
 
 ## Auth
 

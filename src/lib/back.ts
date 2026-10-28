@@ -82,6 +82,28 @@ export async function resolveEtapaId(
   return latest.id;
 }
 
+/**
+ * A pinned etapa must belong to the circuit being asked for. Without this,
+ * `?circuit=PRINCIPIANTES&etapa=<an INTERMEDIOS id>` answers with the other
+ * circuit's whole fixture, and the organizer would write into it.
+ */
+export async function assertEtapaCircuit(
+  etapaId: string,
+  circuit: Circuit,
+): Promise<void> {
+  const etapa = await prisma.etapa.findUnique({
+    where: { id: etapaId },
+    select: { circuit: true },
+  });
+  if (etapa && etapa.circuit !== circuit) {
+    throw new BackError(
+      "La etapa no pertenece a ese circuito.",
+      400,
+      "etapa_circuit_mismatch",
+    );
+  }
+}
+
 /** Missing dates are the oldest: the calendar decides, not the load order. */
 function etapaDateValue(etapa: { date: Date | null }): number {
   return etapa.date ? etapa.date.getTime() : 0;
@@ -738,6 +760,79 @@ export async function deleteEtapa(etapaId: string): Promise<{ id: string }> {
   return { id: etapa.id };
 }
 
+/**
+ * Rebuilds the group fixture after the zones change.
+ *
+ * The fixture is generated when the etapa is created, from the draw. Relabelling
+ * a team alone would leave GROUPS matches between teams of different zones, and
+ * the standings silently drop those (a group match only counts for a zone when
+ * BOTH sides belong to it), so the bracket would seed a team that never played.
+ * Both callers already require an unplayed etapa with an unconfirmed
+ * zonification, so there is no result to lose here.
+ */
+async function rebuildGroupFixture(etapaId: string): Promise<void> {
+  const [teams, etapa, previous] = await Promise.all([
+    prisma.team.findMany({
+      where: { etapaId },
+      select: { id: true, zone: true },
+    }),
+    prisma.etapa.findUnique({
+      where: { id: etapaId },
+      select: { setFormat: true },
+    }),
+    prisma.match.findMany({
+      where: { etapaId, stage: "GROUPS" },
+      select: {
+        teamAId: true,
+        teamBId: true,
+        timeLabel: true,
+        manualStartAt: true,
+        manualEndAt: true,
+      },
+    }),
+  ]);
+  // Manual times belong to the pair, not to the slot: a rebuild renumbers the
+  // fixture, so keeping them by slot would move them onto other teams.
+  const pairKey = (a: string, b: string) => [a, b].sort().join("|");
+  const kept = new Map(
+    previous.map((m) => [pairKey(m.teamAId ?? "", m.teamBId ?? ""), m]),
+  );
+
+  const zones = (["A", "B", "C"] as const).filter((zone) =>
+    teams.some((t) => t.zone === zone),
+  );
+  const pairs = interleaveGroupPairs(
+    zones.map((zone) => ({
+      group: zone,
+      teamIds: teams.filter((t) => t.zone === zone).map((t) => t.id),
+    })),
+  );
+  const setFormat = (etapa?.setFormat ?? "SINGLE_21") as SetFormat;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.match.deleteMany({ where: { etapaId, stage: "GROUPS" } });
+    await tx.match.createMany({
+      data: pairs.map((pair, index) => {
+        const same = kept.get(pairKey(pair.teamAId, pair.teamBId));
+        return {
+          etapaId,
+          stage: "GROUPS" as Stage,
+          zone: pair.group,
+          slot: index + 1,
+          timeLabel: same?.timeLabel ?? null,
+          manualStartAt: same?.manualStartAt ?? null,
+          manualEndAt: same?.manualEndAt ?? null,
+          teamAId: pair.teamAId,
+          teamBId: pair.teamBId,
+          setFormat,
+          resultStatus: "PENDING" as const,
+        };
+      }),
+    });
+  });
+  publishSse("schedule-changed", { etapaId, groupMatches: pairs.length });
+}
+
 export async function generateZones(etapaId?: string | null): Promise<Record<string, string>> {
   const id = await resolveEtapaId(etapaId);
   // Re-arming the zones with results already loaded would leave every match in
@@ -762,6 +857,7 @@ export async function generateZones(etapaId?: string | null): Promise<Record<str
   );
   auditWrite({ op: "generateZones", etapaId: id, count: teams.length });
   publishSse("zones-changed", { mapping });
+  await rebuildGroupFixture(id);
   return mapping;
 }
 
@@ -792,12 +888,31 @@ export async function swapTeam(
     throw new BackError("Invalid zone.", 400);
   }
   const next = swapZone(mapping, teamId, from as ZoneId, to as ZoneId, state.zoneConfirmed);
+
+  // Zones must stay balanced (max one team apart) and none may empty out: the
+  // pair count would change and the group slots would collide with the bracket
+  // slots, which were created right after the original fixture.
+  const activeZones = [...new Set(Object.values(mapping))];
+  const sizes = activeZones.map(
+    (zone) => Object.values(next).filter((z) => z === zone).length,
+  );
+  if (sizes.length > 1 && Math.max(...sizes) - Math.min(...sizes) > 1) {
+    throw new BackError(
+      `Mover ese equipo deja las zonas desparejas (${sizes.join("/")}).`,
+      409,
+      "zones_unbalanced",
+    );
+  }
+
   await prisma.team.update({ where: { id: teamId }, data: { zone: next[teamId] as "A" | "B" | "C" } });
   auditWrite({
     op: "swapTeam",
     etapaId: id,
     detail: { teamId, from, to, zone: next[teamId] },
   });
+  // The fixture follows the zones: without this the moved team keeps playing
+  // its old zone's rivals and those matches stop counting in the standings.
+  await rebuildGroupFixture(id);
   publishSse("zones-changed", { swap: { teamId, from, to } });
   return next;
 }

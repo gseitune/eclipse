@@ -130,11 +130,20 @@ describe("circuito = temporada anual", () => {
     });
     assert.ok(match?.teamAId && match.teamBId);
 
-    // Re-arming the zones is still allowed before any result.
+    // Re-arming the zones is still allowed before any result. It rebuilds the
+    // group fixture, so the match captured above is gone: the pairs follow the
+    // new zones instead of keeping matches between teams of different zones.
     await generateZones(etapa.id);
+    const replaced = await prisma.match.findFirst({ where: { id: match.id } });
+    assert.equal(replaced, null, "re-arming replaces the group fixture");
+
+    const fresh = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "GROUPS" },
+    });
+    assert.ok(fresh?.teamAId && fresh.teamBId);
 
     await recordResult({
-      matchId: match.id,
+      matchId: fresh.id,
       setFormat: "SINGLE_21",
       sets: [{ teamA: 21, teamB: 10 }],
     });

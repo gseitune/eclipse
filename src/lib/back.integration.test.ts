@@ -2231,3 +2231,200 @@ describe("resolveBestSecond (integration) - organizer picks among 3 tied seconds
     );
   });
 });
+
+/**
+ * Moving a team between zones before the fixture is confirmed must rebuild the
+ * group pairs. The fixture is generated when the etapa is created, from the
+ * draw; relabelling a team alone would leave matches between teams of different
+ * zones, and the standings silently drop those (a match only counts for a zone
+ * when BOTH sides belong to it).
+ */
+describe("swapTeam (integration) - a zone change rebuilds the group fixture", () => {
+  let swapEtapaId = "";
+  let swapTeamLocal!: BackModule["swapTeam"];
+  let getTeamsByZoneLocal!: BackModule["getTeamsByZone"];
+  let assertEtapaCircuitLocal!: BackModule["assertEtapaCircuit"];
+
+  before(async () => {
+    process.env.DATABASE_URL = dbUrl;
+    execSync(`npx prisma db push --url ${dbUrl}`, {
+      cwd: repoRoot,
+      stdio: "pipe",
+    });
+
+    const p = await import("./prisma");
+    prisma = p.prisma;
+    const back = await import("./back");
+    swapTeamLocal = back.swapTeam;
+    getTeamsByZoneLocal = back.getTeamsByZone;
+    assertEtapaCircuitLocal = back.assertEtapaCircuit;
+    createEtapa = back.createEtapa;
+    generateZones = back.generateZones;
+    recordResult = back.recordResult;
+
+    const teams = Array.from({ length: 7 }, (_, i) => ({
+      name: `Swap${i + 1}`,
+      maleName: `SwapMale${i + 1}`,
+      femaleName: `SwapFemale${i + 1}`,
+    }));
+    const etapa = await createEtapa({
+      name: "Swap zonas",
+      teams,
+      bracketFormat: "REPECHAJE",
+    });
+    swapEtapaId = etapa.id;
+  });
+
+  after(async () => {
+    await prisma.$disconnect();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("rebuilds the pairs inside each zone and refuses an unbalanced move", async () => {
+    const byZone = await getTeamsByZoneLocal(swapEtapaId);
+    const aBigger = byZone.A.length >= byZone.B.length;
+    const bigZone = aBigger ? "A" : "B";
+    const smallZone = aBigger ? "B" : "A";
+    const big = aBigger ? byZone.A : byZone.B;
+    const small = aBigger ? byZone.B : byZone.A;
+    assert.deepEqual(
+      [big.length, small.length],
+      [4, 3],
+      "7 teams split 4/3",
+    );
+
+    // Emptying the small zone would leave 2/5: the zones must stay balanced.
+    await assert.rejects(
+      () =>
+        swapTeamLocal(small[0]!.id, smallZone, bigZone, swapEtapaId),
+      (err: unknown) =>
+        (err as { reason?: string }).reason === "zones_unbalanced",
+    );
+
+    const mover = big[0]!;
+    await swapTeamLocal(mover.id, bigZone, smallZone, swapEtapaId);
+
+    const teams = await prisma.team.findMany({
+      where: { etapaId: swapEtapaId },
+      select: { id: true, zone: true },
+    });
+    const zoneOf = new Map(teams.map((t) => [t.id, t.zone]));
+    assert.equal(zoneOf.get(mover.id), smallZone, "the team moved");
+
+    const groups = await prisma.match.findMany({
+      where: { etapaId: swapEtapaId, stage: "GROUPS" },
+    });
+    assert.equal(groups.length, 9, "still 9 group matches");
+
+    const pairs = groups.map((m) => {
+      assert.equal(
+        zoneOf.get(m.teamAId!),
+        zoneOf.get(m.teamBId!),
+        `match ${m.id} crosses zones`,
+      );
+      assert.equal(m.zone, zoneOf.get(m.teamAId!) ?? null, "the match carries the zone");
+      return [m.teamAId!, m.teamBId!].sort().join("|");
+    });
+    assert.equal(new Set(pairs).size, 9, "every pair exists exactly once");
+
+    const bracket = await prisma.match.count({
+      where: { etapaId: swapEtapaId, stage: { not: "GROUPS" } },
+    });
+    assert.equal(bracket, 6, "the six bracket slots survive");
+  });
+
+  it("refuses a move that would empty a zone, without touching the fixture", async () => {
+    const etapa = await createEtapa({
+      name: "Zona vacia",
+      teams: Array.from({ length: 6 }, (_, i) => ({
+        name: `Empty${i}`,
+        maleName: `EmptyMale${i}`,
+        femaleName: `EmptyFemale${i}`,
+      })),
+    });
+    const before = await prisma.match.findMany({
+      where: { etapaId: etapa.id },
+      orderBy: { id: "asc" },
+    });
+    const byZone = await prisma.team.findMany({
+      where: { etapaId: etapa.id, zone: "A" },
+    });
+    assert.equal(byZone.length, 3, "6 teams split 3/3");
+
+    await assert.rejects(
+      () => swapTeamLocal(byZone[0]!.id, "A", "B", etapa.id),
+      (err: unknown) =>
+        (err as { reason?: string }).reason === "zones_unbalanced",
+    );
+    assert.deepEqual(
+      await prisma.match.findMany({
+        where: { etapaId: etapa.id },
+        orderBy: { id: "asc" },
+      }),
+      before,
+      "a rejected move must not touch the fixture",
+    );
+  });
+
+  it("refuses every rebuild once a result is loaded and keeps the played row", async () => {
+    const etapa = await createEtapa({
+      name: "Con resultado",
+      teams: Array.from({ length: 7 }, (_, i) => ({
+        name: `Played${i}`,
+        maleName: `PlayedMale${i}`,
+        femaleName: `PlayedFemale${i}`,
+      })),
+    });
+    const match = await prisma.match.findFirst({
+      where: { etapaId: etapa.id, stage: "GROUPS" },
+    });
+    await recordResult({
+      matchId: match!.id,
+      setFormat: "SINGLE_21",
+      sets: [{ teamA: 21, teamB: 10 }],
+    });
+    const before = await prisma.match.findMany({
+      where: { etapaId: etapa.id },
+      orderBy: { id: "asc" },
+    });
+
+    await assert.rejects(
+      () => generateZones(etapa.id),
+      (err: unknown) => (err as { reason?: string }).reason === "etapa_jugada",
+    );
+    const team = await prisma.team.findFirst({
+      where: { etapaId: etapa.id, zone: "A" },
+    });
+    await assert.rejects(
+      () => swapTeamLocal(team!.id, "A", "B", etapa.id),
+      (err: unknown) => (err as { reason?: string }).reason === "etapa_jugada",
+    );
+    assert.deepEqual(
+      await prisma.match.findMany({
+        where: { etapaId: etapa.id },
+        orderBy: { id: "asc" },
+      }),
+      before,
+      "the rebuild never runs with a result loaded",
+    );
+  });
+
+  it("refuses a pinned stage that belongs to another circuit", async () => {
+    const other = await createEtapa({
+      name: "Otro circuito",
+      teams: Array.from({ length: 6 }, (_, i) => ({
+        name: `Cross${i}`,
+        maleName: `CrossMale${i}`,
+        femaleName: `CrossFemale${i}`,
+      })),
+      circuit: "INTERMEDIOS",
+    });
+
+    await assert.rejects(
+      () => assertEtapaCircuitLocal(other.id, "PRINCIPIANTES"),
+      (err: unknown) =>
+        (err as { reason?: string }).reason === "etapa_circuit_mismatch",
+    );
+    await assertEtapaCircuitLocal(other.id, "INTERMEDIOS");
+  });
+});

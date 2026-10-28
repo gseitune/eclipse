@@ -28,6 +28,11 @@ export function useLiveState(options?: {
   initial?: StateSnapshot | null;
   /** Circuit (annual season) to read. Defaults to the API's own default. */
   circuit?: Circuit;
+  /**
+   * Stage to read. Null/undefined follows the API's own choice (the stage with
+   * the newest date). Pinning one lets the panel operate on an older fecha.
+   */
+  etapaId?: string | null;
 }): {
   state: StateSnapshot | null;
   loading: boolean;
@@ -39,11 +44,17 @@ export function useLiveState(options?: {
   const hasInitial = options?.initial !== undefined;
   const initialValue: StateSnapshot | null = hasInitial ? options.initial! : null;
   const circuit = options?.circuit;
+  const etapaId = options?.etapaId ?? null;
   const [state, setState] = useState<StateSnapshot | null>(initialValue);
   // Which circuit the data in `state` belongs to. The snapshot and the fetched
   // stages are tagged, so a circuit switch can never render the other circuit's
   // groups and brackets while the new ones are loading (or after a failure).
   const [dataCircuit, setDataCircuit] = useState<Circuit | undefined>(circuit);
+  // The stage the data in `state` came from: a pinned stage must never render
+  // another stage's matches while the pinned one loads.
+  const [dataEtapaId, setDataEtapaId] = useState<string | null>(
+    initialValue?.etapaId ?? null,
+  );
   const [loading, setLoading] = useState<boolean>(!hasInitial);
   const [error, setError] = useState<string | null>(null);
   const [lastEvent, setLastEvent] = useState<string | null>(null);
@@ -66,10 +77,11 @@ export function useLiveState(options?: {
     setRefreshing(true);
     const promise = (async () => {
       try {
-        const snapshot = await fetchState(circuit);
+        const snapshot = await fetchState(circuit, etapaId);
         if (mountedRef.current) {
           setState(snapshot);
           setDataCircuit(circuit);
+          setDataEtapaId(snapshot.etapaId);
           setError(null);
         }
       } catch (err) {
@@ -86,7 +98,7 @@ export function useLiveState(options?: {
     })();
     refreshPromiseRef.current = promise;
     return promise;
-  }, [circuit]);
+  }, [circuit, etapaId]);
 
   const refetch = useCallback(async () => {
     if (debounceTimerRef.current) {
@@ -105,11 +117,12 @@ export function useLiveState(options?: {
     // changes: the SSR snapshot belongs to the previous circuit.
     if (!hasInitial || !isFirstRun) {
       setLoading(true);
-      fetchState(circuit)
+      fetchState(circuit, etapaId)
         .then((snapshot) => {
           if (mountedRef.current) {
             setState(snapshot);
             setDataCircuit(circuit);
+            setDataEtapaId(snapshot.etapaId);
             setLoading(false);
           }
         })
@@ -221,15 +234,19 @@ export function useLiveState(options?: {
         debounceTimerRef.current = null;
       }
     };
-  }, [performRefetch, hasInitial, circuit]);
+  }, [performRefetch, hasInitial, circuit, etapaId]);
 
   // Data from another circuit is not "state": it is hidden until the matching
   // one arrives, so Principiantes can never leak into the Intermedios view.
+  // Same for a pinned stage: the previous stage's matches must not render while
+  // the pinned one loads.
   const sameCircuit = dataCircuit === circuit;
+  const sameEtapa = !etapaId || dataEtapaId === etapaId;
+  const usable = sameCircuit && sameEtapa;
 
   return {
-    state: sameCircuit ? state : null,
-    loading: loading || !sameCircuit,
+    state: usable ? state : null,
+    loading: loading || !usable,
     error,
     lastEvent,
     refreshing,

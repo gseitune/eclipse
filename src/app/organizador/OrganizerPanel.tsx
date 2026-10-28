@@ -4,7 +4,7 @@ import { logout, closeEtapa } from "@/lib/front/api";
 import { useState, useEffect, useMemo } from "react";
 import { useLiveState } from "@/lib/front/use-live-state";
 import { closeEtapaUi, closedBannerVisible, CLOSED_BANNER_MS, type CloseEtapaUi } from "@/lib/etapa-close";
-import type { Circuit, MatchPublic, StateSnapshot } from "@/lib/front/types";
+import type { Circuit, EtapaMeta, MatchPublic, StateSnapshot } from "@/lib/front/types";
 import { computeTimeEstimate } from "@/lib/time-estimate";
 import { stageLabel } from "@/lib/front/phase";
 import { IconoApagado, IconoCasa, IconoEngranaje } from "@/components/Iconos";
@@ -222,6 +222,7 @@ export interface OrganizerPanelProps {
 
 /** Where the panel remembers the circuit the organizer was working on. */
 const CIRCUIT_KEY = "eclipse.organizer.circuit";
+const ETAPA_KEY = "eclipse.organizer.etapa";
 
 /* ── Subcomponent: Actionable card ── */
 function SectionCard({
@@ -438,6 +439,27 @@ export function OrganizerPanel(_props: OrganizerPanelProps) {
   function changeCircuit(next: Circuit) {
     setCircuit(next);
     window.localStorage.setItem(CIRCUIT_KEY, next);
+    // A pinned stage belongs to one circuit: keeping it would read the other
+    // circuit's etapa through ?etapa=.
+    changeEtapa(null);
+  }
+
+  // Which stage the panel operates on. Empty = the API's own choice (the stage
+  // with the newest date). Pinning one is how a fecha loaded late stays
+  // reachable: its date is older than the current stage, so the default answer
+  // would never be it.
+  const [etapaId, setEtapaId] = useState<string | null>(null);
+  useEffect(() => {
+    const saved = window.localStorage.getItem(ETAPA_KEY);
+    if (!saved) return;
+    const timer = setTimeout(() => setEtapaId(saved), 0);
+    return () => clearTimeout(timer);
+  }, []);
+
+  function changeEtapa(next: string | null) {
+    setEtapaId(next);
+    if (next) window.localStorage.setItem(ETAPA_KEY, next);
+    else window.localStorage.removeItem(ETAPA_KEY);
   }
 
   // Reactive clock for the counters card (recomputes every 30s)
@@ -447,7 +469,23 @@ export function OrganizerPanel(_props: OrganizerPanelProps) {
     return () => clearInterval(id);
   }, []);
 
-  const { state: liveState, loading, error: liveStateError, refetch } = useLiveState({ circuit });
+  const { state: liveState, loading, error: liveStateError, refetch } = useLiveState({ circuit, etapaId });
+
+  // Options for the stage selector. The snapshot lists every etapa of the
+  // circuit; it is kept in its own state so the select never empties while a
+  // pinned stage loads (the snapshot is null during that fetch). It is tagged
+  // with its circuit: a leftover list from the previous circuit must never be
+  // selectable, because ?etapa= is honoured across circuits.
+  const [etapaOptions, setEtapaOptions] = useState<{
+    circuit: Circuit;
+    list: EtapaMeta[];
+  } | null>(null);
+  useEffect(() => {
+    const list = liveState?.etapas;
+    if (list && list.length > 0) setEtapaOptions({ circuit, list });
+  }, [liveState?.etapas, circuit]);
+  const visibleEtapas =
+    etapaOptions?.circuit === circuit ? etapaOptions.list : [];
   const nextMatch = liveState?.nextMatch ?? null;
   const isCancelled = !!liveState?.etapa?.cancelledAt;
   // Bell notice: only a match whose teams are already defined can be loaded.
@@ -570,6 +608,31 @@ export function OrganizerPanel(_props: OrganizerPanelProps) {
                     );
                   })}
                 </div>
+                {/* Stage selector: the panel used to follow only the stage with
+                    the newest date, so a fecha loaded late was unreachable. */}
+                <label className="inline-flex items-center">
+                  <span className="sr-only">Etapa</span>
+                  <select
+                    aria-label="Etapa"
+                    value={etapaId ?? ""}
+                    onChange={(event) => changeEtapa(event.target.value || null)}
+                    className="min-h-[38px] max-w-[220px] rounded-full border border-stone-300 bg-white/80 px-3 text-[13px] font-semibold text-stone-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-selva-600"
+                  >
+                    <option value="">Etapa más reciente</option>
+                    {[...visibleEtapas]
+                      .sort((a, b) => a.sortOrder - b.sortOrder)
+                      .map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.name}
+                          {option.cancelledAt
+                            ? " · cancelada"
+                            : option.closedAt
+                              ? " · cerrada"
+                              : ""}
+                        </option>
+                      ))}
+                  </select>
+                </label>
                 <button
                   onClick={() => setView("public")}
                   aria-label="Ver página pública"

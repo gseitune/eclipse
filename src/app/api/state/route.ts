@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { getStateSnapshot } from "@/lib/back";
+import { getStateSnapshot, assertEtapaCircuit } from "@/lib/back";
 import type { Circuit } from "@/generated/prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +36,10 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // A pinned etapa must belong to the requested circuit: the lookup below
+    // honours ?etapa= without checking it, so the panel could read (and write
+    // into) the other circuit's stage.
+    if (etapa) await assertEtapaCircuit(etapa, circuit);
     return NextResponse.json(await getStateSnapshot(etapa, circuit, season));
   } catch (error) {
     // Without this, a throw leaves the client with an empty 500 and no clue.

@@ -80,3 +80,37 @@ describe("handleResponse", () => {
     assert.deepEqual(await fetchScheduleBoard(), { schedule: [] });
   });
 });
+
+describe("fetchState query", () => {
+  function capture(): string[] {
+    const seen: string[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      seen.push(String(input));
+      return new Response(JSON.stringify({ etapaId: "e3" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as typeof fetch;
+    return seen;
+  }
+
+  it("pins the stage next to the circuit, so an older fecha is reachable", async () => {
+    const seen = capture();
+    await fetchState("INTERMEDIOS", "e3");
+
+    assert.equal(seen.length, 1);
+    const url = new URL(seen[0]!, "http://localhost");
+    assert.equal(url.pathname, "/api/state");
+    assert.equal(url.searchParams.get("circuit"), "INTERMEDIOS");
+    assert.equal(url.searchParams.get("etapa"), "e3");
+  });
+
+  it("omits the etapa param when the panel follows the newest stage", async () => {
+    const seen = capture();
+    await fetchState("INTERMEDIOS", null);
+
+    const url = new URL(seen[0]!, "http://localhost");
+    assert.equal(url.searchParams.get("circuit"), "INTERMEDIOS");
+    assert.equal(url.searchParams.get("etapa"), null);
+  });
+});

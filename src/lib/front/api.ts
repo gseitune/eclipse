@@ -50,9 +50,22 @@ async function handleResponse<T>(res: Response): Promise<T> {
   return body as T;
 }
 
-export async function fetchState(circuit?: Circuit): Promise<StateSnapshot> {
-  const qs = circuit ? `?circuit=${circuit}` : "";
-  const res = await fetch(`${BASE}/state${qs}`, { cache: "no-store" });
+/**
+ * ONE etapa's snapshot. `etapaId` pins the stage to read: without it the API
+ * answers with the stage that has the NEWEST DATE, so an older fecha (a stage
+ * loaded late) could never be opened from the panel.
+ */
+export async function fetchState(
+  circuit?: Circuit,
+  etapaId?: string | null,
+): Promise<StateSnapshot> {
+  const params = new URLSearchParams();
+  if (circuit) params.set("circuit", circuit);
+  if (etapaId) params.set("etapa", etapaId);
+  const query = params.toString();
+  const res = await fetch(`${BASE}/state${query ? `?${query}` : ""}`, {
+    cache: "no-store",
+  });
   return handleResponse<StateSnapshot>(res);
 }
 
