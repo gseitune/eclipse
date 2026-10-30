@@ -8,6 +8,7 @@ import {
   needsBrackets,
   hasBracketResult,
   stageLabel,
+  matchStageLabel,
   zoneName,
   isKnownZone,
 } from "./phase";
@@ -108,6 +109,25 @@ describe("stageLabel", () => {
   it("returns generic label for unknown stage", () => {
     assert.equal(stageLabel("QUARTERS"), "Partido");
     assert.equal(stageLabel(""), "Partido");
+  });
+});
+
+describe("matchStageLabel", () => {
+  it("names the zone being played for a group match", () => {
+    assert.equal(matchStageLabel("GROUPS", "A"), "Grupos Zona A");
+    assert.equal(matchStageLabel("GROUPS", "B"), "Grupos Zona B");
+    assert.equal(matchStageLabel("GROUPS", "C"), "Grupos Zona C");
+  });
+
+  it("falls back to the plain stage label when the group has no zone", () => {
+    assert.equal(matchStageLabel("GROUPS", null), "Grupos");
+    assert.equal(matchStageLabel("GROUPS", undefined), "Grupos");
+  });
+
+  it("never appends a zone to a bracket match", () => {
+    assert.equal(matchStageLabel("FINAL", "A"), "Final");
+    assert.equal(matchStageLabel("SEMIFINAL_1", "B"), "Semifinal 1");
+    assert.equal(matchStageLabel("DESEMPATE", "C"), "Desempate");
   });
 });
 

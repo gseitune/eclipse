@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { fetchScheduleBoard, rescheduleMatch } from "@/lib/front/api";
 import type { ScheduleBoardRow } from "@/lib/front/types";
 import { ApiError } from "@/lib/front/types";
-import { stageLabel } from "@/lib/front/phase";
+import { matchStageLabel } from "@/lib/front/phase";
 
 /* ── Up arrow icon (inline SVG, no emoji) ── */
 function UpIcon() {
@@ -246,7 +246,7 @@ export function ReagendarSection({ onBack, readOnly = false }: ReagendarSectionP
                   </span>
                   <span className="mx-1.5 text-stone-300">·</span>
                   <span className="text-[13px] sm:text-xs text-stone-500">
-                    {stageLabel(row.stage)}
+                    {matchStageLabel(row.stage, row.zone)}
                   </span>
                   <div className="text-[15px] sm:text-sm text-stone-600 mt-0.5">
                     {row.teamA && row.teamB

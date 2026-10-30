@@ -96,6 +96,16 @@ export function zoneName(z: string): string {
   }
 }
 
+/**
+ * Label for one schedule row. A group match also names the zone being played,
+ * so the organizer board never shows a bare "Grupos" for three different zones.
+ */
+export function matchStageLabel(stage: string, zone?: string | null): string {
+  const label = stageLabel(stage);
+  if (stage !== "GROUPS" || !zone) return label;
+  return `${label} ${zoneName(zone)}`;
+}
+
 const KNOWN_ZONES = ["A", "B", "C"] as const;
 
 export function isKnownZone(z: string): boolean {
