@@ -2,9 +2,19 @@
 
 export type TournamentId = "principiantes" | "intermedios";
 
+/**
+ * Display labels for the two circuits. Single source of truth: the switch here
+ * and the hero header both read from this map, so the headline can never drift
+ * from the option the viewer has selected.
+ */
+export const CIRCUIT_LABELS: Record<TournamentId, string> = {
+  principiantes: "Principiante/Intermedio",
+  intermedios: "Intermedio/Avanzado",
+};
+
 const OPTIONS: { id: TournamentId; label: string }[] = [
-  { id: "principiantes", label: "Principiante/Intermedio" },
-  { id: "intermedios", label: "Intermedio/Avanzado" },
+  { id: "principiantes", label: CIRCUIT_LABELS.principiantes },
+  { id: "intermedios", label: CIRCUIT_LABELS.intermedios },
 ];
 
 /**

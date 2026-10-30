@@ -9,7 +9,7 @@ import { fetchGallery, fetchRanking } from "@/lib/front/api";
 import type { Circuit, StateSnapshot, ZoneId, TeamPublic, RankingResponse } from "@/lib/front/types";import type { FotoGaleria } from "@/lib/front/galeria";
 import { Hero } from "./Hero";
 import { HeroCarousel } from "./HeroCarousel";
-import { TournamentSwitch, type TournamentId } from "./TournamentSwitch";
+import { TournamentSwitch, CIRCUIT_LABELS, type TournamentId } from "./TournamentSwitch";
 import { MatchTicker } from "./MatchTicker";
 import { TournamentTabs } from "./TournamentTabs";
 import { RankingPanel } from "./RankingPanel";
@@ -51,6 +51,9 @@ export function PublicHome({
   );
   const circuit: Circuit =
     tournament === "intermedios" ? "INTERMEDIOS" : "PRINCIPIANTES";
+  // The hero headline names the circuit the same way the switch does, so the
+  // heading and the selector below can never show different categories.
+  const circuitLabel = CIRCUIT_LABELS[tournament];
 
   function changeCircuit(id: TournamentId) {
     setTournament(id);
@@ -186,9 +189,9 @@ export function PublicHome({
       {galeria.fotos.length > 0 ? (
         <HeroCarousel
           fotos={galeria.fotos}
-          circuit={`Circuito Mixto ${
-            circuit === "INTERMEDIOS" ? "Intermedios" : "Principiantes"
-          } ${state?.etapa?.season ?? 2026}`}
+          circuit={`Circuito Mixto ${circuitLabel} ${
+            state?.etapa?.season ?? 2026
+          }`}
           etapaName={state?.etapa?.name?.toUpperCase() ?? "—"}
           live={liveIds.size > 0}
           finished={
@@ -198,9 +201,9 @@ export function PublicHome({
         />
       ) : (
         <Hero
-          circuit={`Circuito Mixto ${
-            circuit === "INTERMEDIOS" ? "Intermedios" : "Principiantes"
-          } ${state?.etapa?.season ?? 2026}`}
+          circuit={`Circuito Mixto ${circuitLabel} ${
+            state?.etapa?.season ?? 2026
+          }`}
           etapaName={state?.etapa?.name?.toUpperCase() ?? "—"}
           live={liveIds.size > 0}
           finished={
@@ -243,8 +246,7 @@ export function PublicHome({
         {!state && !loading ? (
           <div className="rounded-2xl border border-selva-200 bg-selva-50 p-8 text-center shadow-[0_18px_40px_-34px_rgba(23,43,24,0.28)]">
             <p className="text-[13px] sm:text-xs font-semibold uppercase tracking-[0.2em] text-stone-400">
-              Circuito Mixto{" "}
-              {circuit === "INTERMEDIOS" ? "Intermedios" : "Principiantes"}
+              Circuito Mixto {circuitLabel}
             </p>
             <p className="mt-2 text-lg font-semibold text-stone-900">
               Todavía no hay fechas
