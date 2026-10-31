@@ -21,8 +21,17 @@ const MEANINGFUL_EVENTS = [
 const DEBOUNCE_MS = 250;
 const RECONNECT_INITIAL_MS = 1000;
 const RECONNECT_MAX_MS = 15000;
-/** Safety-net refresh: SSE events can be published from another instance. */
-const POLL_MS = 10000;
+/**
+ * Refresh interval. Polling is the source of truth: an SSE event can be
+ * published from a different instance than the one holding the connection, so
+ * the listener would never see it.
+ *
+ * 5s keeps the page as fresh as the old push stream was meant to be. The cost
+ * is what matters: while a stream is open the instance stays in flight and is
+ * billed at 2 GB-hrs per hour on Hobby (memory size is fixed there and cannot
+ * be lowered). Polling at this rate costs roughly 0.12 GB-hrs per hour.
+ */
+const POLL_MS = 5000;
 
 export function useLiveState(options?: {
   initial?: StateSnapshot | null;
@@ -33,6 +42,16 @@ export function useLiveState(options?: {
    * the newest date). Pinning one lets the panel operate on an older fecha.
    */
   etapaId?: string | null;
+  /**
+   * Open the `/api/events` SSE stream on top of polling. Off by default: on
+   * serverless the write is published from whichever instance handled it, so a
+   * listener held by another instance never receives the event, and polling is
+   * the real source of truth anyway. An open stream also keeps a function
+   * instance in flight for as long as the tab stays open, which is billed as
+   * provisioned memory (2 GB-hrs per viewer-hour on Hobby, where the memory
+   * size is fixed and cannot be lowered).
+   */
+  stream?: boolean;
 }): {
   state: StateSnapshot | null;
   loading: boolean;
@@ -45,6 +64,7 @@ export function useLiveState(options?: {
   const initialValue: StateSnapshot | null = hasInitial ? options.initial! : null;
   const circuit = options?.circuit;
   const etapaId = options?.etapaId ?? null;
+  const stream = options?.stream ?? false;
   const [state, setState] = useState<StateSnapshot | null>(initialValue);
   // Which circuit the data in `state` belongs to. The snapshot and the fetched
   // stages are tagged, so a circuit switch can never render the other circuit's
@@ -186,11 +206,12 @@ export function useLiveState(options?: {
       };
     };
 
-    createSource();
+    if (stream) createSource();
 
     // Serverless makes SSE unreliable: a write can land in another instance than
-    // the one holding this connection, so its event never arrives. Poll as a
-    // safety net, and refetch as soon as the tab comes back to the front.
+    // the one holding this connection, so its event never arrives. Polling is
+    // therefore the source of truth, and the tab also refetches as soon as it
+    // comes back to the front.
     const poll = setInterval(() => {
       if (!mountedRef.current) return;
       if (typeof document !== "undefined" && document.visibilityState === "hidden") {
@@ -234,7 +255,7 @@ export function useLiveState(options?: {
         debounceTimerRef.current = null;
       }
     };
-  }, [performRefetch, hasInitial, circuit, etapaId]);
+  }, [performRefetch, hasInitial, circuit, etapaId, stream]);
 
   // Data from another circuit is not "state": it is hidden until the matching
   // one arrives, so Principiantes can never leak into the Intermedios view.
