@@ -18,9 +18,12 @@
  * `high >= cap && high - low >= 2`. `15-14` and `21-20` are INVALID; `16-14`
  * and `22-20` are valid.
  *
- * The winner is ALWAYS derived from the sets; WINNER_ONLY remains legal in any
- * stage (no invented scores). A `winnerId` in the payload must agree with the
- * sets when both are present.
+ * The winner is ALWAYS derived from the sets, so a COMPLETE result is the only
+ * result the zone phase (GROUPS) accepts: with the winner alone, sets, point
+ * difference and points for stay at zero for every team and a three-way tie can
+ * never be ordered. WINNER_ONLY stays legal from the knockout stages on, where
+ * the slot is decided by who advances. A `winnerId` in the payload must agree
+ * with the sets when both are present.
  */
 
 export type SetFormatId =
@@ -287,6 +290,16 @@ export function resolveResultPayload(
       throw new InvalidResultError(
         "winnerId must be one of the playing teams.",
         "invalid_winner",
+      );
+    }
+    // Zone positions are ordered by merit (wins → sets → points), so a group
+    // result without its set score leaves every team tied on 3 of the 4
+    // criteria and the zone can only be resolved by hand. From the knockout
+    // stages on, the slot only needs to know who advances.
+    if (stage === "GROUPS") {
+      throw new InvalidResultError(
+        "Zone matches need the set score: a winner alone cannot order the zone.",
+        "winner_only_not_in_groups",
       );
     }
     return {

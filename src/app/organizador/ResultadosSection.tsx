@@ -198,6 +198,12 @@ export function ResultadoEntryPanel({
   const nextMatch = state?.nextMatch ?? null;
   const schedule = useMemo(() => state?.schedule ?? [], [state?.schedule]);
 
+  // Winner-only is a knockout shortcut. A zone position is ordered by merit
+  // (wins → sets → points), so the zone phase always needs its set score; there
+  // the tab is gone and the board falls back to the score entry.
+  const winnerOnlyAllowed = nextMatch?.stage !== "GROUPS";
+  const tab: EntryTab = winnerOnlyAllowed ? activeTab : "sets";
+
   // The etapa can fix one format for every match; otherwise the stage decides
   // which formats are legal (semifinals allow both).
   const etapaFormat = state?.etapa?.setFormat ?? null;
@@ -446,7 +452,7 @@ export function ResultadoEntryPanel({
                 </button>
               </div>
 
-              {/* Tab switch */}
+              {/* Tab switch — winner-only only exists from the knockout stages on */}
               <div
                 role="tablist"
                 className="inline-flex rounded-lg bg-stone-100 p-1 gap-0.5"
@@ -454,34 +460,44 @@ export function ResultadoEntryPanel({
                 <button
                   type="button"
                   role="tab"
-                  aria-selected={activeTab === "sets"}
+                  aria-selected={tab === "sets"}
                   onClick={() => { setActiveTab("sets"); setSubmitMsg(null); }}
                   className={`px-3 py-2 text-[15px] sm:text-sm font-medium rounded-md transition-colors min-h-[44px] ${
-                    activeTab === "sets"
+                    tab === "sets"
                       ? "bg-white text-stone-900 shadow-sm"
                       : "text-stone-500 hover:text-stone-700"
                   }`}
                 >
                   Sets
                 </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={activeTab === "winner"}
-                  onClick={() => { setActiveTab("winner"); setSubmitMsg(null); }}
-                  className={`px-3 py-2 text-[15px] sm:text-sm font-medium rounded-md transition-colors min-h-[44px] ${
-                    activeTab === "winner"
-                      ? "bg-white text-stone-900 shadow-sm"
-                      : "text-stone-500 hover:text-stone-700"
-                  }`}
-                >
-                  1 ganador
-                </button>
+                {winnerOnlyAllowed && (
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={tab === "winner"}
+                    onClick={() => { setActiveTab("winner"); setSubmitMsg(null); }}
+                    className={`px-3 py-2 text-[15px] sm:text-sm font-medium rounded-md transition-colors min-h-[44px] ${
+                      tab === "winner"
+                        ? "bg-white text-stone-900 shadow-sm"
+                        : "text-stone-500 hover:text-stone-700"
+                    }`}
+                  >
+                    1 ganador
+                  </button>
+                )}
               </div>
             </div>
 
+            {/* Why the shortcut is missing: a zone is ordered by merit. */}
+            {!winnerOnlyAllowed && (
+              <p className="text-[12px] sm:text-[11px] text-stone-500">
+                En la fase de zonas va el set completo: con solo el ganador no se
+                pueden desempatar dos equipos por sets ni por puntos.
+              </p>
+            )}
+
             {/* Sets scoreboard — teams on each side, number in the middle */}
-            {activeTab === "sets" && (
+            {tab === "sets" && (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
                   {/* Team A */}
@@ -664,7 +680,7 @@ export function ResultadoEntryPanel({
             )}
 
             {/* Winner buttons */}
-            {activeTab === "winner" && (
+            {tab === "winner" && (
               <div className="flex gap-3">
                 <button
                   type="button"
@@ -901,6 +917,12 @@ export function CorregirResultadosPanel({
   // The stored format of the match decides how many sets the correction needs.
   const corrFormat: SetFormatId = (openRow?.setFormat ?? "SINGLE_21") as SetFormatId;
 
+  // Same rule as the entry board: a zone result is corrected with its set
+  // score, because that is what orders the zone. From the knockout stages on
+  // the stored result also carries the score, but the winner tab stays.
+  const corrWinnerAllowed = openRow?.stage !== "GROUPS";
+  const corrActiveTab: CorrTab = corrWinnerAllowed ? corrTab : "sets";
+
   const corrFirstTwo = [
     parseInt(corrA, 10),
     parseInt(corrB, 10),
@@ -913,7 +935,7 @@ export function CorregirResultadosPanel({
     (corrFirstTwo[0] > corrFirstTwo[1]) !== (corrFirstTwo[2] > corrFirstTwo[3]);
 
   const corrSets = useMemo(() => {
-    if (corrTab !== "sets") return [];
+    if (corrActiveTab !== "sets") return [];
     const sets = [
       { teamA: parseInt(corrA, 10), teamB: parseInt(corrB, 10) },
     ];
@@ -932,7 +954,7 @@ export function CorregirResultadosPanel({
       }
     }
     return sets;
-  }, [corrTab, corrA, corrB, corr2A, corr2B, corr3A, corr3B, corrFormat, showCorrThird]);
+  }, [corrActiveTab, corrA, corrB, corr2A, corr2B, corr3A, corr3B, corrFormat, showCorrThird]);
 
   const impact = useMemo(
     () => (openRow ? cascadeImpact(openRow.stage, board ?? []) : null),
@@ -961,7 +983,7 @@ export function CorregirResultadosPanel({
   const canConfirm =
     !corrSaving &&
     openRow !== null &&
-    (corrTab === "sets"
+    (corrActiveTab === "sets"
       ? describeSetProblem(corrFormat, corrSets) === null
       : corrWinner !== null);
 
@@ -970,7 +992,7 @@ export function CorregirResultadosPanel({
     setCorrSaving(true);
     setCorrMsg(null);
     try {
-      if (corrTab === "sets") {
+      if (corrActiveTab === "sets") {
         await editResult({
           matchId: openRow.id,
           setFormat: corrFormat,
@@ -1103,38 +1125,40 @@ export function CorregirResultadosPanel({
               <button
                 type="button"
                 role="tab"
-                aria-selected={corrTab === "sets"}
+                aria-selected={corrActiveTab === "sets"}
                 onClick={() => {
                   setCorrTab("sets");
                   setCorrMsg(null);
                 }}
                 className={`px-3 py-2 text-[15px] sm:text-sm font-medium rounded-md transition-colors min-h-[44px] ${
-                  corrTab === "sets"
+                  corrActiveTab === "sets"
                     ? "bg-white text-stone-900 shadow-sm"
                     : "text-stone-500 hover:text-stone-700"
                 }`}
               >
                 Sets
               </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={corrTab === "winner"}
-                onClick={() => {
-                  setCorrTab("winner");
-                  setCorrMsg(null);
-                }}
-                className={`px-3 py-2 text-[15px] sm:text-sm font-medium rounded-md transition-colors min-h-[44px] ${
-                  corrTab === "winner"
-                    ? "bg-white text-stone-900 shadow-sm"
-                    : "text-stone-500 hover:text-stone-700"
-                }`}
-              >
-                1 ganador
-              </button>
+              {corrWinnerAllowed && (
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={corrActiveTab === "winner"}
+                  onClick={() => {
+                    setCorrTab("winner");
+                    setCorrMsg(null);
+                  }}
+                  className={`px-3 py-2 text-[15px] sm:text-sm font-medium rounded-md transition-colors min-h-[44px] ${
+                    corrActiveTab === "winner"
+                      ? "bg-white text-stone-900 shadow-sm"
+                      : "text-stone-500 hover:text-stone-700"
+                  }`}
+                >
+                  1 ganador
+                </button>
+              )}
             </div>
 
-            {corrTab === "sets" ? (
+            {corrActiveTab === "sets" ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-center gap-2">
                 <label htmlFor="corr-set-a" className="sr-only">

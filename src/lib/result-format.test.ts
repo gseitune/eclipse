@@ -304,14 +304,34 @@ describe("resolveResultPayload", () => {
       assert.equal(result.winnerId, TEAM_A);
     });
 
-    it("allows WINNER_ONLY in every stage", () => {
-      for (const stage of ["GROUPS", "DESEMPATE", "SEMIFINAL_1", "SEMIFINAL_2", "FINAL"]) {
+    it("allows WINNER_ONLY in every knockout stage", () => {
+      for (const stage of [
+        "DESEMPATE",
+        "REPECHAJE_1",
+        "REPECHAJE_2",
+        "CUARTOS_1",
+        "CUARTOS_2",
+        "CUARTOS_3",
+        "CUARTOS_4",
+        "SEMIFINAL_1",
+        "SEMIFINAL_2",
+        "BRONZE",
+        "FINAL",
+      ]) {
         const result = resolve(stage, { winnerId: TEAM_B });
         assert.equal(result.resultStatus, "WINNER_ONLY");
         assert.equal(result.winnerId, TEAM_B);
         assert.equal(result.sets, null);
         assert.equal(result.setFormat, null);
       }
+    });
+
+    it("rejects WINNER_ONLY in the zone phase (no metric left to order the zone)", () => {
+      invalid({
+        stage: "GROUPS",
+        input: { winnerId: TEAM_A },
+        reason: "winner_only_not_in_groups",
+      });
     });
 
     it("rejects a winner that is not one of the teams", () => {

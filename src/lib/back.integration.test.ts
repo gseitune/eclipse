@@ -166,12 +166,29 @@ describe("recordResult/editResult (integration)", () => {
     );
   });
 
-  it("records a WINNER_ONLY result in groups (allowed in every stage) and finalizes the bracket", async () => {
-    await recordResult({ matchId: "m2", winnerId: "tB1" });
+  it("rejects a WINNER_ONLY result in the zone phase, on record and on edit", async () => {
+    await bad400(
+      () => recordResult({ matchId: "m2", winnerId: "tB1" }),
+      "winner_only_not_in_groups",
+    );
+    const untouched = await prisma.match.findUnique({ where: { id: "m2" } });
+    assert.equal(untouched?.resultStatus, "PENDING", "nothing was written");
+
+    // The correction panel sends the same payload surface, so it is refused too.
+    await bad400(
+      () => editResult({ matchId: "m1", winnerId: "tA2" }),
+      "winner_only_not_in_groups",
+    );
+  });
+
+  it("records the last group result with its set score and finalizes the bracket", async () => {
+    await recordResult({
+      matchId: "m2",
+      setFormat: "SINGLE_21",
+      sets: [{ teamA: 21, teamB: 15 }],
+    });
     const m2 = await prisma.match.findUnique({ where: { id: "m2" } });
-    assert.equal(m2?.resultStatus, "WINNER_ONLY");
-    assert.equal(m2?.sets, null, "no invented sets");
-    assert.equal(m2?.winnerId, "tB1");
+    assert.equal(m2?.resultStatus, "COMPLETE", "zone results always carry their score");
 
     const state = await prisma.tournamentState.findUnique({ where: { etapaId } });
     assert.equal(state?.phase, "ELIMINATORIES", "both group results build the bracket");
@@ -1918,10 +1935,13 @@ describe("cascade edit (integration)", () => {
       select: { winnerId: true },
     });
     const newWinner = beforeFlip?.winnerId === A[0] ? A[1] : A[0];
+    // Zone results now always carry their score, so the flip is a full set.
+    const winnerIsA = newWinner === a1vsA2!.teamAId;
     await editResult({
       matchId: a1vsA2!.id,
       cascade: true,
-      winnerId: newWinner,
+      setFormat: "SINGLE_21",
+      sets: [{ teamA: winnerIsA ? 21 : 19, teamB: winnerIsA ? 19 : 21 }],
     });
 
     // The whole eliminatories chain is PENDING again; the group results stay
