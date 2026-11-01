@@ -1065,7 +1065,7 @@ export async function getScheduleBoard(
     manualEndAt: m.manualEndAt?.toISOString() ?? null,
   }));
 
-  const rows = computeSchedule(input, state.prepMinutes, state.matchMinutes);
+  const rows = computeSchedule(input, state.matchMinutes);
 
   const matchMap = new Map(matches.map((m) => [m.id, m]));
 
@@ -1221,7 +1221,7 @@ export async function getSchedule(
     manualEndAt: m.manualEndAt?.toISOString() ?? null,
   }));
   const byId = new Map(matches.map((m) => [m.id, m]));
-  return computeSchedule(input, state.prepMinutes, state.matchMinutes).map(
+  return computeSchedule(input, state.matchMinutes).map(
     (row) => {
       const match = byId.get(row.id);
       return {

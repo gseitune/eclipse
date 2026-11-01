@@ -4,10 +4,11 @@ import type { SetFormatId, SetScore } from "./result-format";
 /**
  * Dynamic estimated schedule (HORARIOS ESTIMADOS).
  *
- * The seed `timeLabel` is the base (scheduled). Once results exist, each
- * match has an estimate: the first pending match after a recorded result
- * starts at result time + prepMinutes; all later pending matches shift in
- * chain by matchMinutes. Pure: computed on read, never stored.
+ * `timeLabel` is the base (scheduled). Once a result or a manual window exists,
+ * every match gets an estimate: each played match pins the chain to what really
+ * happened and later pending matches shift by `matchMinutes`. There is no
+ * preparation gap, and all windows render in the tournament timezone.
+ * Pure: computed on read, never stored.
  */
 
 export interface ScheduleMatchInput {
@@ -143,106 +144,105 @@ export const CASCADE_NULL_TEAMS: Record<string, readonly string[]> = {
 
 const MS = 60_000;
 
-function toTimeOnly(iso: string): string {
-  const d = new Date(iso);
-  return d.toTimeString().slice(0, 5);
+/**
+ * Tournament timezone. Every window is rendered in this zone so the server
+ * (which runs in UTC on Vercel) and the browser agree. Using the process zone
+ * shifted every window three hours in production, while local development in
+ * Argentina looked correct and hid the bug.
+ */
+const TOURNAMENT_TZ = "America/Argentina/Buenos_Aires";
+
+const HHMM = new Intl.DateTimeFormat("es-AR", {
+  timeZone: TOURNAMENT_TZ,
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
+
+function toTimeOnly(date: Date): string {
+  const formatted = HHMM.format(date);
+  // Some ICU builds render midnight as "24:00" instead of "00:00".
+  return formatted === "24:00" ? "00:00" : formatted;
+}
+
+function parseDate(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatWindow(start: Date, end: Date): string {
+  return `${toTimeOnly(start)} - ${toTimeOnly(end)}`;
 }
 
 /**
- * Computes, for every match (any stage), the estimated start window.
+ * Computes the estimated window of every match.
  *
- * The first recorded result (by slot) anchors: its next pending match starts
- * at recordedAt + prepMinutes, and each following pending match adds
- * matchMinutes. Pending matches BEFORE the first recorded result keep their
- * base schedule untouched (they stay as scheduled).
+ * The anchor is real data, never a guessed start hour: a match with manual
+ * times uses them, and a recorded match is assumed to have just ended, so its
+ * window is [recordedAt - matchMinutes, recordedAt]. Every later pending match
+ * chains from the previous window's end. Each newly loaded result re-anchors
+ * the chain, so the agenda follows the pace of the day instead of drifting.
+ *
+ * There is no preparation gap: a match takes `matchMinutes` and the next one
+ * starts immediately, which is how the day actually runs.
+ *
+ * Matches before the first anchored one have no estimate and keep their
+ * fixture label (null for group matches, which carry no base time).
  */
 export function computeSchedule(
   matches: ScheduleMatchInput[],
-  prepMinutes: number,
   matchMinutes: number,
 ): ScheduleRow[] {
   const ordered = [...matches].sort((a, b) => a.slot - b.slot);
-
-  const firstRecordedSlot = ordered.find(
-    (m) => m.resultStatus !== "PENDING",
-  )?.slot;
-
-  const rows: ScheduleRow[] = [];
-  let nextStart: Date | null = null;
 
   const editableByMatch = new Map(
     ordered.map((m) => [m.id, isEditableMatch(m, ordered)]),
   );
 
+  const rows: ScheduleRow[] = [];
+  // Start of the next unplayed match, once something anchors the day.
+  let nextStart: Date | null = null;
+
   for (const m of ordered) {
-    const hasManual = m.manualStartAt != null;
-    const manualWindow = hasManual ? formatManualWindow(m.manualStartAt as string, (m.manualEndAt as string | null) ?? null) : null;
-    const scheduled = hasManual ? manualWindow : (m.timeLabel ?? null);
+    const manualStart = parseDate(m.manualStartAt);
+    const manualEnd = parseDate(m.manualEndAt);
+    const scheduled = manualStart
+      ? formatWindow(manualStart, manualEnd ?? new Date(manualStart.getTime() + matchMinutes * MS))
+      : (m.timeLabel ?? null);
 
-    if (firstRecordedSlot === undefined || m.slot <= firstRecordedSlot) {
-      rows.push({
-        id: m.id,
-        slot: m.slot,
-        stage: m.stage,
-        scheduled,
-        estimated: null,
-        estimatedFromResult: false,
-        sets: m.sets,
-        setFormat: m.setFormat,
-        editable: editableByMatch.get(m.id) ?? false,
-        manualStartAt: m.manualStartAt ?? null,
-        manualEndAt: m.manualEndAt ?? null,
-      });
-      continue;
+    let estimated: string | null = null;
+
+    if (manualStart) {
+      const end = manualEnd ?? new Date(manualStart.getTime() + matchMinutes * MS);
+      estimated = formatWindow(manualStart, end);
+      nextStart = end;
+    } else if (m.recordedAt) {
+      const end = m.recordedAt;
+      const start = new Date(end.getTime() - matchMinutes * MS);
+      estimated = formatWindow(start, end);
+      nextStart = end;
+    } else if (nextStart) {
+      const start: Date = nextStart;
+      const end: Date = new Date(start.getTime() + matchMinutes * MS);
+      estimated = formatWindow(start, end);
+      nextStart = end;
     }
 
-    if (nextStart === null) {
-      const anchor = ordered.find(
-        (x) => x.slot === firstRecordedSlot && x.recordedAt !== null,
-      );
-      if (!anchor?.recordedAt) {
-        rows.push({
-          id: m.id,
-          slot: m.slot,
-          stage: m.stage,
-          scheduled,
-          estimated: null,
-          estimatedFromResult: false,
-          sets: m.sets,
-          setFormat: m.setFormat,
-          editable: editableByMatch.get(m.id) ?? false,
-          manualStartAt: m.manualStartAt ?? null,
-          manualEndAt: m.manualEndAt ?? null,
-        });
-        continue;
-      }
-      nextStart = new Date(anchor.recordedAt.getTime() + prepMinutes * MS);
-    }
-
-    const start: Date = nextStart;
-    const end: Date = new Date(start.getTime() + matchMinutes * MS);
     rows.push({
       id: m.id,
       slot: m.slot,
       stage: m.stage,
       scheduled,
-      estimated: `${toTimeOnly(start.toISOString())} - ${toTimeOnly(end.toISOString())}`,
-      estimatedFromResult: true,
+      estimated,
+      estimatedFromResult: estimated !== null,
       sets: m.sets,
       setFormat: m.setFormat,
       editable: editableByMatch.get(m.id) ?? false,
       manualStartAt: m.manualStartAt ?? null,
       manualEndAt: m.manualEndAt ?? null,
     });
-    nextStart = end;
   }
 
   return rows;
-}
-
-function formatManualWindow(startIso: string, endIso: string | null): string | null {
-  if (!startIso) return null;
-  const start = toTimeOnly(startIso);
-  const end = endIso ? toTimeOnly(endIso) : start;
-  return `${start} - ${end}`;
 }

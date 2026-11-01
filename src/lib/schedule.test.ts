@@ -37,7 +37,7 @@ describe("computeSchedule", () => {
   ];
 
   it("keeps the scheduled windows while nothing was recorded", () => {
-    const rows = computeSchedule(base, 5, 20);
+    const rows = computeSchedule(base, 20);
     assert.deepEqual(
       rows.map((r) => [r.scheduled, r.estimated]),
       [
@@ -48,50 +48,72 @@ describe("computeSchedule", () => {
     );
   });
 
-  it("chains estimates for pending matches after the first recorded result", () => {
+  it("anchors the day on the first loaded result and windows that match too", () => {
+    // Loaded at 12:25 UTC = 09:25 in Argentina, so the first match ran 09:05-09:25.
     const matches = [
-      match(1, "10:00 - 10:20", "COMPLETE", new Date(2026, 8, 23, 10, 0, 0)),
-      match(2, "10:20 - 10:40"),
-      match(3, "10:40 - 11:00"),
+      match(1, null, "COMPLETE", new Date("2026-11-01T12:25:00.000Z")),
+      match(2, null),
+      match(3, null),
     ];
-    const rows = computeSchedule(matches, 5, 20);
-    assert.equal(rows[0].estimated, null, "decided match has no estimate");
-    assert.equal(rows[1].estimated, "10:05 - 10:25", "result + 5 min prep");
-    assert.equal(rows[2].estimated, "10:25 - 10:45", "chains by match duration");
+    const rows = computeSchedule(matches, 20);
+    assert.equal(rows[0].estimated, "09:05 - 09:25", "first match starts one match earlier");
+    assert.equal(rows[1].estimated, "09:25 - 09:45", "next match starts immediately");
+    assert.equal(rows[2].estimated, "09:45 - 10:05", "chains by match duration");
   });
 
-  it("keeps pending matches BEFORE the first recorded result untouched", () => {
+  it("renders windows in the tournament timezone, not the server zone", () => {
+    // 12:20 UTC is 09:20 in Argentina. Formatting with the process zone (UTC on
+    // Vercel) shifted every window three hours and made 09:00 read as 12:00.
+    const rows = computeSchedule(
+      [match(1, null, "COMPLETE", new Date("2026-11-01T12:20:00.000Z"))],
+      20,
+    );
+    assert.equal(rows[0].estimated, "09:00 - 09:20");
+  });
+
+  it("leaves pending matches before the first loaded result without an estimate", () => {
     const matches = [
       match(1, "10:00 - 10:20"),
-      match(2, "10:20 - 10:40", "WINNER_ONLY", new Date(2026, 8, 23, 10, 30, 0)),
+      match(2, "10:20 - 10:40", "WINNER_ONLY", new Date("2026-11-01T13:30:00.000Z")),
       match(3, "10:40 - 11:00"),
     ];
-    const rows = computeSchedule(matches, 5, 20);
-    assert.equal(rows[0].estimated, null, "slot before anchor stays as scheduled");
-    assert.equal(rows[1].estimated, null, "decided matches have no estimate");
-    assert.equal(rows[2].estimated, "10:35 - 10:55", "10:30 result + 5 min");
+    const rows = computeSchedule(matches, 20);
+    assert.equal(rows[0].estimated, null, "nothing anchors the day yet");
+    assert.equal(rows[1].estimated, "10:10 - 10:30", "loaded match ends at its recordedAt");
+    assert.equal(rows[2].estimated, "10:30 - 10:50", "chains from the loaded result");
   });
 
-  it("respects a configurable preparation time", () => {
+  it("re-anchors the chain on every newly loaded result", () => {
     const matches = [
-      match(1, "10:00 - 10:20", "COMPLETE", new Date(2026, 8, 23, 10, 0, 0)),
-      match(2, "10:20 - 10:40"),
+      match(1, null, "COMPLETE", new Date("2026-11-01T12:25:00.000Z")),
+      match(2, null, "COMPLETE", new Date("2026-11-01T12:52:00.000Z")),
+      match(3, null),
     ];
-    const rows = computeSchedule(matches, 0, 20);
-    assert.equal(rows[1].estimated, "10:00 - 10:20", "prep 0 kept the window");
+    const rows = computeSchedule(matches, 20);
+    assert.equal(rows[1].estimated, "09:32 - 09:52", "match 2 ran long");
+    assert.equal(rows[2].estimated, "09:52 - 10:12", "match 3 follows the real end");
+  });
+
+  it("adds no preparation gap between matches", () => {
+    const matches = [
+      match(1, null, "COMPLETE", new Date("2026-11-01T12:20:00.000Z")),
+      match(2, null),
+    ];
+    const rows = computeSchedule(matches, 20);
+    assert.equal(rows[1].estimated, "09:20 - 09:40", "no extra minutes between windows");
   });
 
   it("includes a DESEMPATE match in the estimate chain before the semis", () => {
     const matches = [
-      match(1, "10:00 - 10:20", "COMPLETE", new Date(2026, 8, 23, 10, 0, 0)),
+      match(1, null, "COMPLETE", new Date("2026-11-01T12:20:00.000Z")),
       match(2, null, "PENDING", null, "DESEMPATE"),
       match(3, "16:40 - 17:00", "PENDING", null, "SEMIFINAL_1"),
     ];
-    const rows = computeSchedule(matches, 5, 20);
+    const rows = computeSchedule(matches, 20);
     assert.equal(rows[1].scheduled, null, "desempate has no base fixture time");
-    assert.equal(rows[1].estimated, "10:05 - 10:25", "desempate chains from the result");
+    assert.equal(rows[1].estimated, "09:20 - 09:40", "desempate chains from the result");
     assert.equal(rows[1].stage, "DESEMPATE");
-    assert.equal(rows[2].estimated, "10:25 - 10:45", "semis chain after the desempate");
+    assert.equal(rows[2].estimated, "09:40 - 10:00", "semis chain after the desempate");
   });
 
   it("exposes the multi-set score and format on rows (passthrough)", () => {
@@ -100,14 +122,14 @@ describe("computeSchedule", () => {
         1,
         "10:00 - 10:20",
         "COMPLETE",
-        new Date(2026, 8, 23, 10, 0, 0),
+        new Date("2026-11-01T13:00:00.000Z"),
         "GROUPS",
         [{ teamA: 21, teamB: 19 }],
         "SINGLE_21",
       ),
       match(2, "10:20 - 10:40"),
     ];
-    const rows = computeSchedule(matches, 5, 20);
+    const rows = computeSchedule(matches, 20);
     assert.deepEqual(rows[0].sets, [{ teamA: 21, teamB: 19 }]);
     assert.equal(rows[0].setFormat, "SINGLE_21");
     assert.equal(rows[1].sets, null);
@@ -186,7 +208,7 @@ describe("isEditableMatch (edit guard)", () => {
 
 it("exposes the flag on schedule rows", () => {
      const all = [played(1), played(2, "SEMIFINAL_1")];
-     const rows = computeSchedule(all, 5, 20);
+     const rows = computeSchedule(all, 20);
      assert.equal(rows[0].editable, false, "group closed by played semi");
      assert.equal(rows[1].editable, true, "semi before the final stays editable");
    });
@@ -197,7 +219,7 @@ it("exposes the flag on schedule rows", () => {
       matchWithManual(2, "10:20 - 10:40", "2026-09-26T14:00:00.000Z", "2026-09-26T14:20:00.000Z", "PENDING"),
       match(3, "10:40 - 11:00"),
     ];
-    const rows = computeSchedule(matches, 5, 20);
+    const rows = computeSchedule(matches, 20);
     // Match 2 with manual times should have non-null scheduled from manual window
     assert.ok(rows[1].scheduled, "scheduled should be non-null from manual window");
     assert.ok(rows[1].scheduled!.includes("14:00") || rows[1].scheduled!.includes("11:00"),
@@ -215,7 +237,7 @@ it("exposes the flag on schedule rows", () => {
       match(1, "10:00 - 10:20", "COMPLETE", new Date(2026, 8, 23, 10, 0, 0)),
       match(2, "10:20 - 10:40"),
     ];
-    const rows = computeSchedule(matches, 5, 20);
+    const rows = computeSchedule(matches, 20);
     assert.equal(rows[1].scheduled, "10:20 - 10:40", "no manual → timeLabel preserved");
     assert.equal(rows[1].manualStartAt, null);
     assert.equal(rows[1].manualEndAt, null);
