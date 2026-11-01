@@ -499,9 +499,9 @@ export function ResultadoEntryPanel({
             {/* Sets scoreboard — teams on each side, number in the middle */}
             {tab === "sets" && (
               <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
+                <div className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-3 sm:grid-cols-[1fr_auto_1fr] sm:gap-4">
                   {/* Team A */}
-                  <div className="text-left sm:text-right">
+                  <div className="order-1 min-w-0 text-left sm:order-none sm:text-right">
                     <span className="block text-base font-semibold text-stone-900">
                       {nextMatch.teamA?.name ?? "Equipo A"}
                     </span>
@@ -512,8 +512,10 @@ export function ResultadoEntryPanel({
                     )}
                   </div>
 
-                  {/* Middle score */}
-                  <div className="flex items-center justify-center gap-2 sm:justify-start">
+                  {/* Score. `contents` on mobile dissolves this wrapper so each
+                      input lands in the same row as its own team, instead of
+                      stacking both inputs between the two team names. */}
+                  <div className="contents sm:flex sm:items-center sm:justify-center sm:gap-2">
                     <label htmlFor="set-a" className="sr-only">
                       Sets del equipo A
                     </label>
@@ -526,9 +528,9 @@ export function ResultadoEntryPanel({
                       onChange={(e) => setSetAScore(e.target.value)}
                       disabled={submitting}
                       placeholder="0"
-                      className="w-16 rounded-lg border border-sand-300 bg-white px-2 py-2.5 text-center text-lg font-bold text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                      className="order-2 w-16 justify-self-end rounded-lg border border-sand-300 bg-white px-2 py-2.5 text-center text-lg font-bold text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px] sm:order-none sm:justify-self-auto"
                     />
-                    <span className="text-stone-400 font-bold">:</span>
+                    <span className="hidden text-stone-400 font-bold sm:inline">:</span>
                     <label htmlFor="set-b" className="sr-only">
                       Sets del equipo B
                     </label>
@@ -541,12 +543,12 @@ export function ResultadoEntryPanel({
                       onChange={(e) => setSetBScore(e.target.value)}
                       disabled={submitting}
                       placeholder="0"
-                      className="w-16 rounded-lg border border-sand-300 bg-white px-2 py-2.5 text-center text-lg font-bold text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px]"
+                      className="order-4 w-16 justify-self-end rounded-lg border border-sand-300 bg-white px-2 py-2.5 text-center text-lg font-bold text-stone-900 ring-1 ring-inset ring-sand-300 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 min-h-[44px] sm:order-none sm:justify-self-auto"
                     />
                   </div>
 
                   {/* Team B */}
-                  <div className="text-left">
+                  <div className="order-3 min-w-0 text-left sm:order-none">
                     <span className="block text-base font-semibold text-stone-900">
                       {nextMatch.teamB?.name ?? "Equipo B"}
                     </span>

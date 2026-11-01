@@ -135,7 +135,7 @@ function ScoreboardSide({
         </>
       ) : (
         <p className="mt-2 text-[15px] sm:text-sm text-stone-400">
-          {label === "Próximo" ? "No queda ningún partido" : "Sin resultados todavía"}
+          {label === "Próximo" ? "No queda ningún partido" : "Sin partidos pendientes"}
         </p>
       )}
     </div>
@@ -154,30 +154,15 @@ export function MatchTicker({
     [schedule, brackets, nextMatch],
   );
 
-  const { previous, next } = useMemo(() => {
-    // Anterior: el último partido del programa que ya tiene resultado.
-    let previousSlot: Slot | null = null;
-    for (let i = schedule.length - 1; i >= 0; i--) {
-      const row = schedule[i];
+  const { current, next } = useMemo(() => {
+    // Actual: el partido que se está jugando y espera que se carguen sus puntos.
+    // Próximo: el que se juega después de ese.
+    const pending: Slot[] = [];
+    for (const row of schedule) {
       const m = matchMap.get(row.id);
-      if (m && (m.resultStatus === "COMPLETE" || m.resultStatus === "WINNER_ONLY")) {
-        previousSlot = { row, match: m };
-        break;
-      }
+      if (m && m.resultStatus === "PENDING") pending.push({ row, match: m });
     }
-
-    // Próximo: el primero que sigue pendiente.
-    let nextSlot: Slot | null = null;
-    for (let i = 0; i < schedule.length; i++) {
-      const row = schedule[i];
-      const m = matchMap.get(row.id);
-      if (m && m.resultStatus === "PENDING") {
-        nextSlot = { row, match: m };
-        break;
-      }
-    }
-
-    return { previous: previousSlot, next: nextSlot };
+    return { current: pending[0] ?? null, next: pending[1] ?? null };
   }, [schedule, matchMap]);
 
   // The desempate is just another match in the schedule; nothing extra to show.
@@ -194,7 +179,7 @@ export function MatchTicker({
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3">
         <div className="min-w-0 flex-1 rounded-xl border border-selva-100 bg-selva-50 px-4 py-3">
-          <ScoreboardSide label="Anterior" slot={previous} />
+          <ScoreboardSide label="Actual" slot={current} />
         </div>
         <div className="min-w-0 flex-1 rounded-xl border border-selva-100 bg-selva-50 px-4 py-3">
           <ScoreboardSide label="Próximo" slot={next} />
