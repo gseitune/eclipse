@@ -743,7 +743,12 @@ export function OrganizerPanel(_props: OrganizerPanelProps) {
           currentEtapaId={liveState?.etapaId ?? null}
         />
       ) : activeSection === "reagendar" ? (
-        <ReagendarSection onBack={() => setActiveSection(null)} readOnly={isClosed} />
+        <ReagendarSection
+          onBack={() => setActiveSection(null)}
+          readOnly={isClosed}
+          etapaId={liveState?.etapaId ?? null}
+          circuit={circuit}
+        />
       ) : (
         /* Sections list */
         <main className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 sm:py-8">

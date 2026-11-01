@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { fetchScheduleBoard, rescheduleMatch } from "@/lib/front/api";
-import type { ScheduleBoardRow } from "@/lib/front/types";
+import type { Circuit, ScheduleBoardRow } from "@/lib/front/types";
 import { ApiError } from "@/lib/front/types";
 import { matchStageLabel } from "@/lib/front/phase";
 
@@ -49,9 +49,22 @@ export interface ReagendarSectionProps {
   readonly onBack: () => void;
   /** Closed etapa: the agenda stays visible but the order can't be changed. */
   readonly readOnly?: boolean;
+  /** Stage the panel is pinned to; null follows the newest stage of `circuit`. */
+  readonly etapaId?: string | null;
+  /**
+   * Circuit the panel is switched to. Required in practice: without it the
+   * board falls back to the newest Principiantes stage, so an Intermedios panel
+   * would render another circuit's agenda.
+   */
+  readonly circuit?: Circuit;
 }
 
-export function ReagendarSection({ onBack, readOnly = false }: ReagendarSectionProps) {
+export function ReagendarSection({
+  onBack,
+  readOnly = false,
+  etapaId = null,
+  circuit,
+}: ReagendarSectionProps) {
   const [rows, setRows] = useState<ScheduleBoardRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +73,7 @@ export function ReagendarSection({ onBack, readOnly = false }: ReagendarSectionP
 
   const refetch = useCallback(async () => {
     try {
-      const data = await fetchScheduleBoard();
+      const data = await fetchScheduleBoard(etapaId, circuit);
       setRows(data.schedule);
       setError(null);
     } catch (err) {
@@ -69,14 +82,14 @@ export function ReagendarSection({ onBack, readOnly = false }: ReagendarSectionP
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [etapaId, circuit]);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       setLoading(true);
       try {
-        const data = await fetchScheduleBoard();
+        const data = await fetchScheduleBoard(etapaId, circuit);
         if (!cancelled) {
           setRows(data.schedule);
         }
@@ -95,7 +108,7 @@ export function ReagendarSection({ onBack, readOnly = false }: ReagendarSectionP
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [etapaId, circuit]);
 
   // Precompute whether each PENDING row has a PENDING neighbor in each direction
   function canMoveUp(index: number): boolean {

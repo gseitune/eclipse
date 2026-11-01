@@ -1038,8 +1038,11 @@ export interface ScheduleBoardRow {
   manualEndAt?: string | null;
 }
 
-export async function getScheduleBoard(etapaId?: string | null): Promise<ScheduleBoardRow[]> {
-  const id = await resolveEtapaId(etapaId);
+export async function getScheduleBoard(
+  etapaId?: string | null,
+  circuit?: Circuit,
+): Promise<ScheduleBoardRow[]> {
+  const id = await resolveEtapaId(etapaId, circuit);
   const [state, matches] = await Promise.all([
     getState(id),
     prisma.match.findMany({

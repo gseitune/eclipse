@@ -408,9 +408,20 @@ export async function createCancelledEtapa(input: {
   return handleResponse(res);
 }
 
-export async function fetchScheduleBoard(etapaId?: string | null): Promise<{ schedule: ScheduleBoardRow[] }> {
-  const qs = etapaId ? `?etapa=${encodeURIComponent(etapaId)}` : "";
-  const res = await fetch(`${BASE}/schedule${qs}`, { cache: "no-store" });
+export async function fetchScheduleBoard(
+  etapaId?: string | null,
+  circuit?: Circuit,
+): Promise<{ schedule: ScheduleBoardRow[] }> {
+  const params = new URLSearchParams();
+  if (etapaId) params.set("etapa", etapaId);
+  // The board falls back to the newest etapa of the default circuit when it
+  // gets neither, which is how the panel ended up showing Principiantes'
+  // closed stage while it was switched to Intermedios.
+  if (circuit) params.set("circuit", circuit);
+  const qs = params.toString();
+  const res = await fetch(`${BASE}/schedule${qs ? `?${qs}` : ""}`, {
+    cache: "no-store",
+  });
   return handleResponse(res);
 }
 

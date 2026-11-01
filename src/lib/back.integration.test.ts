@@ -653,6 +653,78 @@ it("reorderMatch down swaps slots of two PENDING matches", async () => {
        assert.ok(bracketRow, "bracket row exists");
        assert.equal(bracketRow?.resultStatus, "PENDING");
      });
+
+    it("resolves the board inside the requested circuit, not the default one", async () => {
+      await prisma.match.deleteMany({});
+      await prisma.team.deleteMany({});
+      await prisma.tournamentState.deleteMany({});
+      await prisma.etapa.deleteMany({});
+
+      // A closed Principiantes stage and a brand new Intermedios one. With no
+      // pinned etapa the board must follow the circuit it was asked for; it
+      // used to default to PRINCIPIANTES, so the Intermedios panel rendered the
+      // closed Principiantes agenda.
+      const princ = await prisma.etapa.create({
+        data: {
+          name: "Principiantes 7",
+          circuit: "PRINCIPIANTES",
+          sortOrder: 7,
+          date: new Date("2026-10-24T00:00:00.000Z"),
+          closedAt: new Date("2026-10-24T23:00:00.000Z"),
+        },
+      });
+      const inter = await prisma.etapa.create({
+        data: {
+          name: "Etapa7",
+          circuit: "INTERMEDIOS",
+          sortOrder: 1,
+          date: new Date("2026-11-01T00:00:00.000Z"),
+        },
+      });
+
+      await prisma.team.createMany({
+        data: [
+          { id: "pc1", etapaId: princ.id, name: "Principiantes Uno", zone: "A" },
+          { id: "pc2", etapaId: princ.id, name: "Principiantes Dos", zone: "A" },
+          { id: "in1", etapaId: inter.id, name: "Intermedios Uno", zone: "A" },
+          { id: "in2", etapaId: inter.id, name: "Intermedios Dos", zone: "A" },
+        ],
+      });
+      await prisma.match.createMany({
+        data: [
+          {
+            id: "pm1",
+            etapaId: princ.id,
+            stage: "GROUPS",
+            zone: "A",
+            slot: 1,
+            teamAId: "pc1",
+            teamBId: "pc2",
+            resultStatus: "PENDING",
+          },
+          {
+            id: "im1",
+            etapaId: inter.id,
+            stage: "GROUPS",
+            zone: "A",
+            slot: 1,
+            teamAId: "in1",
+            teamBId: "in2",
+            resultStatus: "PENDING",
+          },
+        ],
+      });
+      await prisma.tournamentState.create({ data: { etapaId: princ.id } });
+      await prisma.tournamentState.create({ data: { etapaId: inter.id } });
+
+      const board = await getScheduleBoard(null, "INTERMEDIOS");
+      assert.equal(board.length, 1, "only the Intermedios stage has a match");
+      assert.equal(
+        board[0].teamA?.name,
+        "Intermedios Uno",
+        "board follows the requested circuit",
+      );
+    });
 });
 
 /**
