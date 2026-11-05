@@ -7,6 +7,8 @@ Live scoring, court scheduling, adaptive group formats and bracket generation â€
 
 **[Live app](https://selvarena.vercel.app)**
 
+[![CI](https://github.com/gseitune/eclipse/actions/workflows/ci.yml/badge.svg)](https://github.com/gseitune/eclipse/actions/workflows/ci.yml)
+
 </div>
 
 ![Eclipse bracket view â€” Etapa 7, mixed circuit](docs/screenshots/brackets.png)
@@ -65,7 +67,6 @@ Eclipse runs the tournaments organized by SELVARENA, the volleyball venue that h
 
 ## Roadmap
 
-- CI on pull requests (typecheck + tests) and a tagged release with a changelog
 - Coverage for the remaining route handlers, not just the domain layer
 - Move the login throttle out of process memory so it survives multiple instances
 
